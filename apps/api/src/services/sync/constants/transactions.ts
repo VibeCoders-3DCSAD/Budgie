@@ -47,3 +47,5 @@ export const RECURRING_TEMPLATE_UPDATE_FIELDS = new Set(
 export const RECURRING_OCCURRENCE_FIELDS = new Set([
   "recurring_template_id", "scheduled_date", "generated_transaction_id",
 ]);
+
+export const RECURRING_FREQUENCIES = ["daily", "weekly", "biweekly", "semi_monthly", "monthly", "quarterly", "yearly", "custom"];
