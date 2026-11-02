@@ -3,6 +3,7 @@ import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { ACTIVE_REQUEST_STATUSES } from "../lib/constants.js";
+import { resolveScheduledDeleteAt } from "../services/accountDeletion/deletionSchedule.js";
 
 const router = Router();
 
@@ -47,40 +48,20 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
     return;
   }
 
-  const minDate = new Date();
-  minDate.setDate(minDate.getDate() + 30);
-  const minDeleteAt = minDate.toISOString();
-
-  let scheduledDeleteAt: string;
-  if (payload.scheduled_delete_at !== undefined) {
-    let parsed: Date;
-    try {
-      parsed = new Date(payload.scheduled_delete_at as string);
-      if (isNaN(parsed.getTime())) throw new Error();
-    } catch {
-      response.status(400).json({
-        error: "Bad Request",
-        message: "scheduled_delete_at must be a valid date string",
-      });
-      return;
-    }
-    scheduledDeleteAt = parsed.toISOString();
-    if (scheduledDeleteAt < minDeleteAt) {
-      response.status(400).json({
-        error: "Bad Request",
-        message: "scheduled_delete_at must be at least 30 days from now",
-      });
-      return;
-    }
-  } else {
-    scheduledDeleteAt = minDeleteAt;
+  const schedule = resolveScheduledDeleteAt(payload.scheduled_delete_at);
+  if ("error" in schedule) {
+    response.status(400).json({
+      error: "Bad Request",
+      message: schedule.error,
+    });
+    return;
   }
 
   const { data, error } = await authenticatedSupabase
     .from("account_deletion_requests")
     .insert({
       user_id: userId,
-      scheduled_delete_at: scheduledDeleteAt,
+      scheduled_delete_at: schedule.scheduledDeleteAt,
       reason: payload.reason ?? null,
     })
     .select("id, status, requested_at, scheduled_delete_at")
