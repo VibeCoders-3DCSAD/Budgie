@@ -5,6 +5,7 @@ export { FinancialPlanInputError, FinancialPlanUnavailableError } from "./errors
 export { scheduledReservationDates } from "./commitmentSchedule.js";
 import { applyCommitmentBudgets, commitmentKey, validateCommitmentBudgets, type CommitmentBudget } from "./commitments.js";
 import { dueCommitments, queryCommitmentRows } from "./commitmentsLoader.js";
+import type { ManualAllocation, ReservationSkips } from "./recommendationRequest.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast, type ForecastPayload } from "../forecast/forecastService.js";
 import { recommendPlanCategories, type MlExpenseForecastSnapshot, type MlPlanCategory } from "./mlAdapter.js";
@@ -34,8 +35,6 @@ type Goal = Timestamped & { id: string; planned_contribution_amount_centavos: nu
 type FinancialAccount = Timestamped & { id: string; kind: string; current_balance_centavos: number };
 type Transaction = Timestamped & { id: string; amount_centavos: number; transaction_date: string; transaction_type: "income" | "expense"; category_id: string | null; subcategory_id: string | null; source_savings_goal_id?: string | null; destination_savings_goal_id?: string | null };
 type OnboardingSession = { raw_answers: Record<string, unknown> | null };
-type ManualAllocation = { target: "category" | "subcategory"; id: string; amountCentavos: number };
-type ReservationSkips = { skipDebtRepayments?: boolean; skipSavingsContributions?: boolean; skipScheduledPayments?: boolean; commitmentBudgets?: CommitmentBudget[] };
 type TransactionWithAnomalies = Transaction & { anomaly_evaluations: AnomalyEvaluation[] | null };
 
 function selectEligibleDebt(debts: Debt[], strategy: "avalanche" | "snowball", priorityIds: string[]): string | null {
