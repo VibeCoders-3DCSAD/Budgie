@@ -17,16 +17,6 @@ function wholeNumber(answers: OnboardingAnswers, key: string) {
   return typeof value === "string" && /^\d+$/.test(value) ? Number(value) : null;
 }
 
-function selfReportedRevolvingMonths(answers: OnboardingAnswers) {
-  if (answers.credit_card_revolving_months === undefined) {
-    if (answers.credit_card_payment_behavior === "never") return 0;
-    if (answers.credit_card_payment_behavior === "every_month") return 12;
-  }
-  if (answers.questionnaire_version !== "2" && answers.credit_card_payment_behavior === "no_credit_card") return null;
-  const months = wholeNumber(answers, "credit_card_revolving_months");
-  return months !== null && months <= 12 ? months : null;
-}
-
 function selfReportedRevolvingRange(answers: OnboardingAnswers) {
   const value = answers.credit_card_revolving_months;
   return typeof value === "string" && ["no_credit_card", "always_before_due", "1_to_11_months", "over_a_year"].includes(value)
@@ -97,7 +87,6 @@ function onboardingAssessmentInput(answers: OnboardingAnswers) {
     required_monthly_debt_payments: debtPayments,
     monthly_basic_living_costs: essentialCosts,
     credit_card_accounts: [],
-    self_reported_revolving_months: selfReportedRevolvingMonths(answers),
     ...selfReportedRevolvingRange(answers),
     assessment_source: "onboarding_questionnaire",
   };
@@ -143,7 +132,7 @@ export async function createFinancialConditionAssessment(userId: string, supabas
     .maybeSingle();
   const answers = onboarding?.raw_answers && typeof onboarding.raw_answers === "object" ? onboarding.raw_answers as OnboardingAnswers : {};
 
-  return saveAssessment(userId, { ...classificationInput, self_reported_revolving_months: selfReportedRevolvingMonths(answers), ...selfReportedRevolvingRange(answers) }, supabase);
+  return saveAssessment(userId, { ...classificationInput, ...selfReportedRevolvingRange(answers) }, supabase);
 }
 
 export function createOnboardingFinancialConditionAssessment(userId: string, answers: OnboardingAnswers, supabase: SupabaseClient) {

@@ -24,18 +24,6 @@ export function withOnboardingAnswer(answers: Record<string, unknown>, key: stri
 // Preserve named events and valid custom references; ask again for retired quarters.
 export function currentSeasonalAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const next: Record<string, unknown> = { ...answers, questionnaire_version: "2" };
-  if (answers.questionnaire_version !== "2" && next.monthly_deductions !== undefined) {
-    // Old drafts asked for gross income; ask again for take-home income.
-    delete next.monthly_income;
-  }
-  if (next.credit_card_revolving_months === undefined) {
-    const legacyCardAnswers: Record<string, string> = { never: "0", every_month: "12", no_credit_card: "no_credit_card", not_sure: "not_sure" };
-    if (typeof next.credit_card_payment_behavior === "string") next.credit_card_revolving_months = legacyCardAnswers[next.credit_card_payment_behavior];
-  }
-  const cardMonths = next.credit_card_revolving_months;
-  if (cardMonths === "0") next.credit_card_revolving_months = "always_before_due";
-  else if (typeof cardMonths === "string" && /^(?:[1-9]|10|11)$/.test(cardMonths)) next.credit_card_revolving_months = "1_to_11_months";
-  for (const retired of ["date_of_birth", "monthly_deductions", "monthly_deduction_amounts", "liquid_emergency_savings", "monthly_debt_payments", "credit_card_payment_behavior"]) delete next[retired];
   for (const key of SEASONAL_QUESTION_KEYS) {
     const value = next[key];
     const step = STEPS.find((step) => step.questionKey === key);

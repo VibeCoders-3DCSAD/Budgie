@@ -31,8 +31,5 @@ export function validateSeasonalAnswers(answers: Record<string, unknown>, checkR
 export function normalizeSeasonalAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const next = { ...answers };
   if (next.custom_seasonal_events !== undefined) next.custom_seasonal_events = normalizeCustomEvents(next.custom_seasonal_events);
-  if (next.questionnaire_version === "2") {
-    for (const key of ["date_of_birth", "monthly_deductions", "monthly_deduction_amounts", "liquid_emergency_savings", "monthly_debt_payments", "credit_card_payment_behavior"]) delete next[key];
-  }
   return next;
 }

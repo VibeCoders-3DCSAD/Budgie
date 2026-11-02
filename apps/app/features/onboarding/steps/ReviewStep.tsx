@@ -35,32 +35,13 @@ export function ReviewStep({
       .join(", ");
     if (labels && originalStep) rows.push({ label, value: labels, stepIndex: STEPS.indexOf(originalStep) });
   };
-  const addAmountMapRows = (questionKey: string) => {
-    const step = stepFor(questionKey);
-    const values = answers[questionKey];
-    if (!step || !values || typeof values !== "object" || Array.isArray(values)) return;
-    for (const [key, amount] of Object.entries(values as Record<string, unknown>)) {
-      const option = step.amountOptions?.find((item) => item.key === key);
-      if (option && typeof amount === "string") {
-        rows.push({ label: `${option.label} Monthly Amount`, value: formatPeso(Math.round(Number(amount) * 100)), stepIndex: STEPS.indexOf(step) });
-      }
-    }
-  };
-
-  const displayName = answers.display_name;
-  if (displayName && displayName !== "") rows.push({ label: "Name", value: displayName as string, stepIndex: STEPS.findIndex((step) => step.questionKey === "display_name") });
-
   if (incomeText)
     rows.push({
       label: "Monthly Income After Deductions",
       value: formatPeso(Math.round(Number(incomeText) * 100)),
       stepIndex: STEPS.findIndex((step) => step.questionKey === "monthly_income"),
     });
-  addMultiOptionRow("Monthly Deductions", "monthly_deductions");
-  addAmountMapRows("monthly_deduction_amounts");
   addOptionRow("Savings Runway", "emergency_savings_runway");
-  const emergencySavings = answers.liquid_emergency_savings;
-  if (typeof emergencySavings === "string") rows.push({ label: "Emergency Savings", value: formatPeso(Math.round(Number(emergencySavings) * 100)), stepIndex: STEPS.findIndex((step) => step.questionKey === "liquid_emergency_savings") });
   const essentialCosts = answers.monthly_essential_living_costs;
   if (typeof essentialCosts === "string") rows.push({ label: "Monthly Essential Costs", value: essentialCosts === "not_sure" ? "Not sure" : formatPeso(Math.round(Number(essentialCosts) * 100)), stepIndex: STEPS.findIndex((step) => step.questionKey === "monthly_essential_living_costs") });
   addOptionRow("Currently Paying Off Debt", "paying_off_debt");

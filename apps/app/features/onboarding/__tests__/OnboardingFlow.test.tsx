@@ -5,7 +5,6 @@ import OnboardingFlow from "../OnboardingFlow";
 configure({ asyncUtilTimeout: 5000 });
 
 jest.mock("../../../lib/api", () => ({ API_BASE_URL: "http://test", REQUEST_TIMEOUT_MS: 1000 }));
-jest.mock("@react-native-community/datetimepicker", () => "DateTimePicker");
 jest.mock("phosphor-react-native", () => ({ CaretLeft: "Icon", CaretRight: "Icon", Check: "Icon", CheckCircle: "Icon", PencilSimple: "Icon" }));
 jest.mock("../../../services/connectivity", () => ({ useConnectivityStore: (selector: (state: { online: boolean }) => unknown) => selector({ online: true }) }));
 const mockShowToast = jest.fn();
@@ -13,7 +12,7 @@ jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: mo
 const mockSubmit = jest.fn();
 const mockUpdate = jest.fn();
 const mockAnswers = {
-  display_name: "Juan", monthly_income: "50000", emergency_savings_runway: "2_months", monthly_essential_living_costs: "30000", paying_off_debt: "false", credit_card_revolving_months: "0", high_expense_seasons: ["christmas_ber_months"], low_expense_seasons: ["summer"], saving_seasons: ["summer"],
+  monthly_income: "50000", emergency_savings_runway: "2_months", monthly_essential_living_costs: "30000", paying_off_debt: "false", credit_card_revolving_months: "always_before_due", high_expense_seasons: ["christmas_ber_months"], low_expense_seasons: ["summer"], saving_seasons: ["summer"],
 };
 jest.mock("../api", () => ({
   getCurrentSession: async () => ({ response: { ok: true }, body: { payload: { session: { id: "session-1", status: "in_progress", current_step_key: "review", raw_answers: mockAnswers } } } }),

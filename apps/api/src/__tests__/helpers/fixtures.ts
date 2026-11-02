@@ -69,12 +69,3 @@ export function validPasswordUpdatePayload(
     },
   };
 }
-
-export function validUpdateMePayload() {
-  return {
-    payload: {
-      display_name: "Juan Updated",
-      metro_manila_city: "Makati",
-    },
-  };
-}

@@ -2,15 +2,14 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { getValidLocalityNames } from "../lib/locality-cache.js";
 
 const router = Router();
 
-const VALID_INCLUDE_FIELDS = ["profile", "privacy", "consents", "assignment"];
+const VALID_INCLUDE_FIELDS = ["privacy", "consents"];
 
 function parseIncludeParam(includeValue: unknown): Set<string> {
   if (typeof includeValue !== "string" || includeValue.trim().length === 0) {
-    return new Set(["profile", "privacy", "assignment"]);
+    return new Set(["privacy"]);
   }
 
   const requestedFields = includeValue
@@ -45,27 +44,6 @@ router.get("/", requireAuth, async (request: AuthenticatedRequest, response: Res
   }
 
   const payload: Record<string, unknown> = {};
-
-  if (includeFields.has("profile")) {
-    const { data: profile, error: profileError } = await authenticatedSupabase
-      .from("profiles")
-      .select("display_name, metro_manila_city")
-      .eq("user_id", userId)
-      .single();
-
-    if (profileError || !profile) {
-      response.status(404).json({
-        error: "Not Found",
-        message: "Profile not found",
-      });
-      return;
-    }
-
-    payload.profile = {
-      display_name: profile.display_name,
-      metro_manila_city: profile.metro_manila_city,
-    };
-  }
 
   if (includeFields.has("privacy")) {
     const { data: privacy, error: privacyError } = await authenticatedSupabase
@@ -109,97 +87,6 @@ router.get("/", requireAuth, async (request: AuthenticatedRequest, response: Res
 
   response.status(200).json({
     payload,
-  });
-});
-
-router.patch("/", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
-  const userId = request.userId!;
-  const authenticatedSupabase = request.supabase!;
-  const { display_name, metro_manila_city } = request.body?.payload ?? {};
-
-  if (display_name !== undefined) {
-    if (display_name.length > 100) {
-      response.status(400).json({
-        error: "Bad Request",
-        message: "Display name must not exceed 100 characters",
-      });
-      return;
-    }
-    if (display_name.trim().length === 0) {
-      response.status(400).json({
-        error: "Bad Request",
-        message: "Display name must not be empty or whitespace only",
-      });
-      return;
-    }
-  }
-
-  if (metro_manila_city !== undefined) {
-    if (metro_manila_city === null) {
-      // Allow clearing the field.
-    } else if (typeof metro_manila_city !== "string" || metro_manila_city.trim().length === 0) {
-      response.status(400).json({
-        error: "Bad Request",
-        message: "Metro Manila city must be a non-empty string",
-      });
-      return;
-    } else {
-      let validLocalityNames: string[];
-      try {
-        validLocalityNames = await getValidLocalityNames(authenticatedSupabase);
-      } catch {
-        response.status(500).json({
-          error: "Internal Server Error",
-          message: "Failed to validate Metro Manila city",
-        });
-        return;
-      }
-
-      if (!validLocalityNames.includes(metro_manila_city)) {
-        response.status(400).json({
-          error: "Bad Request",
-          message: "Invalid Metro Manila city",
-        });
-        return;
-      }
-    }
-  }
-
-  const updates: Record<string, unknown> = {};
-  if (display_name !== undefined) updates.display_name = display_name;
-  if (metro_manila_city !== undefined) updates.metro_manila_city = metro_manila_city;
-  updates.updated_at = new Date().toISOString();
-
-  const { data, error } = await authenticatedSupabase
-    .from("profiles")
-    .update(updates)
-    .eq("user_id", userId)
-    .select("display_name, metro_manila_city")
-    .single();
-
-  if (error) {
-    response.status(500).json({
-      error: "Internal Server Error",
-      message: "Profile update failed",
-    });
-    return;
-  }
-
-  if (!data) {
-    response.status(404).json({
-      error: "Not Found",
-      message: "Profile not found",
-    });
-    return;
-  }
-
-  response.status(200).json({
-    payload: {
-      profile: {
-        display_name: data.display_name,
-        metro_manila_city: data.metro_manila_city,
-      },
-    },
   });
 });
 

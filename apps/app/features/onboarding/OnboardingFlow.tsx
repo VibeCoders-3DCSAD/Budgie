@@ -44,7 +44,6 @@ export default function OnboardingFlow({
   const [submitResult, setSubmitResult] = useState<SubmitResult | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [incomeText, setIncomeText] = useState("");
-  const [showDatePicker, setShowDatePicker] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const sessionRef = useRef(sessionId);
@@ -129,15 +128,9 @@ export default function OnboardingFlow({
     const next = nextVisibleStepIndex(stepIndex, 1, answersRef.current);
     const nextStep = STEPS[next];
     if (!nextStep) return;
-    let nextAnswers = answersRef.current;
-    if (nextStep.kind === "amount_list" && !nextAnswers[nextStep.questionKey]) {
-      nextAnswers = { ...nextAnswers, [nextStep.questionKey]: {} };
-      answersRef.current = nextAnswers;
-      setAnswers(nextAnswers);
-    }
     setStepIndex(next);
     if (sessionRef.current)
-      persistStep(sessionRef.current, nextStep.key, nextAnswers);
+      persistStep(sessionRef.current, nextStep.key, answersRef.current);
   }, [stepIndex, persistStep]);
 
   const goBack = useCallback(() => {
@@ -244,8 +237,6 @@ export default function OnboardingFlow({
           saveAnswer={saveAnswer}
           incomeText={incomeText}
           setIncomeText={setIncomeText}
-          showDatePicker={showDatePicker}
-          setShowDatePicker={setShowDatePicker}
           onEdit={(idx) => setStepIndex(idx)}
         />
 

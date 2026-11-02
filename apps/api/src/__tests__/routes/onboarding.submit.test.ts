@@ -42,12 +42,12 @@ const mockRpc = getServiceRoleClient().rpc as jest.Mock;
 const mockCreateOnboardingAssessment = createOnboardingFinancialConditionAssessment as jest.Mock;
 
 const validRawAnswers = {
-  display_name: "Juan",
+  questionnaire_version: "2",
   monthly_income: "50000",
   emergency_savings_runway: "2_months",
   monthly_essential_living_costs: "30000",
   paying_off_debt: "false",
-  credit_card_revolving_months: "0",
+  credit_card_revolving_months: "always_before_due",
   high_expense_seasons: ["christmas_ber_months"],
   low_expense_seasons: ["summer"],
   saving_seasons: ["summer"],
@@ -283,17 +283,7 @@ describe("POST /odin/api/onboarding/sessions/:id/submit", () => {
       data: {
         id: "session-1",
         status: "in_progress",
-        raw_answers: {
-          display_name: "Juan",
-          date_of_birth: "1995-06-15",
-          is_filipino: "true",
-          metro_manila_presence: "lives_in_metro_manila",
-          metro_manila_locality_code: "makati",
-          primary_employment_classification: "full_time_employee",
-          employment_status: "employed_full_time",
-          // monthly_income missing
-          protected_categories: ["none"],
-        },
+        raw_answers: Object.fromEntries(Object.entries(validRawAnswers).filter(([key]) => key !== "monthly_income")),
       },
       error: null,
     }));
@@ -306,49 +296,6 @@ describe("POST /odin/api/onboarding/sessions/:id/submit", () => {
     expect(response.status).toBe(400);
     expect(response.body.message).toContain("incomplete");
     expect(mockRpc).not.toHaveBeenCalled();
-  });
-
-  it("accepts onboarding with Classification V2 financial setup answers", async () => {
-    mockAuth();
-    mockRpcSuccess();
-    mockFrom.mockReturnValueOnce(createMockQuery({
-      data: {
-        id: "session-1",
-        status: "in_progress",
-        raw_answers: {
-          display_name: "Juan",
-          date_of_birth: "1995-06-15",
-          is_filipino: "true",
-          metro_manila_presence: "lives_in_metro_manila",
-          metro_manila_locality_code: "makati",
-          primary_employment_classification: "full_time_employee",
-          employment_status: "employed_full_time",
-          monthly_income: "50000",
-          monthly_deductions: ["none"],
-          monthly_deduction_amounts: {},
-          emergency_savings_runway: "1_to_3_months",
-          liquid_emergency_savings: "20000",
-          monthly_essential_living_costs: "30000",
-          paying_off_debt: "false",
-          credit_card_payment_behavior: "never",
-          credit_card_revolving_months: "0",
-          protected_categories: ["none"],
-          protected_category_costs: {},
-          high_expense_seasons: ["q4"],
-          low_expense_seasons: ["q2"],
-          saving_seasons: ["q2"],
-        },
-      },
-      error: null,
-    }));
-
-    const response = await request(app)
-      .post(`${basePath}/sessions/${sessionId}/submit`)
-      .set(authHeader())
-      .send({ payload: { confirm_data_use: true } });
-
-    expect(response.status).toBe(200);
-    expect(mockRpc).toHaveBeenCalledWith("submit_onboarding_session_v2", expect.any(Object));
   });
 
   it("requires the consolidated credit-card answer", async () => {
@@ -368,34 +315,10 @@ describe("POST /odin/api/onboarding/sessions/:id/submit", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("accepts the revolving-months follow-up answer", async () => {
-    mockAuth();
-    mockRpcSuccess();
-    mockFrom.mockReturnValueOnce(createMockQuery({
-      data: {
-        id: "session-1",
-        status: "in_progress",
-        raw_answers: { ...validRawAnswers, credit_card_payment_behavior: "some_months", credit_card_revolving_months: "4" },
-      },
-      error: null,
-    }));
-
-    const response = await request(app)
-      .post(`${basePath}/sessions/${sessionId}/submit`)
-      .set(authHeader())
-      .send({ payload: { confirm_data_use: true } });
-
-    expect(response.status).toBe(200);
-  });
-
-  it("rejects a revolving-months answer outside the last 12 months", async () => {
+  it.each(["0", "4", "13"])("rejects the retired numeric revolving-months answer %s", async (months) => {
     mockAuth();
     mockFrom.mockReturnValueOnce(createMockQuery({
-      data: {
-        id: "session-1",
-        status: "in_progress",
-        raw_answers: { ...validRawAnswers, credit_card_payment_behavior: "some_months", credit_card_revolving_months: "13" },
-      },
+      data: { id: "session-1", status: "in_progress", raw_answers: { ...validRawAnswers, credit_card_revolving_months: months } },
       error: null,
     }));
 
@@ -405,6 +328,7 @@ describe("POST /odin/api/onboarding/sessions/:id/submit", () => {
       .send({ payload: { confirm_data_use: true } });
 
     expect(response.status).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
   });
 
   it("accepts zero income without a profile heuristic", async () => {
@@ -415,24 +339,12 @@ describe("POST /odin/api/onboarding/sessions/:id/submit", () => {
         id: "session-1",
         status: "in_progress",
         raw_answers: {
-          display_name: "Juan",
-          date_of_birth: "1995-06-15",
-          is_filipino: "true",
-          metro_manila_presence: "lives_in_metro_manila",
-          metro_manila_locality_code: "makati",
-          primary_employment_classification: "full_time_employee",
-          employment_status: "employed_full_time",
+          questionnaire_version: "2",
           monthly_income: "0",
-          monthly_deductions: ["none"],
-          monthly_deduction_amounts: {},
           emergency_savings_runway: "not_sure",
-          liquid_emergency_savings: "0",
           monthly_essential_living_costs: "0",
           paying_off_debt: "false",
-          credit_card_payment_behavior: "no_credit_card",
           credit_card_revolving_months: "no_credit_card",
-          protected_categories: ["none"],
-          protected_category_costs: {},
           high_expense_seasons: ["none"],
           low_expense_seasons: ["none"],
           saving_seasons: ["none"],

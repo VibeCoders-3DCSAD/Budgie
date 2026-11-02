@@ -3,17 +3,15 @@ import { Check } from "phosphor-react-native";
 import { AQUA50, AQUA600, AQUA950, CARD, INK2, LINE, MUTED } from "../colors";
 import type { StepConfig } from "../types";
 
-// Single-choice option list. "dropdown" renders the label alone; "card" also shows each option's description.
+// Single-choice option list showing each option's label and description.
 export function CardSelectStep({
   step,
   selected,
   onSelect,
-  variant = "card",
 }: {
   step: StepConfig;
   selected: string | undefined;
   onSelect: (key: string) => void;
-  variant?: "card" | "dropdown";
 }) {
   return (
     <View className="gap-3">
@@ -49,26 +47,22 @@ export function CardSelectStep({
               justifyContent: "space-between",
             }}
           >
-            {variant === "dropdown" ? (
-              label
-            ) : (
-              <View style={{ flex: 1 }}>
-                {label}
-                {opt.description ? (
-                  <Text
-                    style={{
-                      fontFamily: "Manrope",
-                      fontWeight: "400",
-                      fontSize: 13,
-                      color: MUTED,
-                      marginTop: 4,
-                    }}
-                  >
-                    {opt.description}
-                  </Text>
-                ) : null}
-              </View>
-            )}
+            <View style={{ flex: 1 }}>
+              {label}
+              {opt.description ? (
+                <Text
+                  style={{
+                    fontFamily: "Manrope",
+                    fontWeight: "400",
+                    fontSize: 13,
+                    color: MUTED,
+                    marginTop: 4,
+                  }}
+                >
+                  {opt.description}
+                </Text>
+              ) : null}
+            </View>
             {active && <Check size={18} color={AQUA600} weight="bold" />}
           </Pressable>
         );

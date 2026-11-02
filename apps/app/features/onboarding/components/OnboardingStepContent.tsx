@@ -1,13 +1,10 @@
-import type { DateTimePickerEvent } from "@react-native-community/datetimepicker";
 import { normalizeCustomEvents } from "@odin/spending-insights/seasons";
 import type { StepConfig } from "../types";
 import { availableOnboardingStep, SEASONAL_QUESTION_KEYS } from "../helpers/seasonalAnswers";
 import { CustomSeasonalEventForm } from "./CustomSeasonalEventForm";
 import { CardSelectStep } from "../steps/CardSelectStep";
 import { CardMultiSelectStep } from "../steps/CardMultiSelectStep";
-import { DateStep } from "../steps/DateStep";
 import { InputStep } from "../steps/InputStep";
-import { AmountListStep } from "../steps/AmountListStep";
 import { ReviewStep } from "../steps/ReviewStep";
 
 type OnboardingStepContentProps = {
@@ -16,8 +13,6 @@ type OnboardingStepContentProps = {
   saveAnswer: (key: string, value: unknown) => void;
   incomeText: string;
   setIncomeText: (text: string) => void;
-  showDatePicker: boolean;
-  setShowDatePicker: (show: boolean) => void;
   onEdit: (stepIndex: number) => void;
 };
 
@@ -28,20 +23,15 @@ export function OnboardingStepContent({
   saveAnswer,
   incomeText,
   setIncomeText,
-  showDatePicker,
-  setShowDatePicker,
   onEdit,
 }: OnboardingStepContentProps) {
-  const dateOfBirth = (answers.date_of_birth as string) ?? "";
-
   return (
     <>
-      {(step.kind === "card_select" || step.kind === "dropdown") && (
+      {step.kind === "card_select" && (
         <CardSelectStep
           step={step}
           selected={answers[step.questionKey] as string | undefined}
           onSelect={(val) => saveAnswer(step.questionKey, val)}
-          variant={step.kind === "dropdown" ? "dropdown" : "card"}
         />
       )}
 
@@ -77,23 +67,7 @@ export function OnboardingStepContent({
         />
       )}
 
-      {step.kind === "input" && step.key === "date_of_birth" ? (
-        <DateStep
-          step={step}
-          value={dateOfBirth}
-          showPicker={showDatePicker}
-          onPress={() => setShowDatePicker(true)}
-          onChange={(_event: DateTimePickerEvent, selectedDate?: Date) => {
-            setShowDatePicker(false);
-            if (selectedDate) {
-              const yyyy = selectedDate.getFullYear();
-              const mm = String(selectedDate.getMonth() + 1).padStart(2, "0");
-              const dd = String(selectedDate.getDate()).padStart(2, "0");
-              saveAnswer("date_of_birth", `${yyyy}-${mm}-${dd}`);
-            }
-          }}
-        />
-      ) : step.kind === "input" && (
+      {step.kind === "input" && (
         <InputStep
           step={step}
           value={step.key === "monthly_income" ? incomeText : (answers[step.questionKey] as string) ?? ""}
@@ -109,18 +83,6 @@ export function OnboardingStepContent({
                   step.allowUnknown && t === "not_sure" ? t : step.inputSuffix ? t.replace(/[^0-9]/g, "") : t,
                 )
           }
-        />
-      )}
-
-      {step.kind === "amount_list" && (
-        <AmountListStep
-          step={step}
-          selected={(answers[step.amountSourceKey ?? ""] as string[] | undefined) ?? []}
-          values={(answers[step.questionKey] as Record<string, string> | undefined) ?? {}}
-          onChange={(key, value) => saveAnswer(step.questionKey, {
-            ...((answers[step.questionKey] as Record<string, string> | undefined) ?? {}),
-            [key]: value.replace(/[^0-9]/g, ""),
-          })}
         />
       )}
 

@@ -105,7 +105,7 @@ describe("POST /odin/api/onboarding/sessions", () => {
       status: "in_progress",
       started_at: "2026-07-08T00:00:00Z",
       current_step_key: "welcome",
-      raw_answers: { display_name: "Juan" },
+      raw_answers: { monthly_income: "40000" },
       metadata: {},
     };
 
@@ -114,7 +114,7 @@ describe("POST /odin/api/onboarding/sessions", () => {
     const response = await request(app)
       .post(`${basePath}/sessions`)
       .set(authHeader())
-      .send({ payload: { raw_answers: { display_name: "Juan" }, current_step_key: "welcome" } });
+      .send({ payload: { raw_answers: { monthly_income: "40000" }, current_step_key: "welcome" } });
 
     expect(response.status).toBe(201);
     expect(response.body.payload.session).toMatchObject({
@@ -170,13 +170,13 @@ describe("POST /odin/api/onboarding/sessions", () => {
     expect(mockRpc).not.toHaveBeenCalled();
   });
 
-  it("returns 400 when an amount map contains an unsupported entry", async () => {
+  it.each(["display_name", "date_of_birth", "metro_manila_presence", "monthly_deductions"])("returns 400 for the retired %s answer", async (key) => {
     mockAuth();
 
     const response = await request(app)
       .post(`${basePath}/sessions`)
       .set(authHeader())
-      .send({ payload: { raw_answers: { monthly_deduction_amounts: { unsupported: "100" } } } });
+      .send({ payload: { raw_answers: { [key]: "x" } } });
 
     expect(response.status).toBe(400);
     expect(mockRpc).not.toHaveBeenCalled();
@@ -231,10 +231,10 @@ describe("POST /odin/api/onboarding/sessions", () => {
     await request(app)
       .post(`${basePath}/sessions`)
       .set(authHeader())
-      .send({ payload: { raw_answers: { display_name: "Juan" }, current_step_key: "welcome" } });
+      .send({ payload: { raw_answers: { monthly_income: "40000" }, current_step_key: "welcome" } });
 
     expect(mockRpc).toHaveBeenCalledWith("create_onboarding_session", {
-      p_raw_answers: { display_name: "Juan" },
+      p_raw_answers: { monthly_income: "40000" },
       p_current_step_key: "welcome",
     });
   });
@@ -257,16 +257,6 @@ describe("PATCH /odin/api/onboarding/sessions/:id", () => {
     expect(response.status).toBe(200);
     expect(update.update).toHaveBeenCalledWith({ raw_answers: { ...existing, saving_seasons: [event.id] } });
     expect(update.eq).toHaveBeenCalledWith("user_id", validUserId);
-  });
-
-  it("clears retired fields when a new questionnaire replaces a legacy draft", async () => {
-    mockAuth();
-    const update = createMockQuery({ data: { id: sessionId }, error: null });
-    mockFrom.mockReturnValueOnce(createMockQuery({ data: { id: sessionId, status: "in_progress", raw_answers: { monthly_deductions: ["tax"], monthly_deduction_amounts: { tax: "1000" }, credit_card_payment_behavior: "no_credit_card" } }, error: null })).mockReturnValueOnce(update);
-    const answers = { questionnaire_version: "2", monthly_income: "40000", credit_card_revolving_months: "4" };
-    const response = await request(app).patch(`${basePath}/sessions/${sessionId}`).set(authHeader()).send({ payload: { raw_answers: answers } });
-    expect(response.status).toBe(200);
-    expect(update.update).toHaveBeenCalledWith({ raw_answers: answers });
   });
 
   it("rejects conflicts with previously saved higher seasons on partial updates", async () => {
@@ -294,7 +284,7 @@ describe("PATCH /odin/api/onboarding/sessions/:id", () => {
       id: sessionId,
       user_id: validUserId,
       status: "in_progress",
-      raw_answers: { display_name: "Juan" },
+      raw_answers: { monthly_income: "40000" },
     };
 
     const updatedSession = {
@@ -303,7 +293,7 @@ describe("PATCH /odin/api/onboarding/sessions/:id", () => {
       status: "in_progress",
       started_at: "2026-07-08T00:00:00Z",
       current_step_key: "income",
-      raw_answers: { display_name: "Juan", monthly_income: "25000" },
+      raw_answers: { monthly_income: "40000", emergency_savings_runway: "2_months" },
       metadata: {},
     };
 

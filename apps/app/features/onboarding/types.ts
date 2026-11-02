@@ -11,7 +11,7 @@ export type OnboardingSession = {
   raw_answers: Record<string, unknown>;
 };
 
-export type StepKind = "card_select" | "card_multi_select" | "dropdown" | "input" | "amount_list" | "review" | "result";
+export type StepKind = "card_select" | "card_multi_select" | "input" | "review";
 
 export type StepOption = {
   key: string;
@@ -30,8 +30,6 @@ export type StepConfig = {
   inputLabel?: string;
   inputSuffix?: string;
   allowUnknown?: boolean;
-  amountSourceKey?: string;
-  amountOptions?: StepOption[];
   visibleWhen?: { questionKey: string; value: string | readonly string[] };
 };
 
@@ -41,13 +39,6 @@ export const EXPENSE_SEASON_OPTIONS: StepOption[] = [
 ];
 
 export const STEPS: StepConfig[] = [
-  {
-    key: "display_name",
-    title: "What should we call you?",
-    kind: "input",
-    questionKey: "display_name",
-    inputPlaceholder: "Your name",
-  },
   {
     key: "monthly_income",
     title: "Monthly Income After Deductions",

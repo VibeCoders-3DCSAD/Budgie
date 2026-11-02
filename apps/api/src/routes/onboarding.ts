@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { ONBOARDING_ERRORS, VALID_EMPLOYMENT_CLASSIFICATIONS, VALID_METRO_MANILA_PRESENCE } from "../lib/constants.js";
+import { ONBOARDING_ERRORS } from "../lib/constants.js";
 import { getServiceRoleClient } from "../lib/supabase.js";
 import { createOnboardingFinancialConditionAssessment } from "../services/financialConditionAssessmentService.js";
 import { CUSTOM_EVENT_ID } from "@odin/spending-insights/seasons.js";
@@ -11,46 +11,23 @@ import { normalizeSeasonalAnswers, validateSeasonalAnswers } from "../services/h
 const router = Router();
 
 const ONBOARDING_ANSWER_KEYS = new Set([
-  "display_name", "questionnaire_version", "date_of_birth", "is_filipino", "metro_manila_presence", "metro_manila_locality_code",
-  "primary_employment_classification", "employment_status", "monthly_income",
-  "monthly_deductions", "monthly_deduction_amounts", "emergency_savings_runway", "liquid_emergency_savings", "monthly_debt_payment_percentage",
-  "monthly_essential_living_costs", "paying_off_debt", "credit_card_payment_behavior", "credit_card_revolving_months", "monthly_debt_payments", "protected_categories", "custom_seasonal_events",
-  "protected_category_costs", "high_expense_seasons", "low_expense_seasons", "saving_seasons", "has_dependents",
+  "questionnaire_version", "monthly_income", "emergency_savings_runway", "monthly_essential_living_costs",
+  "paying_off_debt", "monthly_debt_payment_percentage", "credit_card_revolving_months",
+  "high_expense_seasons", "low_expense_seasons", "saving_seasons", "custom_seasonal_events",
 ]);
 
-const ARRAY_ANSWER_KEYS = new Set(["monthly_deductions", "protected_categories", "high_expense_seasons", "low_expense_seasons", "saving_seasons"]);
-const AMOUNT_MAP_ANSWER_KEYS = new Set(["monthly_deduction_amounts", "protected_category_costs"]);
-const AMOUNT_MAP_OPTIONS: Record<string, readonly string[]> = {
-  monthly_deduction_amounts: ["tax", "sss", "philhealth", "pag_ibig", "salary_loan", "other"],
-  protected_category_costs: ["dependents_children", "dependents_elderly", "pwd", "solo_parent", "indigenous"],
-};
-const STRING_ANSWER_KEYS = new Set([...ONBOARDING_ANSWER_KEYS].filter((key) => !ARRAY_ANSWER_KEYS.has(key) && !AMOUNT_MAP_ANSWER_KEYS.has(key) && key !== "has_dependents" && key !== "custom_seasonal_events"));
+const ARRAY_ANSWER_KEYS = new Set(["high_expense_seasons", "low_expense_seasons", "saving_seasons"]);
+const STRING_ANSWER_KEYS = new Set([...ONBOARDING_ANSWER_KEYS].filter((key) => !ARRAY_ANSWER_KEYS.has(key) && key !== "custom_seasonal_events"));
 const EXPENSE_SEASONS = ["q1", "q2", "q3", "q4", "rainy_season", "back_to_school", "undas", "christmas_ber_months", "new_year", "summer", "annual_payments", "family_celebrations", "other", "none"];
 const ANSWER_OPTIONS: Record<string, readonly string[]> = {
   questionnaire_version: ["2"],
-  is_filipino: ["true", "false"],
-  metro_manila_presence: VALID_METRO_MANILA_PRESENCE,
-  primary_employment_classification: VALID_EMPLOYMENT_CLASSIFICATIONS,
-  employment_status: ["employed_full_time", "employed_part_time", "self_employed", "unemployed", "retired", "student"],
-  monthly_deductions: ["tax", "sss", "philhealth", "pag_ibig", "salary_loan", "other", "none"],
-  emergency_savings_runway: ["1_month", "2_months", "3_months", "more_than_3_months", "not_sure", "less_than_1_month", "1_to_3_months", "3_to_6_months", "more_than_6_months"],
-  credit_card_payment_behavior: ["no_credit_card", "never", "some_months", "every_month", "not_sure"],
+  emergency_savings_runway: ["1_month", "2_months", "3_months", "more_than_3_months", "not_sure"],
   paying_off_debt: ["true", "false"],
-  credit_card_revolving_months: ["no_credit_card", "always_before_due", "1_to_11_months", "over_a_year", ...Array.from({ length: 13 }, (_, months) => String(months)), "not_sure"],
-  protected_categories: ["dependents_children", "dependents_elderly", "pwd", "solo_parent", "indigenous", "none"],
+  credit_card_revolving_months: ["no_credit_card", "always_before_due", "1_to_11_months", "over_a_year"],
   high_expense_seasons: EXPENSE_SEASONS,
   low_expense_seasons: EXPENSE_SEASONS,
   saving_seasons: EXPENSE_SEASONS,
 };
-
-function amountMapIsComplete(rawAnswers: Record<string, unknown>, selectionKey: string, amountKey: string) {
-  const selections = rawAnswers[selectionKey];
-  const amounts = rawAnswers[amountKey];
-  if (!Array.isArray(selections) || !amounts || typeof amounts !== "object" || Array.isArray(amounts)) return false;
-  return selections
-    .filter((selection): selection is string => typeof selection === "string" && selection !== "none")
-    .every((selection) => typeof (amounts as Record<string, unknown>)[selection] === "string" && (amounts as Record<string, unknown>)[selection] !== "");
-}
 
 function validateOnboardingPayload(
   raw_answers: unknown,
@@ -66,21 +43,11 @@ function validateOnboardingPayload(
       if (ARRAY_ANSWER_KEYS.has(key) && (!Array.isArray(value) || value.some((item) => typeof item !== "string"))) {
         return `${key} must be an array of strings.`;
       }
-      if (AMOUNT_MAP_ANSWER_KEYS.has(key)) {
-        if (typeof value !== "object" || value === null || Array.isArray(value)) return `${key} must be an object of amounts.`;
-        if (Object.keys(value).some((amountKey) => !AMOUNT_MAP_OPTIONS[key]!.includes(amountKey))) {
-          return `Invalid ${key} entry.`;
-        }
-        if (Object.values(value).some((amount) => typeof amount !== "string" || !/^\d+$/.test(amount))) {
-          return `${key} amounts must be non-negative whole numbers.`;
-        }
-      }
       if (STRING_ANSWER_KEYS.has(key) && typeof value !== "string") return `${key} must be a string.`;
-      if (key === "has_dependents" && typeof value !== "boolean") return "has_dependents must be a boolean.";
       const options = ANSWER_OPTIONS[key];
       if (options && typeof value === "string" && value !== "" && !options.includes(value)) return `Invalid ${key}.`;
       if (options && Array.isArray(value) && value.some((item) => !options.includes(item) && !(EXPENSE_SEASONS === options && CUSTOM_EVENT_ID.test(item)))) return `Invalid ${key}.`;
-      if (["monthly_income", "liquid_emergency_savings", "monthly_debt_payments"].includes(key) && typeof value === "string" && value !== "" && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || !Number.isSafeInteger(Number(value) * 100))) {
+      if (key === "monthly_income" && typeof value === "string" && value !== "" && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || !Number.isSafeInteger(Number(value) * 100))) {
         return `${key} must be a non-negative whole number.`;
       }
       if (["monthly_essential_living_costs", "monthly_debt_payment_percentage"].includes(key) && typeof value === "string" && value !== "" && value !== "not_sure" && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || !Number.isSafeInteger(Number(value) * 100))) {
@@ -282,7 +249,6 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
     return;
   }
   const requiredFields = [
-    "display_name",
     "monthly_income",
     "emergency_savings_runway",
     "monthly_essential_living_costs",
@@ -294,12 +260,8 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
   ];
   const missing = requiredFields.filter((f) => {
     const v = rawAnswers[f];
-    if (["monthly_income", "liquid_emergency_savings"].includes(f))
-      return typeof v !== "string" || v === "";
     if (ARRAY_ANSWER_KEYS.has(f))
       return !Array.isArray(v) || v.length === 0;
-    if (AMOUNT_MAP_ANSWER_KEYS.has(f))
-      return typeof v !== "object" || v === null || Array.isArray(v);
     return typeof v !== "string" || v === "";
   });
   if (missing.length > 0) {
@@ -316,37 +278,6 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
       message: "Enter the percentage of monthly income allocated to debt.",
       fields: ["monthly_debt_payment_percentage"],
     });
-    return;
-  }
-
-
-  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-  if (typeof rawAnswers.date_of_birth === "string") {
-    if (!dateRegex.test(rawAnswers.date_of_birth)) {
-      response.status(400).json({ error: "Bad Request", message: "date_of_birth must be in YYYY-MM-DD format." });
-      return;
-    }
-    const [y, m, d] = rawAnswers.date_of_birth.split("-").map(Number) as [number, number, number];
-    const parsed = new Date(Date.UTC(y!, m! - 1, d!));
-    if (parsed.getUTCFullYear() !== y || parsed.getUTCMonth() + 1 !== m || parsed.getUTCDate() !== d) {
-      response.status(400).json({ error: "Bad Request", message: "date_of_birth must be a valid calendar date in YYYY-MM-DD format." });
-      return;
-    }
-  }
-  if (typeof rawAnswers.is_filipino === "string" && !["true", "false"].includes(rawAnswers.is_filipino)) {
-    response.status(400).json({ error: "Bad Request", message: "is_filipino must be 'true' or 'false'." });
-    return;
-  }
-  if (typeof rawAnswers.metro_manila_presence === "string" && !VALID_METRO_MANILA_PRESENCE.includes(rawAnswers.metro_manila_presence)) {
-    response.status(400).json({ error: "Bad Request", message: `Invalid metro_manila_presence. Must be one of: ${VALID_METRO_MANILA_PRESENCE.join(", ")}.` });
-    return;
-  }
-  if (typeof rawAnswers.monthly_income === "string" && !/^\d+$/.test(rawAnswers.monthly_income)) {
-    response.status(400).json({ error: "Bad Request", message: "monthly_income must be a non-negative whole number." });
-    return;
-  }
-  if (typeof rawAnswers.primary_employment_classification === "string" && !VALID_EMPLOYMENT_CLASSIFICATIONS.includes(rawAnswers.primary_employment_classification)) {
-    response.status(400).json({ error: "Bad Request", message: `Invalid primary_employment_classification. Must be one of: ${VALID_EMPLOYMENT_CLASSIFICATIONS.join(", ")}.` });
     return;
   }
 

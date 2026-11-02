@@ -15,7 +15,6 @@ export async function classifyFinancialCondition(
   const {
     source_updated_at: _sourceUpdatedAt,
     assessment_source: _assessmentSource,
-    self_reported_credit_card_behavior: _selfReportedCreditCardBehavior,
     ...classificationInput
   } = input;
   const requestBody = JSON.stringify({ request_id: crypto.randomUUID(), user_id: userId, ...classificationInput });

@@ -26,24 +26,6 @@ export const AUTH_ERRORS = {
   generic: "Something went wrong. Please try again.",
 } as const;
 
-export const VALID_METRO_MANILA_PRESENCE = [
-  "lives_in_metro_manila",
-  "works_in_metro_manila",
-  "lives_and_works_in_metro_manila",
-];
-
-export const VALID_EMPLOYMENT_CLASSIFICATIONS = [
-  "full_time_employee",
-  "part_time_employee",
-  "self_employed",
-  "freelancer",
-  "business_owner",
-  "entrepreneur",
-  "contractual_project_based",
-  "gig_worker",
-  "other",
-];
-
 export const VALID_CONSENT_KINDS = [
   "data_collection",
   "personalization",
@@ -77,7 +59,6 @@ export const ONBOARDING_ERRORS = {
   no_active_session: "No active onboarding session found.",
   submit_failed: "Failed to submit onboarding session.",
   submit_not_confirmed: "You must confirm data use before submitting.",
-  eligibility_incomplete: "Your eligibility profile must be complete before submitting.",
 } as const;
 
 export const ONBOARDING_STATUSES = [
