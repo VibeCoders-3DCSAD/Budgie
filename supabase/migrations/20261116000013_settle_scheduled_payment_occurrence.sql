@@ -1,6 +1,6 @@
 -- A biller payment can settle its occurrence in full even when it is less than the scheduled amount
 -- (a variable bill such as electricity). The flag is the only field a payment record may ever update.
-ALTER TABLE public.scheduled_payment_records ADD COLUMN settles_occurrence boolean NOT NULL DEFAULT false;
+ALTER TABLE public.scheduled_payment_records ADD COLUMN IF NOT EXISTS settles_occurrence boolean NOT NULL DEFAULT false;
 
 -- Same function as 20261115000000, except a record update may set settles_occurrence and nothing else.
 CREATE OR REPLACE FUNCTION public.apply_scheduled_payment_sync_operation(
