@@ -78,24 +78,3 @@ export function validUpdateMePayload() {
     },
   };
 }
-
-export function validEligibilityPayload() {
-  return {
-    payload: {
-      date_of_birth: "1996-06-15",
-      is_filipino: true,
-      metro_manila_presence: "lives_in_metro_manila",
-      metro_manila_locality_code: "quezon_city",
-      primary_employment_classification: "full_time_employee",
-    },
-  };
-}
-
-export function validDeviceTokenPayload() {
-  return {
-    payload: {
-      device_token: "fcm-token-abc-123-def-456",
-      platform: "android",
-    },
-  };
-}

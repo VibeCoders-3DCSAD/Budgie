@@ -37,13 +37,6 @@ async function getCachedLocalities(
   return cache.localities;
 }
 
-export async function getValidLocalities(
-  authenticatedSupabase: SupabaseClient,
-): Promise<string[]> {
-  const localities = await getCachedLocalities(authenticatedSupabase);
-  return localities.map((row) => row.code);
-}
-
 export async function getValidLocalityNames(
   authenticatedSupabase: SupabaseClient,
 ): Promise<string[]> {

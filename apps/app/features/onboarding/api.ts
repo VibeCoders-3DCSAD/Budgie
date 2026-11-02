@@ -56,14 +56,6 @@ export function getProfileAssignment(accessToken: string) {
   );
 }
 
-export function updateEligibilityProfile(accessToken: string, payload: Record<string, unknown>) {
-  return apiFetch<{ error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/eligibility-profile",
-    { method: "PATCH", body: { payload } },
-  );
-}
-
 export function selectProfileAssignment(accessToken: string, profileLabel: string, rejectCurrent: boolean) {
   return apiFetch<{ error?: string; message?: string }>(
     accessToken,
@@ -85,13 +77,6 @@ export function rejectProfileAssignment(accessToken: string, assignmentId: strin
     accessToken,
     "/odin/api/profile/assignment/reject",
     { method: "POST", body: { payload: { assignment_id: assignmentId, override_reason: reason } } },
-  );
-}
-
-export function getEligibilityProfile(accessToken: string) {
-  return apiFetch<{ payload?: { profile: { eligibility_confirmed_at: string | null } | null }; error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/eligibility-profile",
   );
 }
 

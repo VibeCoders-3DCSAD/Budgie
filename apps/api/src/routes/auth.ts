@@ -107,55 +107,6 @@ async function bootstrapAuthenticatedUser(
   };
 }
 
-router.post("/google", async (request: Request, response: Response) => {
-  const googleIdToken = request.body?.payload?.googleIdToken;
-
-  if (typeof googleIdToken !== "string" || googleIdToken.trim() === "") {
-    response.status(400).json({
-      error: "Bad Request",
-      message: AUTH_ERRORS.google_id_token_required,
-    });
-    return;
-  }
-
-  const { data, error } = await supabase.auth.signInWithIdToken({
-    provider: "google",
-    token: googleIdToken.trim(),
-  });
-
-  if (error || !data.user || !data.session?.access_token) {
-    response.status(401).json({
-      error: "Unauthorized",
-      message: AUTH_ERRORS.google_failed,
-    });
-    return;
-  }
-
-  let bootstrapPayload: Awaited<ReturnType<typeof bootstrapAuthenticatedUser>>;
-  try {
-    bootstrapPayload = await bootstrapAuthenticatedUser(
-      data.user.id,
-      data.session.access_token,
-    );
-  } catch {
-    response.status(500).json({
-      error: "Internal Server Error",
-      message: AUTH_ERRORS.bootstrap_failed,
-    });
-    return;
-  }
-
-  response.status(200).json({
-    payload: {
-      session: {
-        access_token: data.session.access_token,
-        refresh_token: data.session.refresh_token,
-      },
-      ...bootstrapPayload,
-    },
-  });
-});
-
 router.post("/register", async (request: Request, response: Response) => {
   const { email, password, display_name } = request.body?.payload ?? {};
   const normalizedEmail = normalizeEmail(email);

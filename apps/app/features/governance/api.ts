@@ -1,60 +1,7 @@
-import { API_BASE_URL, REQUEST_TIMEOUT_MS } from "../../lib/api";
-import type { AccountDeletionRequest, ConsentRecord, DataExportRequest, PrivacySettings } from "./types";
+import type { AccountDeletionRequest, ConsentRecord, DataExportRequest } from "./types";
 import { hasCurrentTermsConsent } from "./constants";
 import type { SeasonalPreferences } from "@odin/spending-insights/seasons";
-import { authorizedFetch } from "../../lib/localAccess";
 import { apiFetch } from "../../lib/helpers/apiFetch";
-
-export async function getPrivacySettings(accessToken: string) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-  try {
-    const response = await authorizedFetch(`${API_BASE_URL}/odin/api/privacy/settings`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      signal: controller.signal,
-    });
-    let body = {};
-    try {
-      body = await response.json();
-    } catch {}
-    return { response, body } as {
-      response: Response;
-      body: { payload?: PrivacySettings; error?: string; message?: string };
-    };
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
-
-export async function updatePrivacySettings(
-  accessToken: string,
-  payload: Partial<PrivacySettings>,
-  timeoutMs?: number,
-) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs ?? 4_000);
-  try {
-    const response = await authorizedFetch(`${API_BASE_URL}/odin/api/privacy/settings`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ payload }),
-      signal: controller.signal,
-    });
-    let body = {};
-    try {
-      body = await response.json();
-    } catch {}
-    return { response, body } as {
-      response: Response;
-      body: { payload?: { privacy_settings: { updated_at: string } }; error?: string; message?: string };
-    };
-  } finally {
-    clearTimeout(timeoutId);
-  }
-}
 
 export function getConsents(accessToken: string) {
   return apiFetch<{ payload?: { consents: ConsentRecord[] }; error?: string; message?: string }>(

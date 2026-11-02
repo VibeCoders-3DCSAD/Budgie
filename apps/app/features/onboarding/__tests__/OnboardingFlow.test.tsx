@@ -12,7 +12,6 @@ const mockShowToast = jest.fn();
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 const mockSubmit = jest.fn();
 const mockUpdate = jest.fn();
-const mockEligibility = jest.fn();
 const mockAnswers = {
   display_name: "Juan", monthly_income: "50000", emergency_savings_runway: "2_months", monthly_essential_living_costs: "30000", paying_off_debt: "false", credit_card_revolving_months: "0", high_expense_seasons: ["christmas_ber_months"], low_expense_seasons: ["summer"], saving_seasons: ["summer"],
 };
@@ -20,8 +19,6 @@ jest.mock("../api", () => ({
   getCurrentSession: async () => ({ response: { ok: true }, body: { payload: { session: { id: "session-1", status: "in_progress", current_step_key: "review", raw_answers: mockAnswers } } } }),
   updateSession: async (...args: unknown[]) => { mockUpdate(...args); return { response: { ok: true }, body: {} }; },
   submitSession: (...args: unknown[]) => mockSubmit(...args),
-  updateEligibilityProfile: (...args: unknown[]) => mockEligibility(...args),
-  getEligibilityProfile: async () => ({ response: { ok: true }, body: {} }),
 }));
 
 beforeEach(() => mockUpdate.mockClear());
@@ -93,7 +90,6 @@ it("shares custom events across questions and includes them in review and submis
 });
 
 it("shows the classification returned when finalizing the questionnaire", async () => {
-  mockEligibility.mockResolvedValue({ response: { ok: true }, body: {} });
   mockSubmit.mockResolvedValue({ response: { ok: true }, body: { payload: {
     classification_available: true,
     assessment: { output_snapshot: {
@@ -110,7 +106,6 @@ it("shows the classification returned when finalizing the questionnaire", async 
   expect(view.getByText("Money left over")).toBeTruthy();
   expect(view.getByText("Paid in full")).toBeTruthy();
   expect(view.queryByText("Research eligibility")).toBeNull();
-  expect(mockEligibility).not.toHaveBeenCalled();
 });
 
 it("explains an unavailable classification and still lets the user continue", async () => {
