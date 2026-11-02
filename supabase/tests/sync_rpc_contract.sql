@@ -24,19 +24,47 @@ BEGIN
     RAISE EXCEPTION 'a nullable inactive Financial Plan debt reservation target must be valid';
   END IF;
 
-  IF pg_get_functiondef('public.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
+  IF pg_get_functiondef('private.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
      NOT LIKE '%NULLIF(a.value->>''categoryId'', '''') IS NULL%' THEN
     RAISE EXCEPTION 'Financial Plan sync must accept a null inactive allocation target';
   END IF;
 
-  IF pg_get_functiondef('public.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
+  IF pg_get_functiondef('private.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
      NOT LIKE '%NULLIF(r.value->>''debtAccountId'', '''') IS NULL%' THEN
     RAISE EXCEPTION 'Financial Plan sync must accept a null inactive debt reservation target';
   END IF;
 
-  IF pg_get_functiondef('public.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
+  IF pg_get_functiondef('private.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
      NOT LIKE '%Financial Plans can only cover the current calendar month or the one that just ended%' THEN
     RAISE EXCEPTION 'Financial Plan sync must only accept the current calendar month or the one that just ended';
+  END IF;
+
+  IF to_regprocedure('public.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)') IS NOT NULL THEN
+    RAISE EXCEPTION 'the Financial Plan sync base must not live in the exposed public schema';
+  END IF;
+
+  IF has_function_privilege('authenticated', 'private.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)', 'EXECUTE')
+     OR has_function_privilege('anon', 'private.apply_financial_plan_sync_operation_base(uuid, text, text, uuid, text, integer, text[], jsonb)', 'EXECUTE') THEN
+    RAISE EXCEPTION 'the Financial Plan sync base is executable by an API role';
+  END IF;
+
+  IF pg_get_functiondef('public.apply_financial_plan_sync_operation(uuid, text, text, uuid, text, integer, text[], jsonb)'::regprocedure)
+     NOT LIKE '%private.apply_financial_plan_sync_operation_base(%' THEN
+    RAISE EXCEPTION 'the Financial Plan sync wrapper must call the private base';
+  END IF;
+
+  IF EXISTS (
+    SELECT 1
+      FROM (VALUES
+        ('public.write_daily_financial_report(uuid, date, text, text, date, jsonb, jsonb)'),
+        ('public.seed_hfce_taxonomy_for_user(uuid)'),
+        ('public.seed_hfce_subcategories_for_user(uuid)')
+      ) AS caller_scoped(signature)
+      CROSS JOIN (VALUES ('anon'), ('authenticated')) AS api(role_name)
+     WHERE to_regprocedure(caller_scoped.signature) IS NOT NULL
+       AND has_function_privilege(api.role_name, caller_scoped.signature, 'EXECUTE')
+  ) THEN
+    RAISE EXCEPTION 'a function that trusts p_user_id is executable by an API role';
   END IF;
 
   IF has_schema_privilege('authenticated', 'private', 'USAGE') THEN
