@@ -361,9 +361,13 @@ router.post(
   "/logout",
   requireAuth,
   async (request: AuthenticatedRequest, response: Response) => {
-    const { error } = await request.supabase!.auth.signOut();
+    // The request client holds no SDK session, so auth.signOut() would skip the server call.
+    // Revoke this device's session directly; its refresh token stops minting new access tokens.
+    const { error } = await request.supabase!.auth.admin.signOut(request.accessToken!, "local");
 
-    if (error) {
+    // A session the server no longer recognises is already logged out.
+    if (error && ![401, 403, 404].includes(error.status ?? 0)) {
+      console.error("Logout revocation failed", { user_id: request.userId, status: error.status, code: error.code, error });
       response.status(500).json({
         error: "Internal Server Error",
         message: AUTH_ERRORS.logout_failed,
