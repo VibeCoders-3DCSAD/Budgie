@@ -5,76 +5,10 @@ import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { ONBOARDING_ERRORS } from "../lib/constants.js";
 import { getServiceRoleClient } from "../lib/supabase.js";
 import { createOnboardingFinancialConditionAssessment } from "../services/classification/financialConditionAssessmentService.js";
-import { CUSTOM_EVENT_ID } from "@odin/spending-insights/seasons.js";
-import { normalizeSeasonalAnswers, validateSeasonalAnswers } from "../services/onboarding/seasonalAnswers.js";
+import { normalizeSeasonalAnswers } from "../services/onboarding/seasonalAnswers.js";
+import { onboardingSubmissionError, validateOnboardingPayload } from "../services/onboarding/onboardingValidation.js";
 
 const router = Router();
-
-const ONBOARDING_ANSWER_KEYS = new Set([
-  "questionnaire_version", "monthly_income", "emergency_savings_runway", "monthly_essential_living_costs",
-  "paying_off_debt", "monthly_debt_payment_percentage", "credit_card_revolving_months",
-  "high_expense_seasons", "low_expense_seasons", "saving_seasons", "custom_seasonal_events",
-]);
-
-const ARRAY_ANSWER_KEYS = new Set(["high_expense_seasons", "low_expense_seasons", "saving_seasons"]);
-const STRING_ANSWER_KEYS = new Set([...ONBOARDING_ANSWER_KEYS].filter((key) => !ARRAY_ANSWER_KEYS.has(key) && key !== "custom_seasonal_events"));
-const EXPENSE_SEASONS = ["q1", "q2", "q3", "q4", "rainy_season", "back_to_school", "undas", "christmas_ber_months", "new_year", "summer", "annual_payments", "family_celebrations", "other", "none"];
-const ANSWER_OPTIONS: Record<string, readonly string[]> = {
-  questionnaire_version: ["2"],
-  emergency_savings_runway: ["1_month", "2_months", "3_months", "more_than_3_months", "not_sure"],
-  paying_off_debt: ["true", "false"],
-  credit_card_revolving_months: ["no_credit_card", "always_before_due", "1_to_11_months", "over_a_year"],
-  high_expense_seasons: EXPENSE_SEASONS,
-  low_expense_seasons: EXPENSE_SEASONS,
-  saving_seasons: EXPENSE_SEASONS,
-};
-
-function validateOnboardingPayload(
-  raw_answers: unknown,
-  current_step_key: unknown,
-  checkReferences = true,
-): string | null {
-  if (raw_answers !== undefined && (typeof raw_answers !== "object" || raw_answers === null || Array.isArray(raw_answers))) {
-    return "raw_answers must be a plain object when provided.";
-  }
-  if (raw_answers && typeof raw_answers === "object" && !Array.isArray(raw_answers)) {
-    for (const [key, value] of Object.entries(raw_answers)) {
-      if (!ONBOARDING_ANSWER_KEYS.has(key)) return `Unsupported onboarding answer: ${key}.`;
-      if (ARRAY_ANSWER_KEYS.has(key) && (!Array.isArray(value) || value.some((item) => typeof item !== "string"))) {
-        return `${key} must be an array of strings.`;
-      }
-      if (STRING_ANSWER_KEYS.has(key) && typeof value !== "string") return `${key} must be a string.`;
-      const options = ANSWER_OPTIONS[key];
-      if (options && typeof value === "string" && value !== "" && !options.includes(value)) return `Invalid ${key}.`;
-      if (options && Array.isArray(value) && value.some((item) => !options.includes(item) && !(EXPENSE_SEASONS === options && CUSTOM_EVENT_ID.test(item)))) return `Invalid ${key}.`;
-      if (key === "monthly_income" && typeof value === "string" && value !== "" && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || !Number.isSafeInteger(Number(value) * 100))) {
-        return `${key} must be a non-negative whole number.`;
-      }
-      if (["monthly_essential_living_costs", "monthly_debt_payment_percentage"].includes(key) && typeof value === "string" && value !== "" && value !== "not_sure" && (!/^\d+$/.test(value) || !Number.isSafeInteger(Number(value)) || !Number.isSafeInteger(Number(value) * 100))) {
-        return `${key} must be a non-negative whole number or not_sure.`;
-      }
-      if (key === "monthly_debt_payment_percentage" && value !== "not_sure" && Number(value) > 100) return "Debt payment percentage must be between 0 and 100, or not_sure.";
-    }
-  }
-  if (raw_answers && typeof raw_answers === "object" && !Array.isArray(raw_answers)) {
-    const answers = raw_answers as Record<string, unknown>;
-    const seasonalError = validateSeasonalAnswers(answers, checkReferences);
-    if (seasonalError) return seasonalError;
-    for (const key of ["high_expense_seasons", "low_expense_seasons", "saving_seasons"]) {
-      const selections = answers[key];
-      if (Array.isArray(selections) && selections.includes("none") && selections.length > 1) return `${key} cannot combine none with other seasons.`;
-    }
-    const higher = answers.high_expense_seasons;
-    const lower = answers.low_expense_seasons;
-    if (Array.isArray(higher) && Array.isArray(lower) && lower.some((season) => season !== "none" && higher.includes(season))) {
-      return "A season cannot be selected for both higher and lower expenses.";
-    }
-  }
-  if (current_step_key !== undefined && current_step_key !== null && typeof current_step_key !== "string") {
-    return "current_step_key must be a string when provided.";
-  }
-  return null;
-}
 
 router.post("/onboarding/sessions", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
   const userId = request.userId!;
@@ -248,36 +182,9 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
     response.status(400).json({ error: "Bad Request", message: rawAnswersValidationError });
     return;
   }
-  const requiredFields = [
-    "monthly_income",
-    "emergency_savings_runway",
-    "monthly_essential_living_costs",
-    "paying_off_debt",
-    "credit_card_revolving_months",
-    "high_expense_seasons",
-    "low_expense_seasons",
-    "saving_seasons",
-  ];
-  const missing = requiredFields.filter((f) => {
-    const v = rawAnswers[f];
-    if (ARRAY_ANSWER_KEYS.has(f))
-      return !Array.isArray(v) || v.length === 0;
-    return typeof v !== "string" || v === "";
-  });
-  if (missing.length > 0) {
-    response.status(400).json({
-      error: "Bad Request",
-      message: "Onboarding questionnaire is incomplete. Please complete all required steps before submitting.",
-      fields: missing,
-    });
-    return;
-  }
-  if (rawAnswers.paying_off_debt === "true" && (typeof rawAnswers.monthly_debt_payment_percentage !== "string" || rawAnswers.monthly_debt_payment_percentage === "")) {
-    response.status(400).json({
-      error: "Bad Request",
-      message: "Enter the percentage of monthly income allocated to debt.",
-      fields: ["monthly_debt_payment_percentage"],
-    });
+  const submissionError = onboardingSubmissionError(rawAnswers);
+  if (submissionError) {
+    response.status(400).json({ error: "Bad Request", ...submissionError });
     return;
   }
 

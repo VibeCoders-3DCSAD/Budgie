@@ -1,10 +1,13 @@
 import { CUSTOM_EVENT_ID, customEventsError, normalizeCustomEvents, SEASON_PRESETS, LEGACY_SEASON_LABELS, type SeasonalPreferences } from "@odin/spending-insights/seasons.js";
 
+// Every season a questionnaire answer may name, besides custom events.
+export const SEASON_ANSWER_KEYS: readonly string[] = [...SEASON_PRESETS.map((preset) => preset.key), ...Object.keys(LEGACY_SEASON_LABELS), "none"];
+
 // Settings exposes only seasonal preferences, never the classification answers.
 export function savedSeasonalPreferences(value: unknown): SeasonalPreferences {
   const answers = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
   const events = normalizeCustomEvents(answers.custom_seasonal_events);
-  const allowed = new Set([...SEASON_PRESETS.map((preset) => preset.key), ...events.map((event) => event.id), ...Object.keys(LEGACY_SEASON_LABELS), "none"]);
+  const allowed = new Set([...SEASON_ANSWER_KEYS, ...events.map((event) => event.id)]);
   const selections = (key: string): string[] => {
     const values = answers[key];
     return Array.isArray(values) ? [...new Set(values.filter((item): item is string => typeof item === "string" && allowed.has(item)))].slice(0, 40) : [];
