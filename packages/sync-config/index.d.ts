@@ -5,6 +5,7 @@ export const SYNC_REJECTION_REASONS: Readonly<{
   recordDeleted: "record_deleted";
   recordNotFound: "record_not_found";
   referenceUnavailable: "reference_unavailable";
+  invalidOperation: "invalid_operation";
   rejected: "sync_rejected";
 }>;
 

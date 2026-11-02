@@ -33,6 +33,11 @@ function isChangedFields(value: unknown): boolean {
   return Array.isArray(value) && value.length <= MAX_CHANGED_FIELDS && value.every(isBoundedString);
 }
 
+// Enough of an operation to report a result for it, even when the rest of it is invalid.
+export function hasOperationId(value: unknown): value is { operation_id: string } {
+  return isPlainObject(value) && isBoundedString(value.operation_id) && value.operation_id.length > 0;
+}
+
 export function isPushOperation(value: unknown): boolean {
   if (!value || typeof value !== "object") return false;
   const operation = value as Record<string, unknown>;

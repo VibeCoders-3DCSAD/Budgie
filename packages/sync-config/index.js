@@ -8,6 +8,8 @@ const SYNC_REJECTION_REASONS = Object.freeze({
   recordDeleted: "record_deleted",
   recordNotFound: "record_not_found",
   referenceUnavailable: "reference_unavailable",
+  // The operation failed request validation; resending it unchanged can never succeed.
+  invalidOperation: "invalid_operation",
   rejected: "sync_rejected",
 });
 

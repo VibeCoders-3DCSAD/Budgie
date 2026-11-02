@@ -9,7 +9,8 @@ import {
   registerDevice,
   isDeviceActive,
 } from "../services/sync/syncService.js";
-import { isCursorMap, isDeviceId, isPushOperation, MAX_PUSH_OPERATIONS } from "../services/sync/syncRequestValidation.js";
+import { hasOperationId, isCursorMap, isDeviceId, isPushOperation, MAX_PUSH_OPERATIONS } from "../services/sync/syncRequestValidation.js";
+import { SYNC_REJECTION_REASONS } from "@odin/sync-config";
 
 const router = Router();
 
@@ -43,10 +44,10 @@ router.post(
         return;
       }
 
-       if (!Array.isArray(operations) || operations.length === 0 || operations.length > MAX_PUSH_OPERATIONS || operations.some((operation) => !isPushOperation(operation))) {
+      if (!Array.isArray(operations) || operations.length === 0 || operations.length > MAX_PUSH_OPERATIONS || operations.some((operation) => !hasOperationId(operation))) {
         response.status(400).json({
           error: "Bad Request",
-           message: `operations must contain 1-${MAX_PUSH_OPERATIONS} items`,
+          message: `operations must contain 1-${MAX_PUSH_OPERATIONS} items, each with an operation_id`,
         });
         return;
       }
@@ -63,7 +64,24 @@ router.post(
 
       console.log("[sync/push] start", { userId, device_id, opCount: operations.length });
 
-      const results = await pushOperations(supabase, userId, device_id, operations as never[]);
+      // A malformed operation is rejected on its own, so the valid ones sent with it still apply
+      // instead of the whole batch failing and every operation in it spending a retry.
+      const validOperations = operations.filter(isPushOperation);
+      const invalidResults = operations
+        .filter((operation) => !isPushOperation(operation))
+        .map((operation) => ({
+          operation_id: (operation as { operation_id: string }).operation_id,
+          status: "rejected" as const,
+          reason: SYNC_REJECTION_REASONS.invalidOperation,
+        }));
+      if (invalidResults.length > 0) {
+        console.warn("[sync/push] invalid operations", { userId, device_id, operation_ids: invalidResults.map((result) => result.operation_id) });
+      }
+
+      const appliedResults = validOperations.length > 0
+        ? await pushOperations(supabase, userId, device_id, validOperations as never[])
+        : [];
+      const results = [...invalidResults, ...appliedResults];
 
        const summary = { applied: 0, rejected: 0, conflict: 0, duplicate: 0 };
       for (const r of results) summary[r.status]++;
