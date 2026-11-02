@@ -2,7 +2,8 @@ import { planForecastTransactions } from "./helpers/forecastTransactions.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast } from "../forecast/forecastService.js";
 import { FinancialPlanUnavailableError } from "./errors.js";
-import { excludeUnusualTransactions, financialPlanPeriod, forecastCoversPlanPeriod, forecastHistoryStart } from "./recommendationService.js";
+import { excludeUnusualTransactions, forecastCoversPlanPeriod } from "./recommendationService.js";
+import { financialPlanPeriod, forecastHistoryStart } from "./period.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend } from "./helpers/recurringSpending.js";
 
 const MAX_HISTORY = 2_000;

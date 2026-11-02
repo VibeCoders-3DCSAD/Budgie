@@ -3,7 +3,8 @@ import { validateCommitmentBudgets } from "../services/financialPlan/commitments
 import { getFinancialPlanCommitments } from "../services/financialPlan/commitmentsPreview.js";
 import { getFinancialPlanForecast } from "../services/financialPlan/planForecast.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
-import { FinancialPlanInputError, FinancialPlanUnavailableError, financialPlanPeriod, getFinancialPlanRecommendation } from "../services/financialPlan/recommendationService.js";
+import { FinancialPlanInputError, FinancialPlanUnavailableError, getFinancialPlanRecommendation } from "../services/financialPlan/recommendationService.js";
+import { financialPlanPeriod } from "../services/financialPlan/period.js";
 import { FinancialPlanMlError } from "../services/financialPlan/mlAdapter.js";
 import { explainFinancialPlanRequest, FinancialPlanExplanationRequestError, parseFinancialPlanExplanationRequest } from "../services/financialPlan/explanationRequest.js";
 

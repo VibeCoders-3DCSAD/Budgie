@@ -1,3 +1,4 @@
+import { manilaMonthStart, manilaToday, manilaYearMonth } from "../../lib/date/manila.js";
 import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
 
 export type ForecastTransaction = {
@@ -98,7 +99,7 @@ export function parseForecastRequest(value: unknown): ForecastRequest {
 
 function parseAsOf(value: unknown): string {
   if (typeof value !== "string" || !ISO_DATE.test(value) || Number.isNaN(Date.parse(`${value}T00:00:00Z`))) throw new ForecastValidationError("asOf is invalid");
-  if (value > manilaClock(new Date()).toISOString().slice(0, 10)) throw new ForecastValidationError("asOf cannot be in the future");
+  if (value > manilaToday()) throw new ForecastValidationError("asOf cannot be in the future");
   return value;
 }
 
@@ -188,20 +189,11 @@ function quarterOf(month: string): string {
   return `${month.slice(0, 4)}Q${Math.floor((Number(month.slice(5, 7)) - 1) / MONTHS_PER_QUARTER) + 1}`;
 }
 
-// Forecast months follow the Asia/Manila calendar. The Philippines has no daylight saving time, so shifting
-// by a fixed +08:00 and reading the UTC fields gives the Philippine date.
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-function manilaClock(now: Date): Date {
-  return new Date(now.getTime() + MANILA_OFFSET_MS);
-}
-
 // The current month, so it can be compared with its actual spending so far, through the end of the third
 // quarter after next month's. The opening quarter may be partial; December asks for thirteen months.
 export function forecastMonths(now = new Date()): string[] {
-  const manila = manilaClock(now);
-  const year = manila.getUTCFullYear();
-  const currentMonthIndex = manila.getUTCMonth();
+  // Forecast months follow the Asia/Manila calendar.
+  const { year, monthIndex: currentMonthIndex } = manilaYearMonth(now);
   const nextMonthIndex = currentMonthIndex + 1;
   const endIndex = Math.floor(nextMonthIndex / MONTHS_PER_QUARTER) * MONTHS_PER_QUARTER + FORECAST_QUARTERS * MONTHS_PER_QUARTER;
   return Array.from({ length: endIndex - currentMonthIndex }, (_, index) => utcMonth(year, currentMonthIndex + index));
@@ -249,8 +241,7 @@ const STALE_CATEGORY_MONTHS = 6;
 const BASELINE_LOOKBACK_MONTHS = 12;
 
 function monthsAgo(now: Date, months: number): string {
-  const manila = manilaClock(now);
-  return new Date(Date.UTC(manila.getUTCFullYear(), manila.getUTCMonth() - months, 1)).toISOString().slice(0, 7);
+  return manilaMonthStart(months, now).slice(0, 7);
 }
 
 function isSupportedExpense(transaction: ForecastTransaction): boolean {

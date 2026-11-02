@@ -19,6 +19,7 @@ import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-in
 import { recurringMonthSpend } from "@odin/spending-insights/recurringMonths.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend, type AnomalyEvaluation } from "./helpers/recurringSpending.js";
 import { currentCalendarMonth, MANILA_TIME_ZONE } from "../../lib/date/manila.js";
+import { financialPlanPeriod, forecastHistoryStart } from "./period.js";
 
 // Matches the most transactions a forecast request accepts, so a busy year is not cut short.
 const MAX_HISTORY = 2_000;
@@ -53,7 +54,6 @@ function selectEligibleDebt(debts: Debt[], strategy: "avalanche" | "snowball", p
   })[0]?.id ?? null;
 }
 
-
 export function isFinancialPlanInfeasible(availableCentavos: number, minimumRequiredCentavos: number): boolean {
   return availableCentavos <= 0 || minimumRequiredCentavos > availableCentavos;
 }
@@ -81,12 +81,6 @@ export function excludeUnusualTransactions<T extends { id: string }>(transaction
   return transactions.filter((transaction) => !unusualTransactionIds.has(transaction.id));
 }
 
-// The first day of the twelfth Manila month before this one, where the Spending Forecast's history starts.
-export function forecastHistoryStart(now = new Date()): string {
-  const { start } = currentCalendarMonth(now);
-  return new Date(Date.UTC(Number(start.slice(0, 4)), Number(start.slice(5, 7)) - 13, 1)).toISOString().slice(0, 10);
-}
-
 function latestSourceUpdate(...groups: unknown[][]): string | null {
   const updates = groups.flatMap((group) => group.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
@@ -96,25 +90,10 @@ function latestSourceUpdate(...groups: unknown[][]): string | null {
   return updates.sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
 }
 
-export function financialPlanPeriod(planMonth?: string): { start: string; end: string } {
-  if (planMonth === undefined) return currentCalendarMonth();
-  if (process.env.NODE_ENV === "production" || !/^20\d{2}-(0[1-9]|1[0-2])$/.test(planMonth)) {
-    throw new FinancialPlanInputError("Plan month overrides are only available in development with a valid YYYY-MM month");
-  }
-  return currentCalendarMonth(new Date(`${planMonth}-01T00:00:00+08:00`));
-}
-
 // The budget optimizer rejects a forecast whose month differs from the plan period.
 export function forecastCoversPlanPeriod(forecast: ForecastPayload, period: { start: string }): boolean {
   return forecast.snapshot.month === period.start.slice(0, 7);
 }
-
-export function manilaToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
-}
-
-
-
 
 function fallbackForecast(period: { start: string; end: string }, categories: MlPlanCategory[]): MlExpenseForecastSnapshot {
   return {

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { financialPlanPeriod } from "./recommendationService.js";
+import { financialPlanPeriod } from "./period.js";
 import { FinancialPlanUnavailableError } from "./errors.js";
 import { DEBT_COMMITMENT_FIELDS, SAVINGS_COMMITMENT_FIELDS, debtCommitments, savingsCommitments, statementCommitments } from "./commitments.js";
 import { scheduledPaymentReservations, type ScheduledPaymentRow } from "./scheduledPaymentDates.js";

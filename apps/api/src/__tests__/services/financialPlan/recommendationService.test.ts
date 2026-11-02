@@ -1,5 +1,5 @@
 import { currentCalendarMonth } from "../../../lib/date/manila.js";
-import { applyFinancialPlanPriorityWeights, excludeUnusualTransactions, financialPlanPriorityGroup, forecastCoversPlanPeriod, isFinancialPlanInfeasible, manilaToday, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
+import { applyFinancialPlanPriorityWeights, excludeUnusualTransactions, financialPlanPriorityGroup, forecastCoversPlanPeriod, isFinancialPlanInfeasible, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
 
 describe("Financial Plan feasibility", () => {
   it("marks a 5,000-peso plan infeasible when required minimums exceed it", () => {
@@ -75,11 +75,5 @@ describe("Financial Plan period", () => {
     const forecast = (month: string) => ({ snapshot: { month } }) as Parameters<typeof forecastCoversPlanPeriod>[0];
     expect(forecastCoversPlanPeriod(forecast("2026-10"), { start: "2026-10-01" })).toBe(true);
     expect(forecastCoversPlanPeriod(forecast("2026-11"), { start: "2026-10-01" })).toBe(false);
-  });
-});
-
-describe("Financial Plan commitment payments", () => {
-  it("uses the Manila date for today", () => {
-    expect(manilaToday(new Date("2026-10-14T16:30:00.000Z"))).toBe("2026-10-15");
   });
 });
