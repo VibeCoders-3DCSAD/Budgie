@@ -1,3 +1,5 @@
+import { SYNC_REJECTION_REASONS } from "@odin/sync-config";
+
 type SyncQueueDatabase = {
   runAsync(sql: string, ...params: unknown[]): Promise<unknown>;
 };
@@ -40,7 +42,7 @@ export async function rebaseLegacyDebtPriorityConflict(
   if (
     operation?.entity !== "user_debt_priorities"
     || operation.base_version !== null
-    || conflict.reason !== "debt priority version changed"
+    || conflict.reason !== SYNC_REJECTION_REASONS.versionConflict
     || !Number.isSafeInteger(conflict.current_version)
   ) {
     return false;

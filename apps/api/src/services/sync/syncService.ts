@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { PULL_PAGE_SIZE } from "@odin/sync-config";
+import { PULL_PAGE_SIZE, SYNC_REJECTION_REASONS } from "@odin/sync-config";
 import { prepareOperation, syncRpcFor } from "./syncApplyOperation.js";
+import { publicSyncReason } from "./syncReasons.js";
 
 type PushOperation = {
   operation_id: string;
@@ -33,7 +34,6 @@ type TableCursor = { ts: string; id: string };
 
 type PullCursors = Record<string, TableCursor>;
 
-const CLIENT_SYNC_FAILURE_REASON = "Sync operation rejected";
 const EDIT_HISTORY_FAILURE_REASON = "sync_operation_rejected";
 
 export const SYNCED_TABLES = [
@@ -132,7 +132,7 @@ export async function pushOperations(
       results.push({
         operation_id: op.operation_id,
          status,
-          reason: status === "rejected" || status === "conflict" ? result.reason ?? CLIENT_SYNC_FAILURE_REASON : undefined,
+          reason: status === "rejected" || status === "conflict" ? publicSyncReason(result.reason) : undefined,
           current_version: typeof result.current_version === "number" ? result.current_version : undefined,
         conflicted_fields: result.conflicted_fields ?? undefined,
       });
@@ -159,7 +159,7 @@ export async function pushOperations(
       results.push({
         operation_id: op.operation_id,
         status: "rejected",
-          reason: CLIENT_SYNC_FAILURE_REASON,
+          reason: SYNC_REJECTION_REASONS.rejected,
       });
     }
   }

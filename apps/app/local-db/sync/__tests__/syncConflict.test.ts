@@ -33,7 +33,7 @@ describe("rebaseLegacyDebtPriorityConflict", () => {
       base_version: null,
     }, {
       operation_id: "operation-1",
-      reason: "debt priority version changed",
+      reason: "version_conflict",
       current_version: 3,
     })).resolves.toBe(true);
 
@@ -53,7 +53,7 @@ describe("rebaseLegacyDebtPriorityConflict", () => {
       base_version: 2,
     }, {
       operation_id: "operation-1",
-      reason: "debt priority version changed",
+      reason: "version_conflict",
       current_version: 3,
     })).resolves.toBe(false);
 
