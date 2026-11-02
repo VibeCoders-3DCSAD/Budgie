@@ -3,7 +3,8 @@ BEGIN;
 INSERT INTO auth.users (id) VALUES ('5d000000-0000-4000-8000-000000000001'), ('5d000000-0000-4000-8000-000000000002');
 INSERT INTO public.financial_accounts (id, user_id, name, kind, opening_balance_centavos, current_balance_centavos) VALUES
   ('5d000000-0000-4000-8000-0000000000a1', '5d000000-0000-4000-8000-000000000001', 'Wallet', 'cash', 1000000, 1000000),
-  ('5d000000-0000-4000-8000-0000000000a2', '5d000000-0000-4000-8000-000000000001', 'Card', 'credit_card', 0, 0);
+  ('5d000000-0000-4000-8000-0000000000a2', '5d000000-0000-4000-8000-000000000001', 'Card', 'credit_card', 0, 0),
+  ('5d000000-0000-4000-8000-0000000000a3', '5d000000-0000-4000-8000-000000000001', 'Thin wallet', 'cash', 15000, 15000);
 INSERT INTO public.categories (id, user_id, slug, label, description, is_system) VALUES
   ('5d000000-0000-4000-8000-0000000000d1', '5d000000-0000-4000-8000-000000000001', 'bills-auto', 'Bills auto test', 'Bills auto test', false),
   ('5d000000-0000-4000-8000-0000000000d2', '5d000000-0000-4000-8000-000000000002', 'bills-other', 'Bills other test', 'Bills other test', false);
@@ -21,7 +22,9 @@ INSERT INTO public.scheduled_payments (id, user_id, name, subcategory_id, source
   -- Auto-post off.
   ('5d000000-0000-4000-8000-0000000000b4', '5d000000-0000-4000-8000-000000000001', 'Manual', NULL, '5d000000-0000-4000-8000-0000000000a1', 50000, 'daily', NULL, '2026-11-01', false, NULL),
   -- Category owned by another user, so its post fails.
-  ('5d000000-0000-4000-8000-0000000000b5', '5d000000-0000-4000-8000-000000000001', 'Broken', '5d000000-0000-4000-8000-0000000000e2', '5d000000-0000-4000-8000-0000000000a1', 50000, 'daily', NULL, '2026-11-01', true, '2026-11-01');
+  ('5d000000-0000-4000-8000-0000000000b5', '5d000000-0000-4000-8000-000000000001', 'Broken', '5d000000-0000-4000-8000-0000000000e2', '5d000000-0000-4000-8000-0000000000a1', 50000, 'daily', NULL, '2026-11-01', true, '2026-11-01'),
+  -- Its account covers Nov 1 but not Nov 1-3, so none of them post (as on the device).
+  ('5d000000-0000-4000-8000-0000000000b6', '5d000000-0000-4000-8000-000000000001', 'Short', NULL, '5d000000-0000-4000-8000-0000000000a3', 10000, 'daily', NULL, '2026-11-01', true, '2026-11-01');
 
 -- A manual partial payment of Rent's November 2 occurrence.
 INSERT INTO public.transactions (id, user_id, transaction_type, transaction_date, amount_centavos, source_account_id, subcategory_id)
@@ -67,7 +70,8 @@ BEGIN
   v_dates := ARRAY(SELECT private.scheduled_payment_due_dates(v_payment, '2026-09-01', '2026-10-31'));
   IF v_dates <> ARRAY['2026-09-29', '2026-09-30', '2026-10-01']::date[] THEN RAISE EXCEPTION 'daily within start and end: %', v_dates; END IF;
 
-  -- Padala: Nov 1-3 (3). Rent: the Nov 2 remainder (1). Credit card, auto-post off and the broken payment post nothing.
+  -- Padala: Nov 1-3 (3). Rent: the Nov 2 remainder (1). Credit card, auto-post off, the broken payment and the
+  -- underfunded payment post nothing.
   v_posted := private.post_due_scheduled_payments('2026-11-03');
   IF v_posted <> 4 THEN RAISE EXCEPTION 'the first run must post 4 occurrences, posted %', v_posted; END IF;
 
@@ -93,8 +97,8 @@ BEGIN
     RAISE EXCEPTION 'an uncategorized expense that is not a biller payment must be rejected';
   EXCEPTION WHEN check_violation THEN NULL;
   END;
-  IF EXISTS (SELECT 1 FROM public.transactions WHERE merchant_name IN ('Netflix', 'Manual', 'Broken')) THEN
-    RAISE EXCEPTION 'credit-card, manual and failing payments must not post';
+  IF EXISTS (SELECT 1 FROM public.transactions WHERE merchant_name IN ('Netflix', 'Manual', 'Broken', 'Short')) THEN
+    RAISE EXCEPTION 'credit-card, manual, failing and underfunded payments must not post';
   END IF;
 
   SET CONSTRAINTS ALL IMMEDIATE;

@@ -151,7 +151,8 @@ BEGIN
 END;
 $$;
 
--- Same job as 20261115000003, except an occurrence settled in full never posts its remainder.
+-- Same job as 20261115000003, except an occurrence settled in full never posts its remainder, and a payment
+-- whose source account cannot cover its due dates posts none of them (as on the device).
 CREATE OR REPLACE FUNCTION private.post_due_scheduled_payments(p_today date DEFAULT (now() AT TIME ZONE 'Asia/Manila')::date)
 RETURNS integer
 LANGUAGE plpgsql
@@ -166,6 +167,10 @@ DECLARE
   v_remaining bigint;
   v_posted integer := 0;
   v_payment_posted integer;
+  -- Balances only reconcile at commit, so this run tracks what it has taken from each account itself.
+  v_spent jsonb := '{}'::jsonb;
+  v_available bigint;
+  v_payment_spent bigint;
 BEGIN
   FOR v_payment IN
     SELECT payment.*
@@ -176,6 +181,9 @@ BEGIN
      ORDER BY payment.id
   LOOP
     v_payment_posted := 0;
+    v_payment_spent := 0;
+    SELECT account.current_balance_centavos - COALESCE((v_spent->>account.id::text)::bigint, 0) INTO v_available
+      FROM public.financial_accounts AS account WHERE account.id = v_payment.source_account_id;
     BEGIN
       FOR v_due_date IN SELECT due_date FROM private.scheduled_payment_due_dates(v_payment, v_payment.auto_post_from, p_today) AS due_date LOOP
         v_transaction_id := private.scheduled_payment_post_id(v_payment.id, v_due_date, 'transaction');
@@ -191,6 +199,10 @@ BEGIN
           SELECT 1 FROM public.scheduled_payment_records AS record
            WHERE record.scheduled_payment_id = v_payment.id AND record.occurrence_date = v_due_date AND record.settles_occurrence AND NOT record.deleted
         );
+        -- Raising rolls back this payment's earlier due dates too, like the device's per-payment transaction.
+        IF v_remaining > v_available - v_payment_spent THEN
+          RAISE EXCEPTION 'the source account has insufficient funds for automatic posting';
+        END IF;
 
         INSERT INTO public.transactions (
           id, user_id, transaction_type, status, entry_source, transaction_date, posted_at, amount_centavos,
@@ -206,8 +218,11 @@ BEGIN
           v_record_id, v_payment.user_id, v_payment.id, v_transaction_id, v_due_date, v_due_date, v_remaining, 'auto'
         ) ON CONFLICT (id) DO NOTHING;
         v_payment_posted := v_payment_posted + 1;
+        v_payment_spent := v_payment_spent + v_remaining;
       END LOOP;
       v_posted := v_posted + v_payment_posted;
+      v_spent := jsonb_set(v_spent, ARRAY[v_payment.source_account_id::text],
+        to_jsonb(COALESCE((v_spent->>v_payment.source_account_id::text)::bigint, 0) + v_payment_spent));
     EXCEPTION WHEN OTHERS THEN
       -- One payment that cannot post (for example an inactive category) must not block the others.
       RAISE WARNING 'scheduled payment % auto-post skipped: %', v_payment.id, SQLERRM;
