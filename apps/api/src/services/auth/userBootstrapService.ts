@@ -1,9 +1,10 @@
-import { createAuthenticatedSupabaseClient, supabase } from "../../lib/supabase.js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { createAuthenticatedSupabaseClient } from "../../lib/supabase.js";
 import { ACTIVE_REQUEST_STATUSES } from "../../lib/constants.js";
 
 async function ensureProfile(
   userId: string,
-  authenticatedSupabase = supabase,
+  authenticatedSupabase: SupabaseClient,
 ): Promise<void> {
   const { data: profile, error: profileError } = await authenticatedSupabase
     .from("profiles")
@@ -18,7 +19,7 @@ async function ensureProfile(
 
 async function ensurePrivacySettings(
   userId: string,
-  authenticatedSupabase = supabase,
+  authenticatedSupabase: SupabaseClient,
 ): Promise<{ personalization_enabled: boolean } | null> {
   const { data: privacy, error: privacyError } = await authenticatedSupabase
     .from("user_privacy_settings")
@@ -36,11 +37,14 @@ async function ensurePrivacySettings(
 const MAX_CANCEL_RETRIES = 3;
 const CANCEL_RETRY_DELAY_MS = 500;
 
+// RLS only lets the owner update their own requests, so this must run as the signed-in user.
+// A deletion that cannot be cancelled must stop sign-in rather than leave the account scheduled for removal.
 async function cancelActiveDeletionRequests(
   userId: string,
+  authenticatedSupabase: SupabaseClient,
 ): Promise<void> {
   for (let attempt = 1; attempt <= MAX_CANCEL_RETRIES; attempt++) {
-    const { error } = await supabase
+    const { error } = await authenticatedSupabase
       .from("account_deletion_requests")
       .update({
         status: "cancelled",
@@ -58,6 +62,7 @@ async function cancelActiveDeletionRequests(
       await new Promise((resolve) => setTimeout(resolve, CANCEL_RETRY_DELAY_MS));
     }
   }
+  throw new Error("Failed to cancel active deletion requests");
 }
 
 export async function bootstrapAuthenticatedUser(
@@ -72,7 +77,7 @@ export async function bootstrapAuthenticatedUser(
   await ensureProfile(userId, authenticatedSupabase);
   const privacy = await ensurePrivacySettings(userId, authenticatedSupabase);
 
-  await cancelActiveDeletionRequests(userId);
+  await cancelActiveDeletionRequests(userId, authenticatedSupabase);
 
   const { data: onboarding, error: onboardingError } = await authenticatedSupabase
     .from("onboarding_sessions")

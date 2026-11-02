@@ -1,13 +1,14 @@
 import { jest } from "@jest/globals";
 import request from "supertest";
 
-jest.mock("../../lib/supabase.js", () => ({
-  supabase: {
+jest.mock("../../lib/supabase.js", () => {
+  const mockClient = {
     auth: {
       signUp: jest.fn(),
     },
-  },
-}));
+  };
+  return { supabase: mockClient, createAnonAuthClient: () => mockClient };
+});
 
 import app from "../../app.js";
 import { supabase } from "../../lib/supabase.js";

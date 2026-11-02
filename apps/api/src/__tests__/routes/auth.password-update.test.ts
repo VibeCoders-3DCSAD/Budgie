@@ -12,6 +12,7 @@ jest.mock("../../lib/supabase.js", () => {
 
   return {
     supabase: mockClient,
+    createAnonAuthClient: () => mockClient,
     createAuthenticatedSupabaseClient: () => mockClient,
   };
 });

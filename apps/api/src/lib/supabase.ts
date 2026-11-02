@@ -33,6 +33,18 @@ export function getServiceRoleClient(): SupabaseClient {
   return serviceRoleClientInstance;
 }
 
+// Sign-in and sign-up store the new session on the client that made the call. A fresh client per
+// request keeps one user's session out of the shared module client used by every other request.
+export function createAnonAuthClient(): SupabaseClient {
+  return createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+    global: { fetch: fetchWithTimeout },
+  });
+}
+
 export function createAuthenticatedSupabaseClient(
   accessToken: string,
 ): SupabaseClient {

@@ -1,6 +1,6 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
-import { createAuthenticatedSupabaseClient, supabase } from "../lib/supabase.js";
+import { createAnonAuthClient, createAuthenticatedSupabaseClient, supabase } from "../lib/supabase.js";
 import { bearerToken, requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { AUTH_ERRORS } from "../lib/constants.js";
@@ -39,7 +39,7 @@ router.post("/register", async (request: Request, response: Response) => {
     return;
   }
 
-  const { data, error } = await supabase.auth.signUp({
+  const { data, error } = await createAnonAuthClient().auth.signUp({
     email: normalizedEmail,
     password,
     options: {
@@ -115,7 +115,7 @@ router.post("/login", async (request: Request, response: Response) => {
     return;
   }
 
-  const { data, error } = await supabase.auth.signInWithPassword({
+  const { data, error } = await createAnonAuthClient().auth.signInWithPassword({
     email: normalizedEmail,
     password,
   });
