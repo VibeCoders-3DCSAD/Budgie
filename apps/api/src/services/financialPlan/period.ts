@@ -1,3 +1,4 @@
+import type { ForecastPayload } from "../forecast/forecastService.js";
 import { currentCalendarMonth, manilaMonthStart } from "../../lib/date/manila.js";
 import { FinancialPlanInputError } from "./errors.js";
 
@@ -16,4 +17,9 @@ export function financialPlanPeriod(planMonth?: string): { start: string; end: s
     throw new FinancialPlanInputError("Plan month overrides are only available in development with a valid YYYY-MM month");
   }
   return currentCalendarMonth(new Date(`${planMonth}-01T00:00:00+08:00`));
+}
+
+// The budget optimizer rejects a forecast whose month differs from the plan period.
+export function forecastCoversPlanPeriod(forecast: ForecastPayload, period: { start: string }): boolean {
+  return forecast.snapshot.month === period.start.slice(0, 7);
 }

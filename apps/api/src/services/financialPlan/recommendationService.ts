@@ -1,4 +1,4 @@
-import { planForecastTransactions } from "./helpers/forecastTransactions.js";
+import { excludeUnusualTransactions, planForecastTransactions } from "./helpers/forecastTransactions.js";
 import { buildFinancialPlanExplanationContext } from "./helpers/explanationContext.js";
 import { FinancialPlanInputError, FinancialPlanUnavailableError } from "./errors.js";
 export { FinancialPlanInputError, FinancialPlanUnavailableError } from "./errors.js";
@@ -15,17 +15,14 @@ import { deriveSurplusRecommendation } from "./classificationPolicy.js";
 import { createFinancialConditionAssessment } from "../classification/financialConditionAssessmentService.js";
 import { getServiceRoleClient } from "../../lib/supabase.js";
 import { scheduledCategoryAmounts, subtractScheduledRequirements } from "./helpers/scheduledCategoryAmounts.js";
-import { normalizeCustomEvents, eventMonthLabel } from "@odin/spending-insights/seasons.js";
+import { seasonalPreferencesFromAnswers } from "./seasonalPreferences.js";
 import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-insights/seasonalMonth.js";
 import { recurringMonthSpend } from "@odin/spending-insights/recurringMonths.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend, type AnomalyEvaluation } from "./helpers/recurringSpending.js";
 import { currentCalendarMonth, MANILA_TIME_ZONE } from "../../lib/date/manila.js";
-import { financialPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
+import { financialPlanPeriod, forecastCoversPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
 
 const ESSENTIAL_HFCE_CATEGORY_SLUGS = new Set(["food", "housing_water_utilities", "health", "communication", "transport", "education", "furnishings_household", "clothing_footwear"]);
-const SEASONAL_LABELS: Record<string, string> = { q1: "January–March", q2: "April–June", q3: "July–September", q4: "October–December", rainy_season: "Rainy Season", back_to_school: "Back-to-School Season", undas: "Undas / All Souls' Day", christmas_ber_months: "Christmas and Ber Months", new_year: "New Year", summer: "Summer", annual_payments: "Tax and Annual-Payment Season", family_celebrations: "Birthday and Family-Celebration Months" };
-const SEASONAL_WINDOWS: Record<string, string> = { q1: "January to March", q2: "April to June", q3: "July to September", q4: "October to December", rainy_season: "June to November", back_to_school: "June to August", undas: "October to November", christmas_ber_months: "September to December", new_year: "January", summer: "March to May", annual_payments: "January to April", family_celebrations: "varies by the selected month" };
-const SEASONAL_MONTHS: Record<string, number[]> = { q1: [1, 2, 3], q2: [4, 5, 6], q3: [7, 8, 9], q4: [10, 11, 12], rainy_season: [6, 7, 8, 9, 10, 11], back_to_school: [6, 7, 8], undas: [10, 11], christmas_ber_months: [9, 10, 11, 12], new_year: [1], summer: [3, 4, 5], annual_payments: [1, 2, 3, 4], family_celebrations: [] };
 
 type Subcategory = { id: string; category_id: string | null; label: string; minimum_amount_centavos: number | null; fixed_amount_centavos: number | null; always_in_budget: boolean };
 type Category = { id: string; slug: string; label: string; minimum_amount_centavos: number | null; fixed_amount_centavos: number | null };
@@ -73,10 +70,6 @@ export function applyFinancialPlanPriorityWeights(categories: MlPlanCategory[], 
   return categories.map((category) => ({ ...category, priorityWeight: weights.get(category.id) ?? 1 }));
 }
 
-export function excludeUnusualTransactions<T extends { id: string }>(transactions: T[], unusualTransactionIds: Set<string>): T[] {
-  return transactions.filter((transaction) => !unusualTransactionIds.has(transaction.id));
-}
-
 function latestSourceUpdate(...groups: unknown[][]): string | null {
   const updates = groups.flatMap((group) => group.flatMap((item) => {
     if (!item || typeof item !== "object") return [];
@@ -84,11 +77,6 @@ function latestSourceUpdate(...groups: unknown[][]): string | null {
     return typeof updatedAt === "string" && !Number.isNaN(new Date(updatedAt).getTime()) ? [updatedAt] : [];
   }));
   return updates.sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
-}
-
-// The budget optimizer rejects a forecast whose month differs from the plan period.
-export function forecastCoversPlanPeriod(forecast: ForecastPayload, period: { start: string }): boolean {
-  return forecast.snapshot.month === period.start.slice(0, 7);
 }
 
 function fallbackForecast(period: { start: string; end: string }, categories: MlPlanCategory[]): MlExpenseForecastSnapshot {
@@ -161,28 +149,6 @@ function mapRecommendation(categories: MlPlanCategory[], allocationAmounts: unkn
     const amount = amounts.get(category.id);
     if (amount === undefined || amount < category.floorCentavos || amount > category.ceilingCentavos) throw new FinancialPlanUnavailableError("Budget optimizer returned an invalid recommendation");
     return { categoryId: category.target === "category" ? category.id : null, subcategoryId: category.target === "subcategory" ? category.id : null, allocationRule: category.rule, allocatedAmountCentavos: amount, floorAmountCentavos: category.floorCentavos, ceilingAmountCentavos: category.ceilingCentavos, forecastAmountCentavos: category.forecastCentavos };
-  });
-}
-
-export function seasonalPreferencesFromAnswers(answers: Record<string, unknown>, periodStart: string): FinancialPlanEvidence["seasonalPreferences"] {
-  const month = Number(periodStart.slice(5, 7));
-  const customEvents = new Map(normalizeCustomEvents(answers.custom_seasonal_events).map((event) => [event.id, event]));
-  const higher = Array.isArray(answers.high_expense_seasons) ? answers.high_expense_seasons : [];
-  const preferences = { saving_seasons: "saving", high_expense_seasons: "higher_expense", low_expense_seasons: "lower_expense" } as const;
-  return (Object.keys(preferences) as Array<keyof typeof preferences>).flatMap((key) => {
-    const selections = answers[key];
-    if (!Array.isArray(selections)) return [];
-    return [...new Set(selections)].flatMap((value) => {
-      if (typeof value !== "string") return [];
-      const custom = customEvents.get(value);
-      if (custom) {
-        if (!custom.months.includes(month) || (key === "low_expense_seasons" && higher.includes(value))) return [];
-        return [{ evidenceId: `${key}:${value}`, season: custom.name, seasonWindow: eventMonthLabel(custom.months), preference: preferences[key] }];
-      }
-      if (!SEASONAL_LABELS[value] || !SEASONAL_MONTHS[value]?.includes(month)) return [];
-      if (key === "low_expense_seasons" && higher.includes(value)) return [];
-      return [{ evidenceId: `${key}:${value}`, season: SEASONAL_LABELS[value]!, seasonWindow: SEASONAL_WINDOWS[value]!, preference: preferences[key] }];
-    });
   });
 }
 

@@ -2,7 +2,7 @@ import { categorySeasonalPreferences, confirmedCategoryPayments, possibleSeasona
 import { MONTHLY_SPENDING_REFERENCE, HFCE_CATEGORY_SLUGS } from "../../../services/financialPlan/spendingReasonCatalog.js";
 import { budgetConstraintExplanations, forecastChangeExplanation, seasonalForecastMismatchExplanations, type FinancialPlanEvidence } from "../../../services/financialPlan/explanationService.js";
 import { deterministicFinancialPlanExplanations, explainFinancialPlanRequest, parseFinancialPlanExplanationRequest } from "../../../services/financialPlan/explanationRequest.js";
-import { seasonalPreferencesFromAnswers } from "../../../services/financialPlan/recommendationService.js";
+import { seasonalPreferencesFromAnswers } from "../../../services/financialPlan/seasonalPreferences.js";
 
 const change: FinancialPlanEvidence["forecastChanges"][number] = {
   evidenceId: "forecast:transport", categorySlug: "transport", categoryName: "Transport",

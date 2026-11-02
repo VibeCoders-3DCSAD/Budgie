@@ -1,5 +1,5 @@
 import { explainFinancialPlan, fallbackFinancialPlanExplanations, isUserFacingFinancialPlanExplanation, zeroAllocationExplanations, seasonalForecastMismatchExplanations, forecastChangeExplanation, type FinancialPlanEvidence } from "../../../services/financialPlan/explanationService.js";
-import { seasonalPreferencesFromAnswers } from "../../../services/financialPlan/recommendationService.js";
+import { seasonalPreferencesFromAnswers } from "../../../services/financialPlan/seasonalPreferences.js";
 
 it("passes custom event names and selected months as seasonal evidence only in those months", () => {
   const answers = { custom_seasonal_events: [{ id: "custom_tuition", name: "Tuition payment", months: [1, 8] }], high_expense_seasons: ["custom_tuition"], saving_seasons: ["custom_tuition"] };

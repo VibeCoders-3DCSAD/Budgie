@@ -21,3 +21,7 @@ export function planForecastTransactions(cleanTransactions: ForecastTransaction[
     }]
     : []);
 }
+
+export function excludeUnusualTransactions<T extends { id: string }>(transactions: T[], unusualTransactionIds: Set<string>): T[] {
+  return transactions.filter((transaction) => !unusualTransactionIds.has(transaction.id));
+}

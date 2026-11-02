@@ -1,9 +1,8 @@
-import { planForecastTransactions } from "./helpers/forecastTransactions.js";
+import { excludeUnusualTransactions, planForecastTransactions } from "./helpers/forecastTransactions.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast } from "../forecast/forecastService.js";
 import { FinancialPlanUnavailableError } from "./errors.js";
-import { excludeUnusualTransactions, forecastCoversPlanPeriod } from "./recommendationService.js";
-import { financialPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
+import { financialPlanPeriod, forecastCoversPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend } from "./helpers/recurringSpending.js";
 
 type ForecastTransactionRow = Parameters<typeof planForecastTransactions>[0][number] & Parameters<typeof unusualSpending>[0][number];

@@ -1,5 +1,7 @@
 import { currentCalendarMonth } from "../../../lib/date/manila.js";
-import { applyFinancialPlanPriorityWeights, excludeUnusualTransactions, financialPlanPriorityGroup, forecastCoversPlanPeriod, isFinancialPlanInfeasible, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
+import { applyFinancialPlanPriorityWeights, financialPlanPriorityGroup, isFinancialPlanInfeasible, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
+import { excludeUnusualTransactions } from "../../../services/financialPlan/helpers/forecastTransactions.js";
+import { forecastCoversPlanPeriod } from "../../../services/financialPlan/period.js";
 
 describe("Financial Plan feasibility", () => {
   it("marks a 5,000-peso plan infeasible when required minimums exceed it", () => {
