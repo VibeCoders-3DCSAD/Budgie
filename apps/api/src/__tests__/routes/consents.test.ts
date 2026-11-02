@@ -79,6 +79,53 @@ describe("POST /odin/api/consents", () => {
     expect(insertData).toMatchObject({ user_id: validUserId });
   });
 
+  it("records a withdrawal with a server-set withdrawal time", async () => {
+    mockAuth();
+
+    let insertData: Record<string, unknown> | undefined;
+    const mockSingle = jest.fn().mockReturnValue({
+      data: { consent_kind: "terms", status: "withdrawn", version: "2026-06", recorded_at: "2026-07-06T12:00:00Z" },
+      error: null,
+    });
+    const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
+    const mockInsert = jest.fn().mockImplementation((data) => {
+      insertData = data as Record<string, unknown>;
+      return { select: mockSelect };
+    });
+    mockFrom.mockReturnValue({ insert: mockInsert });
+
+    const response = await request(app)
+      .post("/odin/api/consents")
+      .set(authHeader())
+      .send({ payload: { consent_kind: "terms", status: "withdrawn", version: "2026-06", withdrawn_at: "2000-01-01T00:00:00Z" } });
+
+    expect(response.status).toBe(201);
+    expect(insertData?.status).toBe("withdrawn");
+    expect(typeof insertData?.withdrawn_at).toBe("string");
+    expect(insertData?.withdrawn_at).not.toBe("2000-01-01T00:00:00Z");
+    expect(Number.isNaN(Date.parse(insertData?.withdrawn_at as string))).toBe(false);
+  });
+
+  it("leaves the withdrawal time empty on a grant", async () => {
+    mockAuth();
+
+    let insertData: Record<string, unknown> | undefined;
+    const mockSingle = jest.fn().mockReturnValue({ data: {}, error: null });
+    const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
+    const mockInsert = jest.fn().mockImplementation((data) => {
+      insertData = data as Record<string, unknown>;
+      return { select: mockSelect };
+    });
+    mockFrom.mockReturnValue({ insert: mockInsert });
+
+    await request(app)
+      .post("/odin/api/consents")
+      .set(authHeader())
+      .send({ payload: { consent_kind: "terms", status: "granted", version: "2026-06" } });
+
+    expect(insertData?.withdrawn_at).toBeNull();
+  });
+
   it("returns 400 for missing payload", async () => {
     mockAuth();
 

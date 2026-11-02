@@ -41,6 +41,9 @@ router.post("/", requireAuth, async (request: AuthenticatedRequest, response) =>
     return;
   }
 
+  // The database requires a withdrawal time on withdrawals; the server sets it, never the client.
+  const withdrawnAt = status === "withdrawn" ? new Date().toISOString() : null;
+
   const { data, error } = await authenticatedSupabase
     .from("user_consents")
     .insert({
@@ -48,6 +51,7 @@ router.post("/", requireAuth, async (request: AuthenticatedRequest, response) =>
       consent_kind,
       status,
       version: version.trim(),
+      withdrawn_at: withdrawnAt,
     })
     .select("consent_kind, status, version, recorded_at")
     .single();
