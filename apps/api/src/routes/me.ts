@@ -5,6 +5,9 @@ import type { AuthenticatedRequest } from "../middleware/auth.js";
 
 const router = Router();
 
+// Bounded by consent kinds times published versions, far below this.
+const MAX_CURRENT_CONSENTS = 100;
+
 const VALID_INCLUDE_FIELDS = ["privacy", "consents"];
 
 function parseIncludeParam(includeValue: unknown): Set<string> {
@@ -67,12 +70,14 @@ router.get("/", requireAuth, async (request: AuthenticatedRequest, response: Res
   }
 
   if (includeFields.has("consents")) {
+    // One row per consent kind and version, holding its newest event, so a later withdrawal
+    // always replaces an earlier grant and old history cannot hide the current terms.
     const { data: consents, error: consentsError } = await authenticatedSupabase
-      .from("user_consents")
+      .from("user_current_consents")
       .select("consent_kind, status, version, recorded_at")
       .eq("user_id", userId)
       .order("recorded_at", { ascending: false })
-      .limit(20);
+      .limit(MAX_CURRENT_CONSENTS);
 
     if (consentsError) {
       response.status(500).json({

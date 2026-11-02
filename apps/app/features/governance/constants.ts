@@ -3,12 +3,15 @@ import type { ConsentRecord } from "./types";
 export const TERMS_CONSENT_KIND = "terms";
 export const CURRENT_TERMS_VERSION = "2026-06";
 
+// The newest event for the current terms decides; an older grant never outlives a later withdrawal.
 export function hasCurrentTermsConsent(consents: ConsentRecord[]) {
-  return consents.some((consent) =>
-    consent.consent_kind === TERMS_CONSENT_KIND &&
-    consent.status === "granted" &&
-    consent.version === CURRENT_TERMS_VERSION,
-  );
+  const latest = consents
+    .filter((consent) => consent.consent_kind === TERMS_CONSENT_KIND && consent.version === CURRENT_TERMS_VERSION)
+    .reduce<ConsentRecord | null>((newest, consent) => {
+      if (newest && Date.parse(newest.recorded_at) >= Date.parse(consent.recorded_at)) return newest;
+      return consent;
+    }, null);
+  return latest?.status === "granted";
 }
 
 export const ERRORS = {

@@ -90,6 +90,8 @@ describe("GET /odin/api/me", () => {
       .set(authHeader());
 
     expect(response.status).toBe(200);
+    // The view holds only the newest event per consent kind and version.
+    expect(mockFrom).toHaveBeenCalledWith("user_current_consents");
     expect(response.body.payload).toEqual({
       consents: [
         {
