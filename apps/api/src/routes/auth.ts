@@ -4,7 +4,7 @@ import {
   createAuthenticatedSupabaseClient,
   supabase,
 } from "../lib/supabase.js";
-import { requireAuth } from "../middleware/auth.js";
+import { bearerToken, requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { AUTH_ERRORS } from "../lib/constants.js";
 import { isStrongPassword, normalizeEmail } from "../lib/authValidation.js";
@@ -393,27 +393,17 @@ router.post(
   "/verify",
   requireAuth,
   async (request: AuthenticatedRequest, response: Response) => {
-    const { data, error } = await supabase.auth.getUser(request.accessToken!);
-    if (error || !data.user?.email_confirmed_at) {
+    // requireAuth already fetched the user for this token.
+    if (!request.user?.email_confirmed_at) {
       response.status(401).json({ error: "Unauthorized", message: AUTH_ERRORS.verification_required });
       return;
     }
-    response.status(200).json({ payload: { verified: true, user_id: data.user.id } });
+    response.status(200).json({ payload: { verified: true, user_id: request.user.id } });
   },
 );
 
 router.post("/session", async (request: Request, response: Response) => {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    response.status(400).json({
-      error: "Bad Request",
-      message: AUTH_ERRORS.token_required,
-    });
-    return;
-  }
-
-  const token = authHeader.slice(7);
+  const token = bearerToken(request);
 
   if (!token) {
     response.status(400).json({

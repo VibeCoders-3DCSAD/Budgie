@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
-import { supabase } from "../lib/supabase.js";
+import { hasUserSession, requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { runEngine, ENGINE_ERRORS } from "../services/recurring/recurringService.js";
 
 const router = Router();
@@ -36,19 +36,12 @@ router.post("/run", async (request: Request, response: Response) => {
     return;
   }
 
-  const authHeader = request.headers.authorization;
-  if (authHeader?.startsWith("Bearer ")) {
-    const token = authHeader.slice(7);
-    if (token) {
-      const { data } = await supabase.auth.getUser(token);
-      if (data?.user) {
-        response.status(403).json({
-          error: "Forbidden",
-          message: ENGINE_ERRORS.user_session_rejected,
-        });
-        return;
-      }
-    }
+  if (await hasUserSession(request)) {
+    response.status(403).json({
+      error: "Forbidden",
+      message: ENGINE_ERRORS.user_session_rejected,
+    });
+    return;
   }
 
   if (!validateCronSecret(request.headers["x-cron-secret"], configuredSecret)) {
@@ -85,27 +78,10 @@ router.post("/run", async (request: Request, response: Response) => {
   }
 });
 
-router.post("/run/me", async (request: Request, response: Response) => {
-  const authHeader = request.headers.authorization;
-  if (!authHeader?.startsWith("Bearer ")) {
-    response.status(401).json({ error: "Unauthorized", message: "Missing or invalid Bearer token." });
-    return;
-  }
-
-  const token = authHeader.slice(7);
-  if (!token) {
-    response.status(401).json({ error: "Unauthorized", message: "Missing or invalid Bearer token." });
-    return;
-  }
-
-  const { data } = await supabase.auth.getUser(token);
-  if (!data?.user) {
-    response.status(401).json({ error: "Unauthorized", message: "Invalid or expired token." });
-    return;
-  }
-
+router.post("/run/me", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
+  const userId = request.userId!;
   try {
-    const result = await runEngine(undefined, undefined, data.user.id);
+    const result = await runEngine(undefined, undefined, userId);
 
     response.status(200).json({ payload: result });
   } catch (error) {
@@ -114,7 +90,7 @@ router.post("/run/me", async (request: Request, response: Response) => {
       method: request.method,
       route: request.originalUrl,
       request_id: request.header("x-request-id")?.slice(0, 128) ?? null,
-      user_id: data.user.id,
+      user_id: userId,
       error,
     });
     response.status(500).json({

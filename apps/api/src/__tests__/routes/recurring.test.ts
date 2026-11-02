@@ -173,7 +173,7 @@ describe("POST /odin/api/recurring/run/me", () => {
     const response = await request(app).post("/odin/api/recurring/run/me");
 
     expect(response.status).toBe(401);
-    expect(response.body.message).toMatch(/bearer/i);
+    expect(response.body.message).toMatch(/authorization header/i);
   });
 
   it("returns 401 when Bearer token is empty", async () => {

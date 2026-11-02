@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import {
   createAuthenticatedSupabaseClient,
   supabase,
@@ -8,7 +8,23 @@ import {
 export interface AuthenticatedRequest extends Request {
   userId?: string;
   accessToken?: string;
+  user?: User;
   supabase?: SupabaseClient;
+}
+
+// The token from an "Authorization: Bearer <token>" header, or undefined when it is missing or empty.
+export function bearerToken(request: Request): string | undefined {
+  const authHeader = request.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return undefined;
+  return authHeader.slice(7) || undefined;
+}
+
+// True when the request carries a valid user session token. Machine-only routes use this to reject users.
+export async function hasUserSession(request: Request): Promise<boolean> {
+  const token = bearerToken(request);
+  if (!token) return false;
+  const { data } = await supabase.auth.getUser(token);
+  return Boolean(data?.user);
 }
 
 export async function requireAuth(
@@ -16,22 +32,12 @@ export async function requireAuth(
   response: Response,
   next: NextFunction,
 ): Promise<void> {
-  const authHeader = request.headers.authorization;
-
-  if (!authHeader?.startsWith("Bearer ")) {
-    response.status(401).json({
-      error: "Unauthorized",
-      message: "Missing or invalid authorization header",
-    });
-    return;
-  }
-
-  const token = authHeader.slice(7);
+  const token = bearerToken(request);
 
   if (!token) {
     response.status(401).json({
       error: "Unauthorized",
-      message: "Missing access token",
+      message: "Missing or invalid authorization header",
     });
     return;
   }
@@ -47,6 +53,7 @@ export async function requireAuth(
   }
 
   request.userId = data.user.id;
+  request.user = data.user;
   request.accessToken = token;
   request.supabase = createAuthenticatedSupabaseClient(token);
   next();

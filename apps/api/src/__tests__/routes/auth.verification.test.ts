@@ -60,6 +60,8 @@ describe("email verification", () => {
 
     expect(response.status).toBe(200);
     expect(response.body).toEqual({ payload: { verified: true, user_id: validUserId } });
+    // requireAuth's lookup is reused; the route does not fetch the user again.
+    expect(mockGetUser).toHaveBeenCalledTimes(1);
   });
 
   it("rejects an authenticated user whose email remains unverified", async () => {
