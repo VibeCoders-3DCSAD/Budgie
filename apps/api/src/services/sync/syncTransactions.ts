@@ -14,7 +14,6 @@ import { verifyUncategorizedBillerPayment } from "./syncBillersAndRemittances.js
 import {
   verifyAccountOwnership,
   verifyCategoryOwnership,
-  verifyOwnedAccount,
   verifySubcategoryOwnership,
 } from "./syncOwnership.js";
 import {
@@ -53,14 +52,14 @@ async function validateTransactionCreate({ supabase, userId }: SyncContext, payl
     requireString(sanitized, "destination_account_id");
     if (Boolean(sanitized.category_id) === Boolean(sanitized.subcategory_id)) throw new Error("income requires one category target");
     if (sanitized.source_account_id != null) throw new Error("source_account_id must not be set for income");
-    await verifyOwnedAccount(supabase, userId, sanitized.destination_account_id as string);
+    await verifyAccountOwnership(supabase, userId, sanitized.destination_account_id as string, { includeDeleted: true });
     if (sanitized.category_id) await verifyCategoryOwnership(supabase, userId, sanitized.category_id as string); else await verifySubcategoryOwnership(supabase, userId, sanitized.subcategory_id as string, "income");
     sanitized.source_account_id = null;
   } else if (txType === "expense") {
     requireString(sanitized, "source_account_id");
     if (sanitized.category_id && sanitized.subcategory_id) throw new Error("expense takes at most one category target");
     if (sanitized.destination_account_id != null) throw new Error("destination_account_id must not be set for expense");
-    await verifyOwnedAccount(supabase, userId, sanitized.source_account_id as string);
+    await verifyAccountOwnership(supabase, userId, sanitized.source_account_id as string, { includeDeleted: true });
     if (sanitized.category_id) await verifyCategoryOwnership(supabase, userId, sanitized.category_id as string);
     else if (sanitized.subcategory_id) await verifySubcategoryOwnership(supabase, userId, sanitized.subcategory_id as string, "expense");
     else await verifyUncategorizedBillerPayment(supabase, userId, sanitized.client_mutation_id);
@@ -72,8 +71,8 @@ async function validateTransactionCreate({ supabase, userId }: SyncContext, payl
       throw new Error("source and destination accounts must differ");
     }
     if (sanitized.subcategory_id != null || sanitized.category_id != null) throw new Error("category target must not be set for transfer");
-    await verifyOwnedAccount(supabase, userId, sanitized.source_account_id as string);
-    await verifyOwnedAccount(supabase, userId, sanitized.destination_account_id as string);
+    await verifyAccountOwnership(supabase, userId, sanitized.source_account_id as string, { includeDeleted: true });
+    await verifyAccountOwnership(supabase, userId, sanitized.destination_account_id as string, { includeDeleted: true });
     sanitized.subcategory_id = null;
     sanitized.category_id = null;
   }

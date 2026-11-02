@@ -1,33 +1,24 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-// Also matches deleted accounts, so historical transactions still sync after their account is deleted.
-export async function verifyOwnedAccount(
-  supabase: SupabaseClient,
-  userId: string,
-  accountId: string,
-): Promise<void> {
-  const { data, error } = await supabase
-    .from("financial_accounts")
-    .select("id")
-    .eq("id", accountId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) throw new Error(`account validation failed: ${error.message}`);
-  if (!data) throw new Error("account not found or inaccessible");
-}
-
+// includeDeleted also matches deleted accounts, so historical transactions still sync after their account
+// is deleted.
 export async function verifyAccountOwnership(
   supabase: SupabaseClient,
   userId: string,
   accountId: string,
+  { includeDeleted = false }: { includeDeleted?: boolean } = {},
 ): Promise<void> {
-  const { data, error } = await supabase
+  let query = supabase
     .from("financial_accounts")
     .select("id")
     .eq("id", accountId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
+    .eq("user_id", userId);
+
+  if (!includeDeleted) {
+    query = query.eq("deleted", false);
+  }
+
+  const { data, error } = await query.maybeSingle();
   if (error) throw new Error(`account validation failed: ${error.message}`);
   if (!data) throw new Error("account not found or inaccessible");
 }
