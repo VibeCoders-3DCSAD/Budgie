@@ -45,8 +45,10 @@ export function useAccessLifecycle(links: ReturnType<typeof useDeepLink>) {
     return () => { cancelled = true; };
   }, [phase, userId]);
 
+  // Coming online re-verifies with the stored refresh token, so expired offline access recovers
+  // without a new sign-in. Only a refresh token the server rejects sends the user to sign in.
   useEffect(() => {
-    if (online && phase === "unlocked") void useAuthStore.getState().verifyOnline();
+    if (online && (phase === "unlocked" || phase === "verification-required")) void useAuthStore.getState().verifyOnline();
   }, [online, phase]);
 
   useEffect(() => {

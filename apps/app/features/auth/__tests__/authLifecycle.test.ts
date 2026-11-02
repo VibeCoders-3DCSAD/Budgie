@@ -19,6 +19,7 @@ import { enrollPin, lockVault, unlockWithPin } from "../services/pinVault";
 import { AccessError } from "../../../lib/helpers/accessErrors";
 import { accountFixture, anotherUserId, userId } from "./fixtures";
 import { resetAccessClock } from "../helpers/accessClock";
+import { clearSdkSession, sdkSessionStorage } from "../../../lib/sdkSessionStorage";
 
 describe("offline auth lifecycle", () => {
   let now: number;
@@ -130,5 +131,41 @@ describe("offline auth lifecycle", () => {
     await expect(authorizeLocalRequest(anotherUserId, "token")).rejects.toThrow();
     now = accountFixture(now).expiresAt;
     await expect(authorizeLocalRequest(userId, "token")).rejects.toThrow();
+  });
+
+  it("keeps the access token in memory only while unlocked", async () => {
+    await useAuthStore.getState().hydrate();
+    expect(useAuthStore.getState().account?.session.accessToken).toBe("");
+    jest.mocked(unlockWithPin).mockResolvedValue({ status: "unlocked" });
+    await useAuthStore.getState().submitPin("001234");
+    expect(useAuthStore.getState().account?.session.accessToken).toBe("access");
+    await useAuthStore.getState().lock();
+    expect(useAuthStore.getState().phase).toBe("locked");
+    expect(useAuthStore.getState().account?.session.accessToken).toBe("");
+    // The protected record keeps both tokens for online re-verification without a new sign-in.
+    expect((await readAccount())?.session).toMatchObject({ accessToken: "access", refreshToken: "refresh" });
+  });
+
+  it("drops the SDK session on lock without touching a pending sign-in verifier", async () => {
+    await useAuthStore.getState().hydrate();
+    sdkSessionStorage.setItem("sb-test-auth-token", "{\"access_token\":\"access\"}");
+    sdkSessionStorage.setItem("sb-test-auth-token-code-verifier", "verifier");
+    await useAuthStore.getState().lock();
+    expect(sdkSessionStorage.getItem("sb-test-auth-token")).toBeNull();
+    expect(sdkSessionStorage.getItem("sb-test-auth-token-code-verifier")).toBe("verifier");
+    clearSdkSession();
+    sdkSessionStorage.removeItem("sb-test-auth-token-code-verifier");
+  });
+
+  it("re-verifies expired offline access online without a new sign-in", async () => {
+    now = accountFixture(now).expiresAt;
+    resetAccessClock();
+    await useAuthStore.getState().hydrate();
+    expect(useAuthStore.getState().phase).toBe("verification-required");
+    jest.mocked(refreshOnlineSession).mockResolvedValue(accountFixture(now).session);
+    await useAuthStore.getState().verifyOnline();
+    expect(refreshOnlineSession).toHaveBeenCalledWith(true);
+    expect(acceptOnlineLogin).not.toHaveBeenCalled();
+    expect(useAuthStore.getState().phase).toBe("locked");
   });
 });

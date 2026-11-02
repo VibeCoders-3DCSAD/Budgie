@@ -9,6 +9,7 @@ import { acceptOnlineLogin, accessTokenExpiring, OnlineVerificationError, refres
 import { enrollPin, lockVault, unlockWithPin } from "../services/pinVault";
 import { withAuthLock } from "../services/authMutex";
 import { tracePinStep } from "../../../lib/helpers/pinSetupTrace";
+import { clearSdkSession } from "../../../lib/sdkSessionStorage";
 import type { AccessPhase, AuthenticatedState, LocalAccount, OfflineAccount } from "../types";
 
 interface AuthState {
@@ -36,10 +37,17 @@ let checking = false;
 const safeMessage = (error: unknown) => error instanceof AccessError
   ? error.message : "We couldn't unlock Budgie. Your local records are safe. Please try again.";
 
-function localAccount(account: OfflineAccount | null): LocalAccount | null {
+// The refresh token never leaves the protected record, and memory holds an access token only while unlocked.
+function localAccount(account: OfflineAccount | null, unlocked = false): LocalAccount | null {
   if (!account) return null;
   const { refreshToken: _refreshToken, ...session } = account.session;
-  return { ...account, session };
+  const visible = { ...account, session };
+  if (unlocked) return visible;
+  return withoutAccessToken(visible);
+}
+
+function withoutAccessToken(account: LocalAccount): LocalAccount {
+  return { ...account, session: { ...account.session, accessToken: "" } };
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -94,7 +102,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (epoch !== generation) { await lockVault(); return; }
       const updated = await readAccount();
       if (result.status === "unlocked") {
-        set({ account: localAccount(updated), phase: "unlocked", lockoutMs: 0 });
+        set({ account: localAccount(updated, true), phase: "unlocked", lockoutMs: 0 });
         void get().verifyOnline();
       } else {
         set({ account: localAccount(updated), lockoutMs: result.status === "locked-out" ? result.remainingMs : 0,
@@ -115,7 +123,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await tracePinStep("setup.enrollment", () => enrollPin(get().account!.session.userId, pin, get().recoveryVerified));
       recoveryRequested = false;
       if (epoch !== generation) { await lockVault(); set({ phase: "locked" }); return; }
-      set({ account: localAccount(await tracePinStep("setup.read-unlocked-account", readAccount)), phase: "unlocked", recoveryVerified: false });
+      set({ account: localAccount(await tracePinStep("setup.read-unlocked-account", readAccount), true), phase: "unlocked", recoveryVerified: false });
     } catch (error) {
       const enrolled = await tracePinStep("setup.inspect-after-failure", () => readEnvelope(get().account!.session.userId)).catch(() => null);
       set({ error: safeMessage(error), ...(enrolled ? { phase: "locked" as const } : {}) });
@@ -126,7 +134,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     generation++;
     abortProtectedRequests();
     clearTransactionCache();
-    if (get().phase === "unlocked") set({ phase: "locked", error: null });
+    // Locking ends the in-memory session; the protected record keeps the refresh token so
+    // the next online verification succeeds without signing in again.
+    clearSdkSession();
+    // One update, so no render sees an unlocked phase with the token already cleared.
+    const account = get().account;
+    const locked = { account: account && withoutAccessToken(account) };
+    if (get().phase === "unlocked") set({ ...locked, phase: "locked", error: null });
+    else set(locked);
     // Any in-flight cryptographic unlock must finish before closing its new database handle.
     await withAuthLock(lockVault).catch(() => {
       set({ error: "Budgie is locked. Reopen the app if local storage remains busy." });
@@ -153,7 +168,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         if (now >= current.attempts.lastObservedAt + 60_000) {
           const updated = { ...current, attempts: { ...current.attempts, lastObservedAt: now } };
           await writeAccount(updated);
-          set({ account: localAccount(updated) });
+          set({ account: localAccount(updated, get().phase === "unlocked") });
         }
       });
     } catch {
@@ -167,7 +182,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await refreshOnlineSession(true);
       const account = await readAccount();
       if (epoch !== generation || !account) return;
-      set({ account: localAccount(account), error: null, phase: get().phase === "unlocked" ? "unlocked" : "locked" });
+      const unlocked = get().phase === "unlocked";
+      set({ account: localAccount(account, unlocked), error: null, phase: unlocked ? "unlocked" : "locked" });
     } catch (error) {
       if (epoch !== generation) return;
       if (error instanceof OnlineVerificationError && error.requiresLogin) {
@@ -195,7 +211,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (!account) return;
       const updated = { ...account, session: { ...account.session, onboardingStatus: "submitted" } };
       await writeAccount(updated);
-      set({ account: localAccount(updated) });
+      set({ account: localAccount(updated, get().phase === "unlocked") });
     });
   },
 }));
@@ -206,7 +222,8 @@ async function refreshUnlockedSession(userId: string, forceRefresh = false): Pro
     const current = useAuthStore.getState();
     if (current.phase !== "unlocked" || current.account?.session.userId !== userId) throw new Error("Budgie is locked.");
     const account = await readAccount();
-    if (account) useAuthStore.setState({ account: localAccount(account) });
+    // A lock during the read must not put the access token back in memory.
+    if (account && useAuthStore.getState().phase === "unlocked") useAuthStore.setState({ account: localAccount(account, true) });
     return session.accessToken;
   } catch (error) {
     if (error instanceof OnlineVerificationError && error.requiresLogin) {
