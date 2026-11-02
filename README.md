@@ -475,7 +475,7 @@ odin/
 
 ### Recurring Transaction Engine
 
-The recurring engine is an idempotent SQL function (`odin.run_recurring_transaction_engine`) that scans active templates and posts occurrences and transactions. It is exposed via:
+Recurring income and biller auto-posts run as pg_cron jobs every 5 minutes (`private.post_due_recurring_income`, `private.post_due_scheduled_payments`). Devices post the same paydays offline with the same derived ids, so whichever posts first wins. A biller whose source account cannot cover its due dates is skipped, on the server and on the device. `odin.run_recurring_transaction_engine` runs the income job on demand and is exposed via:
 
 ```
 POST /odin/api/recurring/run
@@ -492,7 +492,7 @@ curl -X POST https://your-api.com/odin/api/recurring/run \
   -d '{}'
 ```
 
-Optional payload: `{ "payload": { "as_of": "2024-01-15", "limit": 200 } }`
+Optional payload: `{ "payload": { "as_of": "2024-01-15" } }` (`limit` is accepted but ignored).
 
 ### Daily Financial Reports
 
