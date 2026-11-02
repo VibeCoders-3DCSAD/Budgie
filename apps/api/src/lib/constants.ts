@@ -42,5 +42,11 @@ export const ONBOARDING_ERRORS = {
   submit_not_confirmed: "You must confirm data use before submitting.",
 } as const;
 
+export const RECURRING_ERRORS = {
+  cron_secret_mismatch: "Invalid cron secret.",
+  user_session_rejected: "User sessions are not allowed on this endpoint. Use the cron secret.",
+  no_cron_secret: "RECURRING_CRON_SECRET is not configured.",
+} as const;
+
 // Deletion and data-export requests in these statuses are still open.
 export const ACTIVE_REQUEST_STATUSES = ["requested", "processing"];

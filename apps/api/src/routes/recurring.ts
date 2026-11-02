@@ -2,7 +2,8 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { hasUserSession, requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
-import { runEngine, ENGINE_ERRORS } from "../services/recurring/recurringService.js";
+import { runEngine } from "../services/recurring/recurringService.js";
+import { RECURRING_ERRORS } from "../lib/constants.js";
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.post("/run", async (request: Request, response: Response) => {
   if (!configuredSecret) {
     response.status(500).json({
       error: "Internal Server Error",
-      message: ENGINE_ERRORS.no_cron_secret,
+      message: RECURRING_ERRORS.no_cron_secret,
     });
     return;
   }
@@ -39,7 +40,7 @@ router.post("/run", async (request: Request, response: Response) => {
   if (await hasUserSession(request)) {
     response.status(403).json({
       error: "Forbidden",
-      message: ENGINE_ERRORS.user_session_rejected,
+      message: RECURRING_ERRORS.user_session_rejected,
     });
     return;
   }
@@ -47,7 +48,7 @@ router.post("/run", async (request: Request, response: Response) => {
   if (!validateCronSecret(request.headers["x-cron-secret"], configuredSecret)) {
     response.status(403).json({
       error: "Forbidden",
-      message: ENGINE_ERRORS.cron_secret_mismatch,
+      message: RECURRING_ERRORS.cron_secret_mismatch,
     });
     return;
   }
