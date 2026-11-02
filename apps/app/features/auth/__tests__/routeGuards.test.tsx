@@ -123,11 +123,4 @@ describe("app routes", () => {
     await act(async () => finish());
     expect(screen.getByText(`redirect:${ROUTES.dashboard}`)).toBeTruthy();
   });
-
-  it("restarts onboarding for reassessment without redirecting a submitted user away", () => {
-    unlock("submitted");
-    jest.mocked(useLocalSearchParams).mockReturnValue({ restart: "1" });
-    const screen = renderUnlocked(<UserOnboarding />);
-    expect(screen.getByText("reassess")).toBeTruthy();
-  });
 });

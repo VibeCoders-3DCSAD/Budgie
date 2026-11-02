@@ -12,8 +12,8 @@ export function Redirect({ href }: { href: string }) { return <Text>{`redirect:$
 
 export function PinAccessScreen() { return <Text>pin</Text>; }
 
-export function OnboardingFlow({ onComplete, restart }: { onComplete: () => void; restart?: boolean }) {
-  return <Pressable onPress={onComplete}><Text>{restart ? "reassess" : "onboarding"}</Text></Pressable>;
+export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
+  return <Pressable onPress={onComplete}><Text>onboarding</Text></Pressable>;
 }
 
 export function SafeAreaProvider({ children }: { children: ReactNode }) { return <>{children}</>; }

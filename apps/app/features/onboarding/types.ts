@@ -11,17 +11,6 @@ export type OnboardingSession = {
   raw_answers: Record<string, unknown>;
 };
 
-export type ProfileAssignment = {
-  id: string;
-  user_id: string;
-  profile_label: string;
-  is_active: boolean;
-  confirmation_required: boolean;
-  effective_from: string;
-  assessment_id: string | null;
-  explanation: string | null;
-};
-
 export type StepKind = "card_select" | "card_multi_select" | "dropdown" | "input" | "amount_list" | "review" | "result";
 
 export type StepOption = {

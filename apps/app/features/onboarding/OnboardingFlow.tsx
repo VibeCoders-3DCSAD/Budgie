@@ -12,7 +12,6 @@ import {
 import { STEPS, type SubmitResult } from "./types";
 import { currentSeasonalAnswers, withOnboardingAnswer } from "./helpers/seasonalAnswers";
 import { isStepComplete, isStepVisible, nextVisibleStepIndex } from "./helpers/stepNavigation";
-import { normalizeCustomEvents } from "@odin/spending-insights/seasons";
 import { AQUA950, ERROR } from "./colors";
 import { OnboardingStatusMessage } from "./components/OnboardingStatusMessage";
 import { OnboardingProgressBar } from "./components/OnboardingProgressBar";
@@ -26,14 +25,12 @@ type OnboardingFlowProps = {
   accessToken: string;
   userId: string;
   onComplete: () => void;
-  restart?: boolean;
 };
 
 export default function OnboardingFlow({
   accessToken,
   userId: _userId,
   onComplete,
-  restart = false,
 }: OnboardingFlowProps) {
   const online = useConnectivityStore((state) => state.online);
   const { showToast } = useToast();
@@ -69,18 +66,8 @@ export default function OnboardingFlow({
         if (response.ok && body.payload?.session) {
           const sess = body.payload.session;
           if (sess.status === "submitted") {
-            if (!restart) {
-              onComplete();
-              return;
-            }
-            const retainedAnswers = { questionnaire_version: "2", custom_seasonal_events: normalizeCustomEvents(sess.raw_answers?.custom_seasonal_events) };
-            const { response: cr, body: cb } = await createSession(accessToken, retainedAnswers);
-            setAnswers(retainedAnswers);
-            if (cr.ok && cb.payload?.session) setSessionId(cb.payload.session.id);
-            else {
-              setInitError(cb?.message ?? "Failed to start reassessment.");
-              return;
-            }
+            onComplete();
+            return;
           } else {
             setSessionId(sess.id);
             if (sess.raw_answers) {
@@ -115,7 +102,7 @@ export default function OnboardingFlow({
     return () => {
       cancelled = true;
     };
-  }, [accessToken, onComplete, showToast, online, restart]);
+  }, [accessToken, onComplete, showToast, online]);
 
   // ── Persist progress on step change ──
   const persistStep = useCallback(

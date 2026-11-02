@@ -1,5 +1,5 @@
 import type { Classification } from "../dashboard/components/FinancialHealthCard";
-import type { OnboardingSession, ProfileAssignment } from "./types";
+import type { OnboardingSession } from "./types";
 import { apiFetch } from "../../lib/helpers/apiFetch";
 
 export function getCurrentSession(accessToken: string) {
@@ -49,48 +49,3 @@ export function submitSession(accessToken: string, sessionId: string) {
   );
 }
 
-export function getProfileAssignment(accessToken: string) {
-  return apiFetch<{ payload?: { assignment: ProfileAssignment | null; drivers: ProfileDriver[] }; error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/profile/assignment/current",
-  );
-}
-
-export function selectProfileAssignment(accessToken: string, profileLabel: string, rejectCurrent: boolean) {
-  return apiFetch<{ error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/profile/assignment/select",
-    { method: "POST", body: { payload: { profile_label: profileLabel, reject_current: rejectCurrent } } },
-  );
-}
-
-export function confirmProfileAssignment(accessToken: string, assignmentId: string) {
-  return apiFetch<{ error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/profile/assignment/confirm",
-    { method: "POST", body: { payload: { assignment_id: assignmentId, confirmation: true } } },
-  );
-}
-
-export function rejectProfileAssignment(accessToken: string, assignmentId: string, reason: string) {
-  return apiFetch<{ error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/profile/assignment/reject",
-    { method: "POST", body: { payload: { assignment_id: assignmentId, override_reason: reason } } },
-  );
-}
-
-export function requestProfileReassessment(accessToken: string, reason: string, useRecentTransactions: boolean) {
-  return apiFetch<{ payload?: { status?: string }; error?: string; message?: string }>(
-    accessToken,
-    "/odin/api/profile/reassess",
-    { method: "POST", body: { payload: { reason, use_recent_transactions: useRecentTransactions, assessment_method: "questionnaire" } } },
-  );
-}
-
-export type ProfileDriver = {
-  driver_key: string;
-  driver_label: string;
-  value_text: string;
-  explanation: string;
-};

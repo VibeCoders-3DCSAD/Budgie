@@ -1,5 +1,4 @@
 import type { PrivacySettings } from "../../../features/governance/types";
-import type { ProfileAssignment } from "../../../features/onboarding/types";
 import { getDb, now } from "../helpers/db";
 
 type PrivacySettingsRow = {
@@ -74,34 +73,5 @@ export async function cachePrivacySettings(
     ts,
     ts,
     ts,
-  );
-}
-
-export async function getLocalProfileAssignment(userId: string): Promise<ProfileAssignment | null> {
-  const db = await getDb();
-  const row = await db.getFirstAsync<{ assignment_json: string }>(
-    "SELECT assignment_json FROM financial_profile_cache WHERE user_id = ?",
-    userId,
-  );
-  if (!row) return null;
-  try {
-    return JSON.parse(row.assignment_json) as ProfileAssignment;
-  } catch {
-    return null;
-  }
-}
-
-export async function cacheProfileAssignment(userId: string, assignment: ProfileAssignment | null): Promise<void> {
-  const db = await getDb();
-  if (!assignment) {
-    await db.runAsync("DELETE FROM financial_profile_cache WHERE user_id = ?", userId);
-    return;
-  }
-  await db.runAsync(
-    `INSERT OR REPLACE INTO financial_profile_cache (user_id, assignment_json, updated_at)
-     VALUES (?, ?, ?)`,
-    userId,
-    JSON.stringify(assignment),
-    now(),
   );
 }
