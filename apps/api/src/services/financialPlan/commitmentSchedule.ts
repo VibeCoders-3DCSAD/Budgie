@@ -4,7 +4,7 @@ function addScheduleDays(date: string, days: number): string {
   return next.toISOString().slice(0, 10);
 }
 
-export function addScheduleMonths(date: string, months: number, dayOfMonth?: number | null): string {
+function addScheduleMonths(date: string, months: number, dayOfMonth?: number | null): string {
   const next = new Date(`${date}T00:00:00Z`);
   const day = dayOfMonth ?? next.getUTCDate();
   next.setUTCDate(1);

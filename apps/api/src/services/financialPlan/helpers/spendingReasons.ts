@@ -11,7 +11,7 @@ const SEASON_KEYS: Readonly<Record<string, string>> = {
 };
 const SEASON_NAMES: Readonly<Record<string, string>> = Object.fromEntries(Object.entries(SEASON_KEYS).map(([name, key]) => [key, name]));
 
-export function explanationPlanMonth(evidence: FinancialPlanEvidence): string | null {
+function explanationPlanMonth(evidence: FinancialPlanEvidence): string | null {
   if (evidence.planMonth !== undefined) return /^\d{4}-(0[1-9]|1[0-2])$/.test(evidence.planMonth) ? evidence.planMonth : null;
   // Compatibility with already-issued explanation requests; avoid locale-dependent Date parsing.
   const match = /^(\w+) (\d{4})$/.exec(evidence.planPeriodLabel);
@@ -19,7 +19,7 @@ export function explanationPlanMonth(evidence: FinancialPlanEvidence): string | 
   return match && index >= 0 ? `${match[2]}-${String(index + 1).padStart(2, "0")}` : null;
 }
 
-export function forecastCategorySlug(change: Change): HfceCategorySlug | null {
+function forecastCategorySlug(change: Change): HfceCategorySlug | null {
   const slug = change.categorySlug ?? change.evidenceId.replace(/^forecast:/, "");
   return HFCE_CATEGORY_SLUGS.find((category) => category === slug) ?? null;
 }

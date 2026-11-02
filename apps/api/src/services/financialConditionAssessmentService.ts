@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { classifyFinancialCondition } from "../lib/mlClient.js";
 
-export type FinancialConditionAssessment = {
+type FinancialConditionAssessment = {
   id: string;
   assessed_at: string;
   rule_set_version: string;

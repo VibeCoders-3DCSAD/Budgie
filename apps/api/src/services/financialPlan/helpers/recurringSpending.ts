@@ -9,7 +9,7 @@ type CategoryAmount = { category: string; amountCentavos: number };
 
 type RecurringSpend = { id: string; key: string; subcategoryId: string; transactionDate: string; amountCentavos: number; months: number[] | null };
 
-export type UnusualSpending = {
+type UnusualSpending = {
   // Unusual spending the user has not said recurs; it stays out of the plan and its forecast.
   oneOffIds: Set<string>;
   // Every payment that comes back in certain months, which spending history leaves out.

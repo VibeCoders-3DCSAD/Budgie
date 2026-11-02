@@ -20,7 +20,7 @@ export type FinancialPlanEvidence = {
   forecastChanges: Array<{ evidenceId: string; categoryName: string; categorySlug?: string; baselineCentavos: number; forecastCentavos: number; allocationCentavos: number; allocationForecastDifferenceCentavos: number; differenceCentavos: number; percentageChange: number | null; forecastRationale: string; possibleSeasonalContext: string | null }>;
 };
 
-export type ZeroAllocationEvidence = {
+type ZeroAllocationEvidence = {
   categoryName: string;
   allocationCentavos: number;
   requiredFloorCentavos: number;

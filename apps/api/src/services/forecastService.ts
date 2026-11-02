@@ -11,7 +11,7 @@ export type ForecastTransaction = {
   recurrence?: "yearly";
 };
 
-export type ForecastRequest = {
+type ForecastRequest = {
   historicalTransactions: ForecastTransaction[];
   // YYYY-MM month to forecast; odin-ml defaults to the next calendar month.
   targetMonth?: string;
@@ -21,7 +21,7 @@ export type ForecastRequest = {
   asOf?: string;
 };
 
-export type BaselineMethod = "same_period_last_year" | "median_monthly" | "recency_weighted_provisional";
+type BaselineMethod = "same_period_last_year" | "median_monthly" | "recency_weighted_provisional";
 const BASELINE_METHODS: readonly BaselineMethod[] = ["same_period_last_year", "median_monthly", "recency_weighted_provisional"];
 
 export type ForecastPayload = {
@@ -40,7 +40,7 @@ export type ForecastPayload = {
 
 type CategoryAmount = { category: string; amountCentavos: number };
 
-export type QuarterlyForecastPayload = {
+type QuarterlyForecastPayload = {
   quarters: { quarter: string; totalCentavos: number; categories: CategoryAmount[] }[];
   // Each forecast month; months differ within a quarter only once a full year of history sets the baseline.
   months: { month: string; totalCentavos: number; categories: CategoryAmount[] }[];
@@ -61,7 +61,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const HFCE_CATEGORIES = new Set(["alcohol_tobacco", "clothing_footwear", "communication", "education", "food", "furnishings_household", "health", "housing_water_utilities", "miscellaneous_goods_services", "recreation_culture", "restaurants_hotels", "transport"]);
 
 export class ForecastValidationError extends Error {}
-export type ForecastUnavailableReason = "NO_COMPLETED_MONTH" | "NO_RECENT_SPENDING";
+type ForecastUnavailableReason = "NO_COMPLETED_MONTH" | "NO_RECENT_SPENDING";
 const FORECAST_UNAVAILABLE_MESSAGES: Record<ForecastUnavailableReason, string> = {
   NO_COMPLETED_MONTH: "Your spending forecast will be ready after your first full month of recorded expenses.",
   NO_RECENT_SPENDING: "You haven't recorded expenses in the last 6 months. Add recent expenses to get a spending forecast.",

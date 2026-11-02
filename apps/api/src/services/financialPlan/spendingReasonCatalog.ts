@@ -1,15 +1,5 @@
 // Candidate explanations supplied in the Philippine Monthly Spending Reference.
 // These are applicability rules, never forecasting coefficients or household facts.
-export const SPENDING_REFERENCE_PROVENANCE = {
-  version: "2026-10-18",
-  reference: "docs/philippine-monthly-spending-reference.md",
-  categorySource: "https://psa.gov.ph/statistics/national-accounts/faqs",
-  climateSource: "https://www.pagasa.dost.gov.ph/index.php/information/climate-philippines",
-  lastReviewedAt: "2026-10-18",
-  // The monthly budgeting possibilities are supplied reference material, not
-  // verified causal findings or a verified calendar for any particular year.
-  calendarLastVerifiedAt: null,
-} as const;
 export const HFCE_CATEGORY_SLUGS = [
   "food", "alcohol_tobacco", "clothing_footwear", "housing_water_utilities",
   "furnishings_household", "health", "transport", "communication",
@@ -17,7 +7,7 @@ export const HFCE_CATEGORY_SLUGS = [
 ] as const;
 export type HfceCategorySlug = typeof HFCE_CATEGORY_SLUGS[number];
 
-export type MonthlySpendingReference = {
+type MonthlySpendingReference = {
   month: number;
   higher: readonly HfceCategorySlug[];
   lower: readonly HfceCategorySlug[];
@@ -48,18 +38,3 @@ export const SEASON_CATEGORY_RULES: Readonly<Record<string, { months: readonly n
   undas: { months: [10, 11], categories: ["food", "transport", "restaurants_hotels"] },
   christmas_ber_months: { months: [9, 10, 11, 12], categories: ["food", "alcohol_tobacco", "clothing_footwear", "housing_water_utilities", "transport", "recreation_culture", "restaurants_hotels", "miscellaneous_goods_services"] },
 };
-
-// Specific purchases, weather effects, tax due dates and completed activities are
-// never established by selecting a season. The current selector only uses the
-// user's reported pattern and actual scheduled-payment records. These candidates
-// stay ineligible until a dedicated, dated source supplies the required facts.
-export const ADDITIONAL_EVIDENCE_REQUIRED = {
-  return_travel: "confirmed_trip_dates", school_payments: "recorded_school_payment",
-  completed_celebrations: "completed_nonrecurring_event", valentines_day: "confirmed_celebration",
-  chinese_new_year: "verified_year_calendar_and_participation", completed_travel: "completed_nonrecurring_trip",
-  holy_week: "verified_year_calendar_and_participation", confirmed_break: "confirmed_work_or_school_break",
-  school_preparation: "confirmed_school_calendar_and_purchase", mothers_day: "confirmed_celebration",
-  canceled_outings: "confirmed_cancellation", holiday_travel: "confirmed_trip_dates",
-  local_festival: "verified_local_calendar_and_participation", halloween: "confirmed_celebration",
-  completed_repairs: "completed_nonrecurring_repair",
-} as const;

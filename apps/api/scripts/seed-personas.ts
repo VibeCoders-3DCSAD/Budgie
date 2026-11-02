@@ -90,7 +90,7 @@ const healthyRegularSpending = [
 // Unplanned one-off purchases, keyed by how many months before the current month they happen. Each lands in a
 // subcategory with at least six purchases inside the IQR check's 12-month window, so it is flagged and the
 // forecast leaves it out.
-export const healthyLargePurchases: Record<number, { slug: string; pesos: number; name: string }> = {
+const healthyLargePurchases: Record<number, { slug: string; pesos: number; name: string }> = {
   6: { slug: "household_kitchenware", pesos: 9_500, name: "Air fryer and rice cooker" },
   5: { slug: "clothing_womens", pesos: 12_000, name: "Work wardrobe refresh" },
   3: { slug: "communication_device", pesos: 42_000, name: "Laptop replacement" },
@@ -160,7 +160,7 @@ function reconcileBalances(data: SeedData) {
 
 // The eight full quarters before the current one, plus the current quarter to date, so the forecast chart
 // can show two years of actual quarterly spending.
-export const PERSONA_HISTORY_QUARTERS = 8;
+const PERSONA_HISTORY_QUARTERS = 8;
 export function personaHistoryMonths(today: string) {
   const currentMonth = monthStartOf(today);
   const quarterStart = addMonths(currentMonth, -((Number(today.slice(5, 7)) - 1) % 3));

@@ -1,4 +1,4 @@
-export type SurplusReasonCode =
+type SurplusReasonCode =
   | "DEBT_SIGNAL"
   | "EMERGENCY_FUND_INADEQUATE"
   | "CREDIT_CARD_SIGNAL"
@@ -9,12 +9,12 @@ export type SurplusReasonCode =
   | "ASSESSMENT_STALE"
   | "ASSESSMENT_INSUFFICIENT_DATA";
 
-export type SurplusDestination =
+type SurplusDestination =
   | { type: "emergency_fund"; savingsGoalId: string }
   | { type: "debt"; debtAccountId: string }
   | { type: "credit_card"; accountId: string };
 
-export type SurplusRecommendation = {
+type SurplusRecommendation = {
   unallocatedSurplusCentavos: number;
   reasonCode: SurplusReasonCode;
   assessmentStatus: "applied" | "unavailable" | "stale" | "insufficient_data";

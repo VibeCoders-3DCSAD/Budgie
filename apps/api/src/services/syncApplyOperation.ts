@@ -14,8 +14,6 @@ export type Operation = {
   payload: Record<string, unknown>;
 };
 
-export type PreparedOperation = Operation;
-
 const SYNCED_ENTITIES = new Set([
   "categories",
   "subcategories",
@@ -356,7 +354,7 @@ export async function prepareOperation(
   supabase: SupabaseClient,
   userId: string,
   op: Operation,
-): Promise<PreparedOperation> {
+): Promise<Operation> {
   if (!SYNCED_ENTITIES.has(op.entity)) {
     throw new Error(`entity '${op.entity}' is not in the sync allowlist`);
   }

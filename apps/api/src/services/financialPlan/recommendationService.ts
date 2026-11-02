@@ -120,10 +120,6 @@ export function manilaToday(now = new Date()): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
-// Commitments already paid this month are deducted so a mid-month plan does not reserve them twice.
-export function remainingCommitmentCentavos(amountCentavos: number, paidCentavos: number): number {
-  return Math.max(amountCentavos - paidCentavos, 0);
-}
 
 
 

@@ -1,4 +1,4 @@
-import { applyFinancialPlanPriorityWeights, currentCalendarMonth, excludeUnusualTransactions, financialPlanPriorityGroup, forecastCoversPlanPeriod, isFinancialPlanInfeasible, manilaToday, remainingCommitmentCentavos, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
+import { applyFinancialPlanPriorityWeights, currentCalendarMonth, excludeUnusualTransactions, financialPlanPriorityGroup, forecastCoversPlanPeriod, isFinancialPlanInfeasible, manilaToday, scheduledReservationDates } from "../../../services/financialPlan/recommendationService.js";
 
 describe("Financial Plan feasibility", () => {
   it("marks a 5,000-peso plan infeasible when required minimums exceed it", () => {
@@ -80,10 +80,5 @@ describe("Financial Plan period", () => {
 describe("Financial Plan commitment payments", () => {
   it("uses the Manila date for today", () => {
     expect(manilaToday(new Date("2026-10-14T16:30:00.000Z"))).toBe("2026-10-15");
-  });
-
-  it("deducts payments already made from a commitment", () => {
-    expect(remainingCommitmentCentavos(5_000, 2_000)).toBe(3_000);
-    expect(remainingCommitmentCentavos(5_000, 6_000)).toBe(0);
   });
 });

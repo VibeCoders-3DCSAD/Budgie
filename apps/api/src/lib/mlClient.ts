@@ -1,8 +1,8 @@
 import { trustedMlHeaders } from "./mlInferenceGateway.js";
 
-export type FinancialClassificationFailureReason = "not_configured" | "timeout" | "network_error" | "http_error" | "invalid_response";
+type FinancialClassificationFailureReason = "not_configured" | "timeout" | "network_error" | "http_error" | "invalid_response";
 
-export type FinancialClassificationResult =
+type FinancialClassificationResult =
   | { ok: true; classification: Record<string, unknown>; modelVersion: string }
   | { ok: false; reason: FinancialClassificationFailureReason };
 
