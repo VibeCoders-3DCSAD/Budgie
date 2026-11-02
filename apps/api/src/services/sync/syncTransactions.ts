@@ -26,7 +26,6 @@ import {
   validateDateOrdering,
   validateDayRange,
   validateUpdateFieldType,
-  validateUpdateFieldTypes,
   type EntitySyncTable,
   type Payload,
   type SyncContext,
@@ -253,47 +252,50 @@ async function validateRecurringTemplateUpdate({ supabase, userId, recordId }: S
       await verifyAccountOwnership(supabase, userId, accountId as string);
     }
   }
-
-  const src = sanitized.source_account_id;
-  const dst = sanitized.destination_account_id;
-  const sub = sanitized.subcategory_id;
-  if (src && typeof src === "string") await verifyAccountOwnership(supabase, userId, src);
-  if (dst && typeof dst === "string") await verifyAccountOwnership(supabase, userId, dst);
-  if (sub && typeof sub === "string") await verifySubcategoryOwnership(supabase, userId, sub);
   return sanitized;
 }
 
-async function validateRecurringOccurrenceCreate({ supabase, userId }: SyncContext, payload: Payload): Promise<Payload> {
-  const sanitized = allowedPayload(payload, RECURRING_OCCURRENCE_FIELDS);
-  requireString(sanitized, "recurring_template_id");
-  requireString(sanitized, "scheduled_date");
+async function verifyRecurringTemplate({ supabase, userId }: SyncContext, templateId: string): Promise<void> {
   const { data: template, error: templateErr } = await supabase
     .from("recurring_transaction_templates")
     .select("id")
-    .eq("id", sanitized.recurring_template_id as string)
+    .eq("id", templateId)
     .eq("user_id", userId)
     .eq("deleted", false)
     .maybeSingle();
   if (templateErr) throw new Error(`recurring template validation failed: ${templateErr.message}`);
   if (!template) throw new Error("recurring template not found or inaccessible");
+}
+
+async function verifyGeneratedTransaction({ supabase, userId }: SyncContext, transactionId: unknown): Promise<void> {
+  if (typeof transactionId !== "string" || !transactionId) return;
+  const { data: tx, error: txErr } = await supabase
+    .from("transactions")
+    .select("id")
+    .eq("id", transactionId)
+    .eq("user_id", userId)
+    .eq("deleted", false)
+    .maybeSingle();
+  if (txErr) throw new Error(`transaction lookup failed: ${txErr.message}`);
+  if (!tx) throw new Error("generated_transaction_id not found or inaccessible");
+}
+
+async function validateRecurringOccurrenceCreate(ctx: SyncContext, payload: Payload): Promise<Payload> {
+  const sanitized = allowedPayload(payload, RECURRING_OCCURRENCE_FIELDS);
+  requireString(sanitized, "recurring_template_id");
+  requireString(sanitized, "scheduled_date");
+  await verifyRecurringTemplate(ctx, sanitized.recurring_template_id as string);
   return sanitized;
 }
 
-async function validateRecurringOccurrenceUpdate({ supabase, userId }: SyncContext, payload: Payload): Promise<Payload> {
+// The template and date are required when present; the generated transaction may be cleared with null.
+async function validateRecurringOccurrenceUpdate(ctx: SyncContext, payload: Payload): Promise<Payload> {
   const sanitized = allowedPayload(payload, RECURRING_OCCURRENCE_FIELDS);
-  validateUpdateFieldTypes(sanitized);
-  const tid = sanitized.generated_transaction_id;
-  if (tid && typeof tid === "string") {
-    const { data: tx, error: txErr } = await supabase
-      .from("transactions")
-      .select("id")
-      .eq("id", tid)
-      .eq("user_id", userId)
-      .eq("deleted", false)
-      .maybeSingle();
-    if (txErr) throw new Error(`transaction lookup failed: ${txErr.message}`);
-    if (!tx) throw new Error("generated_transaction_id not found or inaccessible");
-  }
+  if (sanitized.recurring_template_id !== undefined) requireString(sanitized, "recurring_template_id");
+  if (sanitized.scheduled_date !== undefined) requireString(sanitized, "scheduled_date");
+  optionalString(sanitized, "generated_transaction_id");
+  if (sanitized.recurring_template_id !== undefined) await verifyRecurringTemplate(ctx, sanitized.recurring_template_id as string);
+  await verifyGeneratedTransaction(ctx, sanitized.generated_transaction_id);
   return sanitized;
 }
 
