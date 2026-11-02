@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { classifyFinancialCondition } from "../../lib/mlClient.js";
+import { resolveEmergencyFundBalance } from "../savings/emergencyFundBalance.js";
 
 type FinancialConditionAssessment = {
   id: string;
@@ -22,48 +23,6 @@ function selfReportedRevolvingRange(answers: OnboardingAnswers) {
   return typeof value === "string" && ["no_credit_card", "always_before_due", "1_to_11_months", "over_a_year"].includes(value)
     ? { self_reported_revolving_range: value }
     : {};
-}
-
-async function resolveEmergencyFundBalance(userId: string, supabase: SupabaseClient): Promise<number | null> {
-  const { data: goal, error: goalError } = await supabase
-    .from("savings_goals")
-    .select("id, starting_amount_centavos")
-    .eq("user_id", userId)
-    .eq("is_emergency_fund", true)
-    .eq("status", "active")
-    .eq("deleted", false)
-    .maybeSingle();
-  if (goalError || !goal) {
-    console.info("financial classification emergency fund source", {
-      user_id: userId,
-      goal_id: null,
-      starting_amount_centavos: null,
-      contribution_centavos: null,
-      withdrawal_centavos: null,
-    });
-    return null;
-  }
-
-  const { data: activities, error: activityError } = await supabase
-    .from("savings_goal_activities")
-    .select("activity_kind, amount_centavos")
-    .eq("user_id", userId)
-    .eq("savings_goal_id", goal.id)
-    .eq("deleted", false);
-  if (activityError) return null;
-
-  const contributionCentavos = (activities ?? []).filter((activity) => activity.activity_kind === "contribution").reduce((sum, activity) => sum + Number(activity.amount_centavos), 0);
-  const withdrawalCentavos = (activities ?? []).filter((activity) => activity.activity_kind === "withdrawal").reduce((sum, activity) => sum + Number(activity.amount_centavos), 0);
-  const balanceCentavos = Number(goal.starting_amount_centavos) + contributionCentavos - withdrawalCentavos;
-  console.info("financial classification emergency fund source", {
-    user_id: userId,
-    goal_id: goal.id,
-    starting_amount_centavos: goal.starting_amount_centavos,
-    contribution_centavos: contributionCentavos,
-    withdrawal_centavos: withdrawalCentavos,
-    balance_centavos: balanceCentavos,
-  });
-  return Math.max(0, balanceCentavos) / 100;
 }
 
 function onboardingAssessmentInput(answers: OnboardingAnswers) {
