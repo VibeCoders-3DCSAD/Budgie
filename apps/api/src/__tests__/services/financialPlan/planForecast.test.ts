@@ -22,8 +22,12 @@ describe("Financial Plan forecast", () => {
 
   function client(rows: Record<string, unknown[]>) {
     return { from: (table: string) => {
-      const result = { data: rows[table] ?? [], error: null };
-      const query: unknown = new Proxy({}, { get: (_, key) => key === "then" ? Promise.resolve(result).then.bind(Promise.resolve(result)) : () => query });
+      let data = rows[table] ?? [];
+      const query: unknown = new Proxy({}, { get: (_, key) => {
+        if (key === "range") return (from: number, to: number) => { data = data.slice(from, to + 1); return query; };
+        if (key === "then") { const result = Promise.resolve({ data, error: null }); return result.then.bind(result); }
+        return () => query;
+      } });
       return query;
     } } as SupabaseClient;
   }

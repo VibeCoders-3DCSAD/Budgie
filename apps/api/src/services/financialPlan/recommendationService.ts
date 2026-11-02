@@ -20,7 +20,8 @@ import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-in
 import { recurringMonthSpend } from "@odin/spending-insights/recurringMonths.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend, type AnomalyEvaluation } from "./helpers/recurringSpending.js";
 import { currentCalendarMonth, MANILA_TIME_ZONE } from "../../lib/date/manila.js";
-import { financialPlanPeriod, forecastCoversPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
+import { financialPlanPeriod, forecastCoversPlanPeriod, forecastHistoryStart } from "./period.js";
+import { readExpenseHistory, readScheduledPaymentHistory } from "./historyQueries.js";
 
 const ESSENTIAL_HFCE_CATEGORY_SLUGS = new Set(["food", "housing_water_utilities", "health", "communication", "transport", "education", "furnishings_household", "clothing_footwear"]);
 
@@ -164,10 +165,10 @@ async function loadPlanInputs(supabase: SupabaseClient, userId: string, period: 
     supabase.from("subcategories").select("id, category_id, label, minimum_amount_centavos, fixed_amount_centavos, always_in_budget, updated_at").eq("user_id", userId).eq("kind", "expense").eq("is_active", true).eq("deleted", false).limit(200),
     supabase.from("categories").select("id, slug, label, minimum_amount_centavos, fixed_amount_centavos, updated_at").eq("user_id", userId).eq("is_active", true).eq("deleted", false).limit(200),
     supabase.from("financial_accounts").select("id, kind, current_balance_centavos, updated_at").eq("user_id", userId).eq("status", "active").eq("deleted", false).limit(100),
-    supabase.from("transactions").select("id, amount_centavos, transaction_date, transaction_type, category_id, subcategory_id, source_savings_goal_id, destination_savings_goal_id, updated_at, anomaly_evaluations!anomaly_evaluations_transaction_id_fkey(transaction_id, is_anomaly, recurrence, recurrence_months)").eq("user_id", userId).eq("status", "posted").eq("deleted", false).eq("anomaly_evaluations.is_anomaly", true).order("transaction_date", { ascending: false }).limit(MAX_HISTORY),
+    readExpenseHistory<TransactionWithAnomalies>(supabase, userId, historyStart, "id, amount_centavos, transaction_date, transaction_type, category_id, subcategory_id, source_savings_goal_id, destination_savings_goal_id, updated_at"),
     supabase.from("financial_condition_assessments").select("id, assessed_at, rule_set_version, output_snapshot").eq("user_id", userId).order("assessed_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("onboarding_sessions").select("raw_answers").eq("user_id", userId).eq("status", "submitted").order("submitted_at", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("scheduled_payment_records").select("transaction_id").eq("user_id", userId).eq("deleted", false).gte("payment_date", historyStart).not("transaction_id", "is", null).limit(MAX_HISTORY),
+    readScheduledPaymentHistory(supabase, userId, historyStart),
   ]);
   const sources = [
     ["subcategories", subcategories], ["categories", categories], ["financial_accounts", accounts],

@@ -35,8 +35,13 @@ describe("Financial Plan recommendations with recorded spending", () => {
       ...additionalRows,
     };
     return { from: (table: string) => {
-      const result = { data: rows[table] ?? [], error: null };
-      const query: unknown = new Proxy({}, { get: (_, key) => key === "maybeSingle" ? () => Promise.resolve({ data: rows[table]?.[0] ?? null, error: null }) : key === "then" ? Promise.resolve(result).then.bind(Promise.resolve(result)) : () => query });
+      let data = rows[table] ?? [];
+      const query: unknown = new Proxy({}, { get: (_, key) => {
+        if (key === "maybeSingle") return () => Promise.resolve({ data: rows[table]?.[0] ?? null, error: null });
+        if (key === "range") return (from: number, to: number) => { data = data.slice(from, to + 1); return query; };
+        if (key === "then") { const result = Promise.resolve({ data, error: null }); return result.then.bind(result); }
+        return () => query;
+      } });
       return query;
     } } as SupabaseClient;
   }

@@ -26,8 +26,10 @@ function client(paid: number, fixed: number | null = null, months = 1, commitmen
   ];
   return { from: (table: string) => {
     const builder: Record<string, unknown> = {};
+    let data = rows[table] ?? [];
     for (const name of ["select", "eq", "in", "limit", "order", "gte", "lte", "not", "maybeSingle"]) builder[name] = () => builder;
-    builder.then = (resolve: (value: unknown) => void) => Promise.resolve({ data: rows[table] ?? [], error: null }).then(resolve);
+    builder.range = (from: number, to: number) => { data = (data as unknown[]).slice(from, to + 1); return builder; };
+    builder.then = (resolve: (value: unknown) => void) => Promise.resolve({ data, error: null }).then(resolve);
     return builder;
   } } as unknown as SupabaseClient;
 }
