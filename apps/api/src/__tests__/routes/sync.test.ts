@@ -5,7 +5,7 @@ jest.mock("../../lib/supabase.js", () => {
   return { supabase: mockClient, createAuthenticatedSupabaseClient: () => mockClient };
 });
 
-import { isCursorMap } from "../../routes/sync.js";
+import { isCursorMap } from "../../services/sync/syncRequestValidation.js";
 import { SYNCED_TABLES } from "../../services/sync/syncService.js";
 
 const validCursor = { ts: "2026-01-01T00:00:00.000Z", id: "00000000-0000-0000-0000-000000000002" };
