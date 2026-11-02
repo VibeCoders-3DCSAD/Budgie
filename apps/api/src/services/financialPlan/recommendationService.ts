@@ -18,8 +18,8 @@ import { normalizeCustomEvents, eventMonthLabel } from "@odin/spending-insights/
 import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-insights/seasonalMonth.js";
 import { recurringMonthSpend } from "@odin/spending-insights/recurringMonths.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend, type AnomalyEvaluation } from "./helpers/recurringSpending.js";
+import { currentCalendarMonth, MANILA_TIME_ZONE } from "../../lib/date/manila.js";
 
-const MANILA = "Asia/Manila";
 // Matches the most transactions a forecast request accepts, so a busy year is not cut short.
 const MAX_HISTORY = 2_000;
 const ESSENTIAL_HFCE_CATEGORY_SLUGS = new Set(["food", "housing_water_utilities", "health", "communication", "transport", "education", "furnishings_household", "clothing_footwear"]);
@@ -96,13 +96,6 @@ function latestSourceUpdate(...groups: unknown[][]): string | null {
   return updates.sort((left, right) => new Date(right).getTime() - new Date(left).getTime())[0] ?? null;
 }
 
-export function currentCalendarMonth(now = new Date()): { start: string; end: string } {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: MANILA, year: "numeric", month: "2-digit" }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === "year")!.value);
-  const month = Number(parts.find((part) => part.type === "month")!.value);
-  return { start: new Date(Date.UTC(year, month - 1, 1)).toISOString().slice(0, 10), end: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10) };
-}
-
 export function financialPlanPeriod(planMonth?: string): { start: string; end: string } {
   if (planMonth === undefined) return currentCalendarMonth();
   if (process.env.NODE_ENV === "production" || !/^20\d{2}-(0[1-9]|1[0-2])$/.test(planMonth)) {
@@ -117,7 +110,7 @@ export function forecastCoversPlanPeriod(forecast: ForecastPayload, period: { st
 }
 
 export function manilaToday(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: MANILA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
 }
 
 
@@ -389,7 +382,7 @@ export async function getFinancialPlanRecommendation(userId: string, supabase: S
     const inputSnapshot = { plannedAmountCentavos, commitmentSelection, forecast, restrictions: { allocations: categories }, obligations: { reservations: obligations, requirements: dueObligations }, debtRequirements: { reservations: commitmentRequirements.debts }, savingsRequirements: { reservations: commitmentRequirements.savings }, classification: classificationResult.data ?? { status: "unavailable" } };
     const requiredFundsCentavos = reserved + minimumRequired;
     const shortfallCentavos = Math.max(0, requiredFundsCentavos - plannedAmountCentavos);
-    const explanationEvidence: FinancialPlanEvidence = { ...explanationContext, planPeriodLabel: new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone: MANILA }).format(new Date(`${period.start}T00:00:00Z`)), surplusCentavos: 0, debtSurplusCentavos: 0, savingsSurplusCentavos: 0, shortfall: { plannedAmountCentavos, requiredFundsCentavos, shortfallCentavos }, seasonalPreferences, forecastChanges: [] };
+    const explanationEvidence: FinancialPlanEvidence = { ...explanationContext, planPeriodLabel: new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone: MANILA_TIME_ZONE }).format(new Date(`${period.start}T00:00:00Z`)), surplusCentavos: 0, debtSurplusCentavos: 0, savingsSurplusCentavos: 0, shortfall: { plannedAmountCentavos, requiredFundsCentavos, shortfallCentavos }, seasonalPreferences, forecastChanges: [] };
     const explanationRequest: FinancialPlanExplanationRequest = { evidence: explanationEvidence, leading: [] };
     return { status: "INFEASIBLE" as const, period, inputSnapshot: { ...inputSnapshot, spendingExplanationEvidence: explanationEvidence }, recommendation: { availableFundsCentavos: available, requiredFundsCentavos, shortfallCentavos, allocations: categories.map((category) => ({ categoryId: category.target === "category" ? category.id : null, subcategoryId: category.target === "subcategory" ? category.id : null, allocationRule: category.rule, allocatedAmountCentavos: category.floorCentavos, floorAmountCentavos: category.floorCentavos, ceilingAmountCentavos: category.ceilingCentavos, forecastAmountCentavos: category.forecastCentavos })), debtReservations: [...debtReservations, ...statementReservations], savingsReservations }, explanations: deterministicFinancialPlanExplanations(explanationRequest), explanationRequest };
   }
@@ -481,7 +474,7 @@ export async function getFinancialPlanRecommendation(userId: string, supabase: S
     const differenceCentavos = forecastCentavos - baselineCentavos;
     return [{ evidenceId: `forecast:${detail.category}`, categoryName: category.label, categorySlug: detail.category, baselineCentavos, forecastCentavos, allocationCentavos, allocationForecastDifferenceCentavos: allocationCentavos - forecastCentavos, differenceCentavos, percentageChange: baselineCentavos > 0 ? differenceCentavos / baselineCentavos * 100 : null, forecastRationale: userFacingForecastRationale(detail.explanation), possibleSeasonalContext: null }];
   });
-  const explanationEvidence: FinancialPlanEvidence = { ...explanationContext, planPeriodLabel: new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone: MANILA }).format(new Date(`${period.start}T00:00:00Z`)), surplusCentavos, debtSurplusCentavos, savingsSurplusCentavos, seasonalPreferences, forecastChanges };
+  const explanationEvidence: FinancialPlanEvidence = { ...explanationContext, planPeriodLabel: new Intl.DateTimeFormat("en-PH", { month: "long", year: "numeric", timeZone: MANILA_TIME_ZONE }).format(new Date(`${period.start}T00:00:00Z`)), surplusCentavos, debtSurplusCentavos, savingsSurplusCentavos, seasonalPreferences, forecastChanges };
   // Groq explanations are fetched separately (POST /financial-plans/explanations) so the plan is not held up by them.
   const explanationRequest: FinancialPlanExplanationRequest = { evidence: explanationEvidence, leading: [...(forecastUnavailableMessage ? [forecastUnavailableMessage] : []), ...zeroAllocationInsights] };
   return { status: recommendation.feasibility === "INFEASIBLE" ? "INFEASIBLE" as const : "RECOMMENDATION_READY" as const, period, inputSnapshot: { ...plannedInputSnapshot, spendingExplanationEvidence: explanationEvidence }, recommendation: { availableFundsCentavos: available, requiredFundsCentavos: typeof recommendation.required_funds === "number" ? recommendation.required_funds * 100 : undefined, shortfallCentavos: typeof recommendation.shortfall === "number" ? recommendation.shortfall * 100 : undefined, allocations, debtReservations: baseDebtReservations, debtSurplusCentavos, savingsReservations, savingsSurplusCentavos, surplusRecommendation }, explanations: deterministicFinancialPlanExplanations(explanationRequest), explanationRequest };

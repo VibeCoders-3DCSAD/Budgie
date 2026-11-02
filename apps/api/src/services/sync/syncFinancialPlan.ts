@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { currentCalendarMonth } from "../../lib/date/manila.js";
 import { SYNC_RPCS } from "./constants/entities.js";
 import { FINANCIAL_PLAN_CREATE_FIELDS } from "./constants/financialPlans.js";
 import { verifyAccountOwnership } from "./syncOwnership.js";
@@ -24,8 +25,8 @@ function validatePlanPeriod(sanitized: Payload): void {
   const start = sanitized.period_start as string;
   const end = sanitized.period_end as string;
   // A plan accepted offline near month end may sync after the month rolls over, so the month that just ended is also accepted.
-  const currentPeriod = currentFinancialPlanPeriod();
-  const previousPeriod = currentFinancialPlanPeriod(new Date(Date.parse(`${currentPeriod.start}T00:00:00Z`) - 86_400_000));
+  const currentPeriod = currentCalendarMonth();
+  const previousPeriod = currentCalendarMonth(new Date(Date.parse(`${currentPeriod.start}T00:00:00Z`) - 86_400_000));
   if (![currentPeriod, previousPeriod].some((period) => start === period.start && end === period.end)) throw new Error("Financial Plans can only cover the current calendar month or the one that just ended");
   if (sanitized.status !== "accepted") throw new Error("only accepted Financial Plans can sync");
 }
@@ -172,15 +173,6 @@ async function validateFinancialPlanCreate(ctx: SyncContext, payload: Payload): 
 
 function assertPlanAmount(payload: Payload, field: string): void {
   if (typeof payload[field] !== "number" || !Number.isFinite(payload[field]) || (payload[field] as number) < 0 || (payload[field] as number) > Number.MAX_SAFE_INTEGER) throw new Error(`${field} must be a finite non-negative amount`);
-}
-
-function currentFinancialPlanPeriod(now = new Date()): { start: string; end: string } {
-  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", year: "numeric", month: "2-digit" }).formatToParts(now);
-  const year = Number(parts.find((part) => part.type === "year")!.value);
-  const month = Number(parts.find((part) => part.type === "month")!.value);
-  const start = new Date(Date.UTC(year, month - 1, 1));
-  const end = new Date(Date.UTC(year, month, 0));
-  return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
 async function verifyFinancialPlanAllocationReferences(
