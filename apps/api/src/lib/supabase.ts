@@ -1,13 +1,10 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { withTimeout } from "./http/withTimeout.js";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? "";
 
-const fetchWithTimeout: typeof fetch = (input, init) => {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30_000);
-  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout));
-};
+const fetchWithTimeout: typeof fetch = (input, init) => withTimeout(30_000, (signal) => fetch(input, { ...init, signal }));
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

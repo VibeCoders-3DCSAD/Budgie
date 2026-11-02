@@ -1,6 +1,7 @@
 import { manilaMonthStart, manilaToday, manilaYearMonth } from "../../lib/date/manila.js";
 import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
 import { UUID_PATTERN } from "../../lib/uuid.js";
+import { isAbortError, withTimeout } from "../../lib/http/withTimeout.js";
 
 export type ForecastTransaction = {
   transactionId: string;
@@ -155,29 +156,27 @@ export async function getMlForecast(userId: string, request: ForecastRequest, fe
   });
   const headers = trustedMlHeaders(userId, body);
   if (!headers) throw new ForecastUpstreamError(503, "Forecast service is unavailable", "configuration");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
   try {
-    const response = await fetcher(`${baseUrl.replace(/\/$/, "")}/api/v1/forecast/predict`, {
-      method: "POST",
-      headers,
-      signal: controller.signal,
-      body,
+    return await withTimeout(8_000, async (signal) => {
+      const response = await fetcher(`${baseUrl.replace(/\/$/, "")}/api/v1/forecast/predict`, {
+        method: "POST",
+        headers,
+        signal,
+        body,
+      });
+      if (!response.ok) {
+        throw new ForecastUpstreamError(response.status, `Forecast service rejected the request (HTTP ${response.status})`, "response");
+      }
+      return mapMlForecast(await response.json());
     });
-    if (!response.ok) {
-      throw new ForecastUpstreamError(response.status, `Forecast service rejected the request (HTTP ${response.status})`, "response");
-    }
-    return mapMlForecast(await response.json());
   } catch (error) {
     if (error instanceof ForecastUpstreamError) throw error;
     throw new ForecastUpstreamError(
       503,
-      error instanceof Error && error.name === "AbortError" ? "Forecast service timed out" : "Forecast service is unavailable",
+      isAbortError(error) ? "Forecast service timed out" : "Forecast service is unavailable",
       "request",
       { cause: error },
     );
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

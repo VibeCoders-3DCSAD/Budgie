@@ -1,5 +1,6 @@
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_GROQ_FORECAST_MODEL = "qwen/qwen3.8-27b";
+import { DEFAULT_GROQ_MODEL, groqJsonChat, groqMessageContent } from "../../lib/groq.js";
+import { isAbortError } from "../../lib/http/withTimeout.js";
+
 const MAX_NOTES = 6;
 const MAX_NOTE_LENGTH = 320;
 
@@ -47,40 +48,27 @@ export async function interpretForecast(notes: string[], fetcher: typeof fetch =
     console.info("forecast Groq interpretation skipped", { user_id: userId ?? null, reason: "api_key_unconfigured" });
     return notes;
   }
-  const model = process.env.GROQ_FORECAST_MODEL ?? DEFAULT_GROQ_FORECAST_MODEL;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
+  const model = process.env.GROQ_FORECAST_MODEL ?? DEFAULT_GROQ_MODEL;
   const startedAt = Date.now();
   try {
-    const response = await fetcher(GROQ_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model,
-        temperature: 0.2,
-        response_format: { type: "json_object" },
-        messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `NOTES:\n${JSON.stringify(notes)}` }],
-      }),
-      signal: controller.signal,
+    return await groqJsonChat(fetcher, { apiKey, model, systemPrompt, userContent: `NOTES:\n${JSON.stringify(notes)}` }, async (response) => {
+      if (!response.ok) {
+        console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, status: response.status, duration_ms: Date.now() - startedAt });
+        return notes;
+      }
+      const content = groqMessageContent(await response.json());
+      const rewrites = typeof content === "string" && content.length <= 10_000 ? (JSON.parse(content) as { notes?: unknown }).notes : undefined;
+      if (!Array.isArray(rewrites) || rewrites.length !== notes.length) {
+        console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, reason: "invalid_response", duration_ms: Date.now() - startedAt });
+        return notes;
+      }
+      // A rewrite that drops or changes an amount keeps its original note.
+      const result = notes.map((note, index) => isFaithfulRewrite(note, rewrites[index]) ? (rewrites[index] as string).trim() : note);
+      console.info("forecast Groq interpretation completed", { user_id: userId ?? null, model, rewritten_count: result.filter((note, index) => note !== notes[index]).length, duration_ms: Date.now() - startedAt });
+      return result;
     });
-    if (!response.ok) {
-      console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, status: response.status, duration_ms: Date.now() - startedAt });
-      return notes;
-    }
-    const content = ((await response.json()) as { choices?: Array<{ message?: { content?: unknown } }> }).choices?.[0]?.message?.content;
-    const rewrites = typeof content === "string" && content.length <= 10_000 ? (JSON.parse(content) as { notes?: unknown }).notes : undefined;
-    if (!Array.isArray(rewrites) || rewrites.length !== notes.length) {
-      console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, reason: "invalid_response", duration_ms: Date.now() - startedAt });
-      return notes;
-    }
-    // A rewrite that drops or changes an amount keeps its original note.
-    const result = notes.map((note, index) => isFaithfulRewrite(note, rewrites[index]) ? (rewrites[index] as string).trim() : note);
-    console.info("forecast Groq interpretation completed", { user_id: userId ?? null, model, rewritten_count: result.filter((note, index) => note !== notes[index]).length, duration_ms: Date.now() - startedAt });
-    return result;
   } catch (error) {
-    console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, reason: error instanceof Error && error.name === "AbortError" ? "timeout" : error instanceof SyntaxError ? "invalid_json" : "request_error", duration_ms: Date.now() - startedAt });
+    console.warn("forecast Groq interpretation failed", { user_id: userId ?? null, reason: isAbortError(error) ? "timeout" : error instanceof SyntaxError ? "invalid_json" : "request_error", duration_ms: Date.now() - startedAt });
     return notes;
-  } finally {
-    clearTimeout(timeout);
   }
 }

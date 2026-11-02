@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { isAbortError, withTimeout } from "../../lib/http/withTimeout.js";
 import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
 
 export class FinancialPlanMlError extends Error {
@@ -36,16 +37,16 @@ export async function recommendPlanCategories(userId: string, period: { start: s
   });
   const headers = trustedMlHeaders(userId, body);
   if (!headers) throw new FinancialPlanMlError(503, "Budget optimizer is unavailable");
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8_000);
   try {
-    const response = await fetcher(`${baseUrl}/api/v1/budget/recommend`, { method: "POST", headers, body, signal: controller.signal });
-    if (!response.ok) throw new FinancialPlanMlError(response.status, "Budget optimizer rejected the plan");
-    const payload = await response.json() as { recommendation?: unknown; explanations?: unknown; metadata?: unknown };
-    if (!payload.recommendation || typeof payload.recommendation !== "object") throw new FinancialPlanMlError(502, "Budget optimizer returned an invalid response");
-    return payload;
+    return await withTimeout(8_000, async (signal) => {
+      const response = await fetcher(`${baseUrl}/api/v1/budget/recommend`, { method: "POST", headers, body, signal });
+      if (!response.ok) throw new FinancialPlanMlError(response.status, "Budget optimizer rejected the plan");
+      const payload = await response.json() as { recommendation?: unknown; explanations?: unknown; metadata?: unknown };
+      if (!payload.recommendation || typeof payload.recommendation !== "object") throw new FinancialPlanMlError(502, "Budget optimizer returned an invalid response");
+      return payload;
+    });
   } catch (error) {
     if (error instanceof FinancialPlanMlError) throw error;
-    throw new FinancialPlanMlError(503, error instanceof Error && error.name === "AbortError" ? "Budget optimizer timed out" : "Budget optimizer is unavailable");
-  } finally { clearTimeout(timeout); }
+    throw new FinancialPlanMlError(503, isAbortError(error) ? "Budget optimizer timed out" : "Budget optimizer is unavailable");
+  }
 }

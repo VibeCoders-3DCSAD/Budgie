@@ -1,8 +1,8 @@
 import { categorySeasonalPreferences, confirmedCategoryPayments, possibleSeasonalReasons } from "./helpers/spendingReasons.js";
 import { peso } from "./helpers/formatPlanMoney.js";
+import { DEFAULT_GROQ_MODEL, groqJsonChat, groqMessageContent } from "../../lib/groq.js";
+import { isAbortError } from "../../lib/http/withTimeout.js";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_GROQ_FINANCIAL_PLAN_MODEL = "qwen/qwen3.8-27b";
 const MAX_INSIGHTS = 3;
 const MAX_TEXT_LENGTH = 360;
 
@@ -136,46 +136,33 @@ export async function explainFinancialPlan(evidence: FinancialPlanEvidence, fetc
     return [];
   }
 
-  const body = JSON.stringify({
-    model: process.env.GROQ_FINANCIAL_PLAN_MODEL ?? DEFAULT_GROQ_FINANCIAL_PLAN_MODEL,
-    temperature: 0.2,
-    response_format: { type: "json_object" },
-    messages: [{ role: "system", content: systemPrompt }, { role: "user", content: `PLAN_EVIDENCE:\n${JSON.stringify({ ...evidence, categoryContext: evidence.forecastChanges.map((change) => ({ evidenceId: change.evidenceId, possibleSeasonalReasons: possibleSeasonalReasons(evidence, change), confirmedPayments: confirmedCategoryPayments(evidence, change) })) })}` }],
-  });
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
+  const model = process.env.GROQ_FINANCIAL_PLAN_MODEL ?? DEFAULT_GROQ_MODEL;
+  const userContent = `PLAN_EVIDENCE:\n${JSON.stringify({ ...evidence, categoryContext: evidence.forecastChanges.map((change) => ({ evidenceId: change.evidenceId, possibleSeasonalReasons: possibleSeasonalReasons(evidence, change), confirmedPayments: confirmedCategoryPayments(evidence, change) })) })}`;
   const startedAt = Date.now();
-  console.info("financial plan Groq explanation requested", { user_id: userId ?? null, evidence_count: validEvidenceIds.size, model: process.env.GROQ_FINANCIAL_PLAN_MODEL ?? DEFAULT_GROQ_FINANCIAL_PLAN_MODEL });
+  console.info("financial plan Groq explanation requested", { user_id: userId ?? null, evidence_count: validEvidenceIds.size, model });
   try {
-    const response = await fetcher(GROQ_URL, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-      body,
-      signal: controller.signal,
+    return await groqJsonChat(fetcher, { apiKey, model, systemPrompt, userContent }, async (response) => {
+      if (!response.ok) {
+        console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, status: response.status, duration_ms: Date.now() - startedAt });
+        return [];
+      }
+      const content = groqMessageContent(await response.json());
+      if (typeof content !== "string" || content.length > 10_000) {
+        console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: "invalid_response", duration_ms: Date.now() - startedAt });
+        return [];
+      }
+      try {
+        const insights = parseInsights(JSON.parse(content), validEvidenceIds, evidence);
+        console.info("financial plan Groq explanation completed", { user_id: userId ?? null, insight_count: insights.length, duration_ms: Date.now() - startedAt });
+        return insights;
+      } catch {
+        console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: "invalid_json", duration_ms: Date.now() - startedAt });
+        return [];
+      }
     });
-    if (!response.ok) {
-      console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, status: response.status, duration_ms: Date.now() - startedAt });
-      return [];
-    }
-    const payload: unknown = await response.json();
-    const content = (payload as { choices?: Array<{ message?: { content?: unknown } }> }).choices?.[0]?.message?.content;
-    if (typeof content !== "string" || content.length > 10_000) {
-      console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: "invalid_response", duration_ms: Date.now() - startedAt });
-      return [];
-    }
-    try {
-      const insights = parseInsights(JSON.parse(content), validEvidenceIds, evidence);
-      console.info("financial plan Groq explanation completed", { user_id: userId ?? null, insight_count: insights.length, duration_ms: Date.now() - startedAt });
-      return insights;
-    } catch {
-      console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: "invalid_json", duration_ms: Date.now() - startedAt });
-      return [];
-    }
   } catch (error) {
-    console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: error instanceof Error && error.name === "AbortError" ? "timeout" : "request_error", duration_ms: Date.now() - startedAt });
+    console.warn("financial plan Groq explanation failed", { user_id: userId ?? null, reason: isAbortError(error) ? "timeout" : "request_error", duration_ms: Date.now() - startedAt });
     return [];
-  } finally {
-    clearTimeout(timeout);
   }
 }
 

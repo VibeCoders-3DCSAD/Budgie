@@ -1,3 +1,4 @@
+import { isAbortError, withTimeout } from "./http/withTimeout.js";
 import { trustedMlHeaders } from "./mlInferenceGateway.js";
 
 type FinancialClassificationFailureReason = "not_configured" | "timeout" | "network_error" | "http_error" | "invalid_response";
@@ -21,26 +22,24 @@ export async function classifyFinancialCondition(
   const headers = trustedMlHeaders(userId, requestBody);
   if (!headers) return { ok: false, reason: "not_configured" };
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 5_000);
   try {
-    const response = await fetch(`${baseUrl}/api/v1/classification/v2`, {
-      method: "POST",
-      headers,
-      signal: controller.signal,
-      body: requestBody,
+    return await withTimeout(5_000, async (signal): Promise<FinancialClassificationResult> => {
+      const response = await fetch(`${baseUrl}/api/v1/classification/v2`, {
+        method: "POST",
+        headers,
+        signal,
+        body: requestBody,
+      });
+      if (!response.ok) return { ok: false, reason: "http_error" };
+      const body: unknown = await response.json();
+      const value = body as { classification?: unknown; metadata?: { model_version?: unknown; strategy_used?: unknown } };
+      const modelVersion = value.metadata?.model_version;
+      if (!value.classification || typeof value.classification !== "object"
+        || typeof modelVersion !== "string" || !modelVersion.trim()
+        || value.metadata?.strategy_used !== "rule_based") return { ok: false, reason: "invalid_response" };
+      return { ok: true, classification: value.classification as Record<string, unknown>, modelVersion };
     });
-    if (!response.ok) return { ok: false, reason: "http_error" };
-    const body: unknown = await response.json();
-    const value = body as { classification?: unknown; metadata?: { model_version?: unknown; strategy_used?: unknown } };
-    const modelVersion = value.metadata?.model_version;
-    if (!value.classification || typeof value.classification !== "object"
-      || typeof modelVersion !== "string" || !modelVersion.trim()
-      || value.metadata?.strategy_used !== "rule_based") return { ok: false, reason: "invalid_response" };
-    return { ok: true, classification: value.classification as Record<string, unknown>, modelVersion };
   } catch (error) {
-    return { ok: false, reason: error instanceof DOMException && error.name === "AbortError" ? "timeout" : "network_error" };
-  } finally {
-    clearTimeout(timeout);
+    return { ok: false, reason: isAbortError(error) ? "timeout" : "network_error" };
   }
 }
