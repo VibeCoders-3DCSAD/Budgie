@@ -73,10 +73,11 @@ export async function createFinancialConditionAssessment(userId: string, supabas
     ? input
     : { ...input, liquid_emergency_savings: emergencyFundBalance };
 
+  // Amounts are personal financial data; log only whether each input is present.
   console.info("financial classification inputs", {
     user_id: userId,
-    available_emergency_fund: classificationInput.liquid_emergency_savings,
-    monthly_essential_expenses: classificationInput.average_monthly_recurring_essential_expenses,
+    has_emergency_fund: emergencyFundBalance !== null,
+    has_monthly_essential_expenses: classificationInput.average_monthly_recurring_essential_expenses != null,
   });
 
   // The ML service uses the onboarding self-report only when no card history exists,

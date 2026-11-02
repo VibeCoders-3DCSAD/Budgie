@@ -17,13 +17,7 @@ export async function resolveEmergencyFundBalance(userId: string, supabase: Supa
     .eq("deleted", false)
     .maybeSingle();
   if (goalError || !goal) {
-    console.info("financial classification emergency fund source", {
-      user_id: userId,
-      goal_id: null,
-      starting_amount_centavos: null,
-      contribution_centavos: null,
-      withdrawal_centavos: null,
-    });
+    console.info("financial classification emergency fund source", { user_id: userId, has_emergency_fund: false });
     return null;
   }
 
@@ -38,13 +32,12 @@ export async function resolveEmergencyFundBalance(userId: string, supabase: Supa
   const contributionCentavos = sumActivity(activities ?? [], "contribution");
   const withdrawalCentavos = sumActivity(activities ?? [], "withdrawal");
   const balanceCentavos = Number(goal.starting_amount_centavos) + contributionCentavos - withdrawalCentavos;
+  // Amounts are personal financial data; the goal id is enough to trace the source.
   console.info("financial classification emergency fund source", {
     user_id: userId,
     goal_id: goal.id,
-    starting_amount_centavos: goal.starting_amount_centavos,
-    contribution_centavos: contributionCentavos,
-    withdrawal_centavos: withdrawalCentavos,
-    balance_centavos: balanceCentavos,
+    has_emergency_fund: true,
+    activity_count: activities?.length ?? 0,
   });
   return Math.max(0, balanceCentavos) / 100;
 }
