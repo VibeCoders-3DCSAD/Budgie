@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getFinancialPlanCommitments } from "../../../services/financialPlan/commitmentsPreview.js";
+import { getFinancialPlanCommitments } from "../../../services/financialPlan/commitmentsLoader.js";
 
 it("scopes every preview read to its user and lists every commitment in the month at its full amount", async () => {
   const rows: Record<string, unknown[]> = {

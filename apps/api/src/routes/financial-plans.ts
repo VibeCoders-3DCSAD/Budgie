@@ -1,6 +1,6 @@
 import { Router, type Response } from "express";
 import { validateCommitmentBudgets } from "../services/financialPlan/commitments.js";
-import { getFinancialPlanCommitments } from "../services/financialPlan/commitmentsPreview.js";
+import { getFinancialPlanCommitments } from "../services/financialPlan/commitmentsLoader.js";
 import { getFinancialPlanForecast } from "../services/financialPlan/planForecast.js";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
 import { FinancialPlanInputError, FinancialPlanUnavailableError, getFinancialPlanRecommendation } from "../services/financialPlan/recommendationService.js";
