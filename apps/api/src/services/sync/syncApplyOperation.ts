@@ -3,6 +3,88 @@ import { validateSavingsExpenseWithdrawalPayload } from "./savingsExpenseWithdra
 import { normalizeSavingsInterestReference } from "@odin/savings-interest";
 import { normalizeRecurrenceMonths } from "@odin/spending-insights/recurringMonths.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import {
+  SYNCED_ENTITIES,
+  SERVER_COLUMNS,
+} from "./constants/entities.js";
+import {
+  ALERT_PREFERENCE_CREATE_FIELDS,
+  ALERT_PREFERENCE_UPDATE_FIELDS,
+  ANOMALY_WHITELIST_CREATE_FIELDS,
+  ANOMALY_WHITELIST_UPDATE_FIELDS,
+  ALERT_SUPPRESSION_CREATE_FIELDS,
+  ALERT_SUPPRESSION_UPDATE_FIELDS,
+  ANOMALY_EVALUATION_CREATE_FIELDS,
+  ANOMALY_EVALUATION_UPDATE_FIELDS,
+  ANOMALY_RECURRENCES,
+} from "./constants/alerts.js";
+import {
+  TAXONOMY_ICON_KEYS,
+  COLOR_HEX_PATTERN,
+  CATEGORY_CREATE_FIELDS,
+  CATEGORY_UPDATE_FIELDS,
+  SUBCATEGORY_CREATE_FIELDS,
+  SUBCATEGORY_UPDATE_FIELDS,
+} from "./constants/taxonomy.js";
+import {
+  FINANCIAL_ACCOUNT_CREATE_FIELDS,
+  FINANCIAL_ACCOUNT_UPDATE_FIELDS,
+  SAVINGS_ACCOUNT_DETAIL_FIELDS,
+  VALID_ACCOUNT_KINDS,
+} from "./constants/accounts.js";
+import {
+  TRANSACTION_CREATE_FIELDS,
+  TRANSACTION_UPDATE_FIELDS,
+  VALID_TRANSACTION_TYPES,
+  RECURRING_TEMPLATE_FIELDS,
+  RECURRING_TEMPLATE_UPDATE_FIELDS,
+  RECURRING_OCCURRENCE_FIELDS,
+} from "./constants/transactions.js";
+import {
+  CREDIT_CARD_CYCLE_CREATE_FIELDS,
+  CREDIT_CARD_CYCLE_FIELDS,
+  CREDIT_CARD_STATEMENT_CREATE_FIELDS,
+  CREDIT_CARD_STATEMENT_UPDATE_FIELDS,
+  CREDIT_CARD_PAYMENT_CREATE_FIELDS,
+  CREDIT_CARD_PAYMENT_UPDATE_FIELDS,
+  CREDIT_CARD_DETAILS_CREATE_FIELDS,
+  CREDIT_CARD_DETAILS_UPDATE_FIELDS,
+  CREDIT_CARD_REPAYMENT_PREFERENCE_FIELDS,
+  CREDIT_CARD_INSTALLMENT_CREATE_FIELDS,
+  CREDIT_CARD_SETTLEMENT_FIELDS,
+  CREDIT_CARD_STATEMENT_STRATEGY_FIELDS,
+  CREDIT_CARD_TRANSACTION_FIELDS,
+} from "./constants/creditCards.js";
+import {
+  DEBT_ACCOUNT_FIELDS,
+  DEBT_PAYMENT_FIELDS,
+  DEBT_STRATEGY_FIELDS,
+  DEBT_PRIORITY_FIELDS,
+  DEBT_ACCOUNT_TYPES,
+} from "./constants/debts.js";
+import {
+  SAVINGS_GOAL_FIELDS,
+  SAVINGS_GOAL_ACTIVITY_FIELDS,
+  SAVINGS_ALLOCATION_PREFERENCE_FIELDS,
+  SAVINGS_GOAL_TYPES,
+  SAVINGS_GOAL_PRIORITIES,
+  SAVINGS_GOAL_CONTRIBUTION_FREQUENCIES,
+} from "./constants/savings.js";
+import {
+  SCHEDULED_PAYMENT_FIELDS,
+  SCHEDULED_PAYMENT_FREQUENCIES,
+  SCHEDULED_PAYMENT_RECORD_FIELDS,
+  SCHEDULED_PAYMENT_RECORD_SETTLEMENT_FIELDS,
+  BILLER_PAYMENT_MUTATION,
+} from "./constants/scheduledPayments.js";
+import {
+  INCOME_FREQUENCIES,
+  INCOME_SOURCE_CREATE_FIELDS,
+  INCOME_SOURCE_UPDATE_FIELDS,
+} from "./constants/incomeSources.js";
+import {
+  FINANCIAL_PLAN_CREATE_FIELDS,
+} from "./constants/financialPlans.js";
 
 export type Operation = {
   operation_id: string;
@@ -13,342 +95,6 @@ export type Operation = {
   changed_fields: string[];
   payload: Record<string, unknown>;
 };
-
-const SYNCED_ENTITIES = new Set([
-  "categories",
-  "subcategories",
-  "financial_accounts",
-  "savings_account_details",
-  "transactions",
-  "income_sources",
-  "recurring_transaction_templates",
-  "recurring_transaction_occurrences",
-  "financial_plans",
-  "credit_card_details",
-  "credit_card_repayment_preferences",
-  "credit_card_cycles",
-  "credit_card_installments",
-  "credit_card_transactions",
-  "credit_card_statements",
-  "credit_card_payments",
-  "debt_accounts",
-  "debt_payments",
-  "debt_strategy_preferences",
-  "user_debt_priorities",
-  "credit_card_settlements",
-  "credit_card_statement_strategies",
-  "alert_notification_preferences",
-  "anomaly_whitelist_rules",
-  "alert_suppression_rules",
-  "anomaly_evaluations",
-  "savings_goals",
-  "savings_goal_activities",
-  "savings_allocation_preferences",
-  "scheduled_payments",
-  "scheduled_payment_records",
-]);
-
-const ALERT_PREFERENCE_CREATE_FIELDS = new Set(["category", "mode", "in_app_enabled", "push_enabled", "duplicate_cooldown_hours", "snoozed_until"]);
-const ALERT_PREFERENCE_UPDATE_FIELDS = new Set(["mode", "in_app_enabled", "push_enabled", "duplicate_cooldown_hours", "snoozed_until"]);
-const ANOMALY_WHITELIST_CREATE_FIELDS = new Set(["merchant_name", "subcategory_id", "base_amount_centavos", "tolerance_bps", "allow_any_amount", "status", "notes"]);
-const ANOMALY_WHITELIST_UPDATE_FIELDS = new Set(["status", "notes"]);
-const ALERT_SUPPRESSION_CREATE_FIELDS = new Set(["category", "source_type", "status", "merchant_name", "subcategory_id", "category_id", "amount_center_centavos", "amount_tolerance_bps", "starts_at", "ends_at", "reason", "metadata"]);
-const ALERT_SUPPRESSION_UPDATE_FIELDS = new Set(["status", "ends_at", "reason"]);
-const ANOMALY_EVALUATION_CREATE_FIELDS = new Set(["transaction_id", "subcategory_id", "amount_centavos", "usable_history_count", "usual_spending_centavos", "lower_bound_centavos", "upper_bound_centavos", "severity", "model_version", "evaluated_at"]);
-const ANOMALY_EVALUATION_UPDATE_FIELDS = new Set(["recurrence", "confirmed_recurring_at", "recurrence_months"]);
-const ANOMALY_RECURRENCES = new Set(["one_time", "frequent", "yearly"]);
-const TAXONOMY_ICON_KEYS = new Set([
-  "bowl-food", "wine", "t-shirt", "house", "armchair", "first-aid",
-  "car", "device-mobile", "game-controller", "graduation-cap", "fork-knife",
-  "sparkle", "tag", "airplane", "bank", "basket", "bus", "camera", "coffee",
-  "credit-card", "dog", "gift", "heart", "laptop", "music-note", "storefront",
-  "carrot", "fish", "bread", "egg", "cookie", "orange", "pill", "stethoscope", "tooth",
-  "eye", "test-tube", "hospital", "heartbeat", "shield-check",
-  "cake", "ice-cream", "hamburger", "pizza", "cooking-pot", "tea-bag",
-  "beer-bottle", "beer-stein", "martini", "cigarette", "champagne", "brandy",
-  "pants", "dress", "hoodie", "sock", "sneaker", "baseball-cap",
-  "handbag", "watch", "lightning", "drop", "flame", "wifi-high",
-  "key", "wrench", "plug", "bed", "washing-machine", "broom",
-  "fan", "oven", "potted-plant", "lightbulb", "toolbox", "syringe",
-  "thermometer", "wheelchair", "bandaids", "brain", "ambulance", "bicycle",
-  "train", "gas-pump", "motorcycle", "taxi", "steering-wheel", "truck",
-  "boat", "phone", "envelope", "globe", "sim-card", "chat-circle",
-  "headphones", "film-slate", "ticket", "palette", "barbell", "book-open",
-  "trophy", "tent", "pencil", "notebook", "calculator", "certificate",
-  "backpack", "student", "scissors", "paw-print", "baby", "diamond",
-  "scales", "identification-card", "wallet", "coat-hanger",
-]);
-const COLOR_HEX_PATTERN = /^#[0-9A-Fa-f]{6}$/;
-
-const SERVER_COLUMNS = new Set([
-  "id",
-  "user_id",
-  "version",
-  "deleted",
-  "created_at",
-  "updated_at",
-  "last_synced_at",
-  "is_system",
-  "is_protected_default",
-]);
-
-const CATEGORY_CREATE_FIELDS = new Set([
-  "slug",
-  "label",
-  "short_label",
-  "description",
-  "icon_key",
-  "color_hex",
-  "is_filipino_context",
-  "minimum_amount_centavos",
-  "always_in_budget",
-  "fixed_amount_centavos",
-  "sort_order",
-]);
-
-const CATEGORY_UPDATE_FIELDS = new Set([
-  "label",
-  "short_label",
-  "description",
-  "icon_key",
-  "color_hex",
-  "is_filipino_context",
-  "minimum_amount_centavos",
-  "always_in_budget",
-  "fixed_amount_centavos",
-  "sort_order",
-  "is_active",
-]);
-
-const SUBCATEGORY_CREATE_FIELDS = new Set([
-  "category_id",
-  "slug",
-  "kind",
-  "label",
-  "short_label",
-  "description",
-  "icon_key",
-  "color_hex",
-  "is_filipino_context",
-  "is_protected",
-  "minimum_amount_centavos",
-  "always_in_budget",
-  "fixed_amount_centavos",
-  "sort_order",
-]);
-
-const SUBCATEGORY_UPDATE_FIELDS = new Set([
-  "label",
-  "slug",
-  "short_label",
-  "description",
-  "icon_key",
-  "color_hex",
-  "is_filipino_context",
-  "is_protected",
-  "minimum_amount_centavos",
-  "always_in_budget",
-  "fixed_amount_centavos",
-  "is_active",
-]);
-
-const FINANCIAL_ACCOUNT_CREATE_FIELDS = new Set([
-  "name",
-  "kind",
-  "opening_balance_centavos",
-  "include_in_dashboard_balance",
-  "institution_name",
-  "opened_on",
-  "sort_order",
-]);
-
-const FINANCIAL_ACCOUNT_UPDATE_FIELDS = new Set([
-  "name",
-  "status",
-  "opening_balance_centavos",
-  "current_balance_centavos",
-  "include_in_dashboard_balance",
-  "institution_name",
-  "opened_on",
-  "archived_at",
-  "sort_order",
-]);
-
-const SAVINGS_ACCOUNT_DETAIL_FIELDS = new Set([
-  "interest_reference",
-  "account_type", "interest_rate_bps", "minimum_balance_centavos",
-  "base_interest_rate_bps", "effective_interest_rate_bps", "interest_conditions", "higher_rate_eligible",
-  "boosted_interest_rate_bps", "interest_calculation_basis", "interest_credit_frequency",
-  "maximum_eligible_balance_centavos", "balance_tiers", "required_deposit_centavos",
-  "required_deposit_frequency", "required_transaction_count", "required_transaction_period",
-  "direct_deposit_threshold_centavos", "qualification_period", "promotional_interest_rate_bps",
-  "promotion_start_date", "promotion_end_date",
-  "principal_centavos", "maturity_date", "term_months", "early_withdrawal_rule",
-  "planned_contribution_amount_centavos", "contribution_frequency", "contribution_interval_count",
-  "contribution_day_of_month", "contribution_second_day_of_month", "contribution_day_of_week",
-  "custom_interval_days", "next_contribution_date",
-]);
-
-const CREDIT_CARD_CYCLE_CREATE_FIELDS = new Set([
-  "account_id", "cycle_start_date", "cutoff_date",
-]);
-
-const CREDIT_CARD_CYCLE_FIELDS = new Set([
-  "account_id", "cycle_start_date", "cutoff_date", "statement_date",
-]);
-
-const CREDIT_CARD_STATEMENT_CREATE_FIELDS = new Set([
-  "cycle_id", "statement_date", "statement_balance_centavos", "minimum_due_centavos",
-  "finance_charge_centavos", "due_date",
-]);
-
-const CREDIT_CARD_STATEMENT_UPDATE_FIELDS = new Set([
-  "statement_date", "statement_balance_centavos", "minimum_due_centavos",
-  "finance_charge_centavos", "due_date",
-]);
-
-const CREDIT_CARD_PAYMENT_CREATE_FIELDS = new Set([
-  "cycle_id", "statement_id", "transaction_id", "amount_centavos", "payment_date",
-  "source_account_id", "notes", "client_mutation_id", "forecast_recorded_at",
-]);
-
-const CREDIT_CARD_PAYMENT_UPDATE_FIELDS = new Set([
-  "amount_centavos", "payment_date", "source_account_id", "notes",
-]);
-
-const CREDIT_CARD_DETAILS_CREATE_FIELDS = new Set([
-  "account_id", "issuer", "credit_limit_centavos", "available_credit_centavos",
-  "cutoff_day", "statement_day", "notes", "billing_cycle_days", "alert_threshold_percent", "allows_extra_payments",
-  "reconciled_available_credit_centavos", "pre_reconciliation_available_credit_centavos", "available_credit_reconciled_at",
-]);
-
-const CREDIT_CARD_DETAILS_UPDATE_FIELDS = new Set([
-  "account_id", "issuer", "credit_limit_centavos", "available_credit_centavos", "cutoff_day", "statement_day",
-  "notes", "billing_cycle_days", "alert_threshold_percent", "allows_extra_payments", "reconciled_available_credit_centavos", "pre_reconciliation_available_credit_centavos", "available_credit_reconciled_at",
-]);
-const CREDIT_CARD_REPAYMENT_PREFERENCE_FIELDS = new Set([
-  "account_id", "strategy", "custom_amount_centavos", "percentage_bps",
-]);
-
-const TRANSACTION_CREATE_FIELDS = new Set([
-  "savings_goal_contribution",
-  "savings_goal_withdrawals",
-  "transaction_type",
-  "transaction_date",
-  "credit_card_posting_date",
-  "amount_centavos",
-  "category_id",
-  "subcategory_id",
-  "source_account_id",
-  "destination_account_id",
-  "merchant_name",
-  "counterparty_name",
-  "notes",
-  "entry_source",
-  "recurring_template_id",
-  "client_mutation_id",
-]);
-
-const TRANSACTION_UPDATE_FIELDS = new Set([
-  "savings_goal_contribution",
-  "savings_goal_withdrawals",
-  "amount_centavos",
-  "category_id",
-  "subcategory_id",
-  "source_account_id",
-  "destination_account_id",
-  "transaction_date",
-  "credit_card_posting_date",
-  "merchant_name",
-  "counterparty_name",
-  "notes",
-]);
-
-const VALID_ACCOUNT_KINDS = ["cash", "bank", "e_wallet", "savings", "credit_card", "other"];
-const VALID_TRANSACTION_TYPES = ["income", "expense", "transfer"];
-
-const INCOME_FREQUENCIES = ["daily", "weekly", "semi_monthly", "monthly"];
-
-const INCOME_SOURCE_CREATE_FIELDS = new Set([
-  "name",
-  "frequency",
-  "recurring_template_id",
-  "destination_account_id",
-  "subcategory_id",
-  "expected_amount_centavos",
-  "payday_day_of_month",
-  "payday_second_day_of_month",
-  "payday_day_of_week",
-  "next_expected_date",
-  "is_active",
-  "notes",
-]);
-
-const INCOME_SOURCE_UPDATE_FIELDS = new Set([
-  "name",
-  "frequency",
-  "recurring_template_id",
-  "destination_account_id",
-  "subcategory_id",
-  "expected_amount_centavos",
-  "payday_day_of_month",
-  "payday_second_day_of_month",
-  "payday_day_of_week",
-  "next_expected_date",
-  "is_active",
-  "notes",
-]);
-
-const RECURRING_TEMPLATE_FIELDS = new Set([
-  "transaction_type", "name", "amount_centavos", "frequency", "interval_count",
-  "day_of_month", "second_day_of_month", "day_of_week",
-  "starts_on", "ends_on", "subcategory_id", "source_account_id", "destination_account_id", "notes",
-]);
-
-const RECURRING_TEMPLATE_UPDATE_FIELDS = new Set(
-  [...RECURRING_TEMPLATE_FIELDS].filter((field) => field !== "transaction_type"),
-);
-
-const RECURRING_OCCURRENCE_FIELDS = new Set([
-  "recurring_template_id", "scheduled_date", "generated_transaction_id",
-]);
-
-const FINANCIAL_PLAN_CREATE_FIELDS = new Set([
-  "period_start", "period_end", "status", "input_snapshot", "recommendation",
-]);
-
-const CREDIT_CARD_INSTALLMENT_CREATE_FIELDS = new Set([
-  "account_id", "transaction_id", "description", "original_principal_centavos",
-  "remaining_principal_centavos", "term_months", "remaining_months", "monthly_amortization_centavos",
-  "interest_rate_bps", "interest_type", "settlement_status",
-]);
-
-const DEBT_ACCOUNT_FIELDS = new Set([
-  "linked_account_id", "name", "lender_name", "preset_key", "status",
-  "original_balance_centavos", "current_balance_centavos", "annual_interest_rate_bps",
-  "minimum_payment_centavos", "allows_extra_payments", "payment_frequency", "next_due_date", "maturity_date",
-  "target_payoff_date", "interest_period", "interest_method", "preset_data", "notes",
-]);
-const DEBT_PAYMENT_FIELDS = new Set(["debt_account_id", "transaction_id", "source", "payment_date", "amount_centavos", "principal_centavos", "interest_centavos", "notes", "linked_transaction_type", "linked_source_account_id", "linked_subcategory_id"]);
-const DEBT_STRATEGY_FIELDS = new Set(["strategy"]);
-const DEBT_PRIORITY_FIELDS = new Set(["priorities"]);
-const CREDIT_CARD_SETTLEMENT_FIELDS = new Set(["installment_id", "settlement_date", "remaining_principal_centavos", "settlement_amount_centavos", "pretermination_fee_centavos", "status"]);
-const CREDIT_CARD_STATEMENT_STRATEGY_FIELDS = new Set(["statement_id", "strategy", "custom_amount_centavos", "percentage_bps"]);
-const DEBT_ACCOUNT_TYPES = ["personal_loan", "salary_loan", "multipurpose_loan", "business_loan", "auto_loan", "custom_debt"];
-const SAVINGS_GOAL_FIELDS = new Set(["linked_account_id", "name", "goal_type", "target_amount_centavos", "starting_amount_centavos", "target_date", "priority", "emergency_fund_baseline_centavos", "auto_save_amount_centavos", "planned_contribution_amount_centavos", "contribution_frequency", "contribution_interval_count", "contribution_day_of_month", "contribution_second_day_of_month", "contribution_day_of_week", "custom_interval_days", "next_contribution_date", "interest_rate_bps", "notes", "emergency_fund_target_method", "essential_expense_coverage_months", "is_emergency_fund", "status", "archived_at"]);
-const SCHEDULED_PAYMENT_FIELDS = new Set(["name", "subcategory_id", "source_account_id", "amount_centavos", "frequency", "due_day_of_month", "due_second_day_of_month", "due_day_of_week", "due_month", "starts_on", "ends_on", "auto_post", "auto_post_from", "is_family_support", "is_dependent_support", "protected_by_default", "notes", "status"]);
-const SCHEDULED_PAYMENT_FREQUENCIES = ["daily", "weekly", "biweekly", "semi_monthly", "monthly", "quarterly", "yearly", "once"];
-const SCHEDULED_PAYMENT_RECORD_FIELDS = new Set(["scheduled_payment_id", "transaction_id", "occurrence_date", "payment_date", "amount_centavos", "source", "notes"]);
-const SCHEDULED_PAYMENT_RECORD_SETTLEMENT_FIELDS = new Set(["settles_occurrence"]);
-const SAVINGS_GOAL_ACTIVITY_FIELDS = new Set(["savings_goal_id", "transaction_id", "activity_kind", "amount_centavos", "activity_date", "notes"]);
-const SAVINGS_ALLOCATION_PREFERENCE_FIELDS = new Set(["strategy"]);
-const SAVINGS_GOAL_TYPES = ["emergency_fund", "custom"];
-const SAVINGS_GOAL_PRIORITIES = ["low", "medium", "high"];
-const SAVINGS_GOAL_CONTRIBUTION_FREQUENCIES = ["daily", "weekly", "biweekly", "semi_monthly", "monthly", "quarterly", "yearly", "custom"];
-
-const CREDIT_CARD_TRANSACTION_FIELDS = new Set([
-  "transaction_id", "account_id", "cycle_id", "purchase_type", "installment_id", "client_mutation_id", "applied_credit_centavos", "forecast_recorded_at",
-]);
 
 export async function prepareOperation(
   supabase: SupabaseClient,
@@ -410,9 +156,8 @@ async function validateCreatePayload(
     const sanitized = sanitizePayload(payload, FINANCIAL_ACCOUNT_CREATE_FIELDS);
     requireString(sanitized, "name");
     requireString(sanitized, "kind");
-     const validKinds = ["cash", "bank", "e_wallet", "savings", "credit_card", "other"];
-    if (!validKinds.includes(sanitized.kind as string)) {
-      throw new Error(`kind must be one of: ${validKinds.join(", ")}`);
+    if (!VALID_ACCOUNT_KINDS.includes(sanitized.kind as string)) {
+      throw new Error(`kind must be one of: ${VALID_ACCOUNT_KINDS.join(", ")}`);
     }
     optionalBigInt(sanitized, "opening_balance_centavos");
     optionalBoolean(sanitized, "include_in_dashboard_balance");
@@ -1790,10 +1535,6 @@ function requirePositiveInteger(payload: Record<string, unknown>, field: string)
     throw new Error(`${field} must be a positive integer`);
   }
 }
-
-// Only a biller or remittance payment may be an uncategorized expense. Its client_mutation_id names the
-// scheduled payment it pays (scheduledPaymentMutationId on the device), which must belong to the user.
-const BILLER_PAYMENT_MUTATION = /^scheduled-payment:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}):/i;
 
 async function verifyUncategorizedBillerPayment(supabase: SupabaseClient, userId: string, clientMutationId: unknown): Promise<void> {
   const scheduledPaymentId = typeof clientMutationId === "string" ? BILLER_PAYMENT_MUTATION.exec(clientMutationId)?.[1] : undefined;
