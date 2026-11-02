@@ -2,7 +2,6 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { ACTIVE_REQUEST_STATUSES } from "../lib/constants.js";
 
 const router = Router();
 
@@ -28,7 +27,6 @@ router.get("/data-export-requests", requireAuth, async (request: AuthenticatedRe
 });
 
 router.post("/data-export-requests", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
-  const userId = request.userId!;
   const authenticatedSupabase = request.supabase!;
 
   const payload = request.body?.payload;
@@ -64,25 +62,10 @@ router.post("/data-export-requests", requireAuth, async (request: AuthenticatedR
     metadata.reason = payload.reason;
   }
 
-  const { error: cancelError } = await authenticatedSupabase
-    .from("data_export_requests")
-    .update({ status: "cancelled" })
-    .eq("user_id", userId)
-    .in("status", ACTIVE_REQUEST_STATUSES);
-
-  if (cancelError) {
-    response.status(500).json({
-      error: "Internal Server Error",
-      message: "Failed to cancel previous export request",
-    });
-    return;
-  }
-
+  // Cancels the active export and creates the new one in one transaction.
   const { data, error } = await authenticatedSupabase
-    .from("data_export_requests")
-    .insert({ user_id: userId, metadata })
-    .select("id, status")
-    .single();
+    .rpc("replace_data_export_request", { p_metadata: metadata })
+    .single<{ id: string; status: string }>();
 
   if (error || !data) {
     response.status(500).json({

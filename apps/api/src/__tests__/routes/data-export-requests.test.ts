@@ -7,6 +7,7 @@ jest.mock("../../lib/supabase.js", () => {
       getUser: jest.fn(),
     },
     from: jest.fn(),
+    rpc: jest.fn(),
   };
 
   return {
@@ -22,6 +23,7 @@ import { authHeader, validAccessToken, validUserId } from "../helpers/fixtures.j
 
 const mockGetUser = supabase.auth.getUser as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;
+const mockRpc = supabase.rpc as unknown as jest.Mock;
 
 function mockAuth() {
   mockGetUser.mockResolvedValue({
@@ -30,16 +32,9 @@ function mockAuth() {
   });
 }
 
-function mockInsertChain(result: object) {
-  const mockSingle = jest.fn().mockReturnValue({ data: result, error: null });
-  const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
-  return jest.fn().mockReturnValue({ select: mockSelect });
-}
-
-function mockUpdateChain(result?: object) {
-  const mockIn = jest.fn().mockReturnValue(result ?? {});
-  const mockEq = jest.fn().mockReturnValue({ in: mockIn });
-  return jest.fn().mockReturnValue({ eq: mockEq });
+function mockReplaceResult(result: { data: object | null; error: object | null }) {
+  const mockSingle = jest.fn().mockReturnValue(result);
+  mockRpc.mockReturnValue({ single: mockSingle });
 }
 
 describe("GET /odin/api/data-export-requests", () => {
@@ -70,12 +65,13 @@ describe("GET /odin/api/data-export-requests", () => {
 });
 
 describe("POST /odin/api/data-export-requests", () => {
+  beforeEach(() => mockRpc.mockReset());
+
   it("creates a data export request", async () => {
     mockAuth();
 
     const requestId = "00000000-0000-0000-0000-000000000020";
-    const mockInsert = mockInsertChain({ id: requestId, status: "requested" });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdateChain() });
+    mockReplaceResult({ data: { id: requestId, status: "requested" }, error: null });
 
     const response = await request(app)
       .post("/odin/api/data-export-requests")
@@ -89,44 +85,26 @@ describe("POST /odin/api/data-export-requests", () => {
     });
   });
 
-  it("cancels pending requests before creating a new one", async () => {
+  it("replaces the active export in one database call scoped to the signed-in user", async () => {
     mockAuth();
-
-    let updateData: Record<string, unknown> | undefined;
-    let updateFilter: Record<string, unknown> | undefined;
-    let updateStatusFilter: string[] | undefined;
-
-    const mockIn = jest.fn().mockImplementation((_col, values) => {
-      updateStatusFilter = values as string[];
-      return {};
-    });
-    const mockEq = jest.fn().mockImplementation((col, value) => {
-      updateFilter = { [col]: value };
-      return { in: mockIn };
-    });
-    const mockUpdate = jest.fn().mockImplementation((data) => {
-      updateData = data as Record<string, unknown>;
-      return { eq: mockEq };
-    });
-
-    const mockInsert = mockInsertChain({ id: "new-id", status: "requested" });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdate });
+    mockReplaceResult({ data: { id: "new-id", status: "requested" }, error: null });
 
     await request(app)
       .post("/odin/api/data-export-requests")
       .set(authHeader())
-      .send({ payload: {} });
+      .send({ payload: { format: "csv", reason: "user_request" } });
 
-    expect(updateData).toEqual({ status: "cancelled" });
-    expect(updateFilter).toEqual({ user_id: validUserId });
-    expect(updateStatusFilter).toEqual(["requested", "processing"]);
+    // The function reads the user from the JWT; the client never names one.
+    expect(mockRpc).toHaveBeenCalledTimes(1);
+    expect(mockRpc).toHaveBeenCalledWith("replace_data_export_request", {
+      p_metadata: { format: "csv", reason: "user_request" },
+    });
+    expect(mockFrom).not.toHaveBeenCalledWith("data_export_requests");
   });
 
   it("creates a minimal export request without optional fields", async () => {
     mockAuth();
-
-    const mockInsert = mockInsertChain({ id: "id", status: "requested" });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdateChain() });
+    mockReplaceResult({ data: { id: "id", status: "requested" }, error: null });
 
     const response = await request(app)
       .post("/odin/api/data-export-requests")
@@ -134,42 +112,7 @@ describe("POST /odin/api/data-export-requests", () => {
       .send({ payload: {} });
 
     expect(response.status).toBe(201);
-  });
-
-  it("returns 500 when cancel update fails", async () => {
-    mockAuth();
-
-    mockFrom.mockReturnValue({ update: mockUpdateChain({ error: { message: "Cancel failed" } }) });
-
-    const response = await request(app)
-      .post("/odin/api/data-export-requests")
-      .set(authHeader())
-      .send({ payload: {} });
-
-    expect(response.status).toBe(500);
-  });
-
-  it("scopes creation by user_id", async () => {
-    mockAuth();
-
-    let insertData: Record<string, unknown> | undefined;
-    const mockSingle = jest.fn().mockReturnValue({
-      data: { id: "id", status: "requested" },
-      error: null,
-    });
-    const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
-    const mockInsert = jest.fn().mockImplementation((data) => {
-      insertData = data as Record<string, unknown>;
-      return { select: mockSelect };
-    });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdateChain() });
-
-    await request(app)
-      .post("/odin/api/data-export-requests")
-      .set(authHeader())
-      .send({ payload: {} });
-
-    expect(insertData).toMatchObject({ user_id: validUserId });
+    expect(mockRpc).toHaveBeenCalledWith("replace_data_export_request", { p_metadata: {} });
   });
 
   it("returns 400 for array payload", async () => {
@@ -238,16 +181,9 @@ describe("POST /odin/api/data-export-requests", () => {
     expect(response.status).toBe(401);
   });
 
-  it("returns 500 when database insert fails", async () => {
+  it("returns 500 when the replacement fails", async () => {
     mockAuth();
-
-    const mockSingle = jest.fn().mockReturnValue({
-      data: null,
-      error: { message: "Database error" },
-    });
-    const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
-    const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
-    mockFrom.mockReturnValue({ insert: mockInsert, update: mockUpdateChain() });
+    mockReplaceResult({ data: null, error: { message: "Database error" } });
 
     const response = await request(app)
       .post("/odin/api/data-export-requests")
@@ -255,5 +191,6 @@ describe("POST /odin/api/data-export-requests", () => {
       .send({ payload: {} });
 
     expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Failed to create data export request");
   });
 });
