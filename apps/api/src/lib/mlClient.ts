@@ -1,5 +1,5 @@
 import { isAbortError, withTimeout } from "./http/withTimeout.js";
-import { trustedMlHeaders } from "./mlInferenceGateway.js";
+import { trustedMlHeaders } from "./mlHeaders.js";
 
 type FinancialClassificationFailureReason = "not_configured" | "timeout" | "network_error" | "http_error" | "invalid_response";
 

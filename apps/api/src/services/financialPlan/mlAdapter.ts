@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { isAbortError, withTimeout } from "../../lib/http/withTimeout.js";
-import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
+import { trustedMlHeaders } from "../../lib/mlHeaders.js";
 
 export class FinancialPlanMlError extends Error {
   constructor(public readonly status: number, message: string) { super(message); }

@@ -1,5 +1,5 @@
 import { manilaMonthStart, manilaToday, manilaYearMonth } from "../../lib/date/manila.js";
-import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
+import { trustedMlHeaders } from "../../lib/mlHeaders.js";
 import { UUID_PATTERN } from "../../lib/uuid.js";
 import { isAbortError, withTimeout } from "../../lib/http/withTimeout.js";
 
