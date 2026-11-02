@@ -2,8 +2,8 @@
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { demoPersonas, type DemoPersona } from "./seed-personas.js";
-import { spendingCategories, type SpendingCategory } from "./helpers/persona-spending.js";
+import { demoPersonas, type DemoPersona } from "./seed/personas.js";
+import { spendingCategories, type SpendingCategory } from "./seed/persona-spending.js";
 
 type CsvRow = Record<string, string>;
 const sourcePaths = {
@@ -88,7 +88,7 @@ function completeHfceYears(rows: CsvRow[]) {
 
 function main() {
   const root = process.argv[2];
-  if (!root) throw new Error("Usage: pnpm --filter api exec tsx scripts/export-persona-spending.ts <odin-ml directory>");
+  if (!root) throw new Error("Usage: pnpm --filter api persona-spending:export <odin-ml directory>");
   const households = readTable(root, sourcePaths.households);
   const categories = readTable(root, sourcePaths.categories);
   const hfce = readTable(root, sourcePaths.hfce);

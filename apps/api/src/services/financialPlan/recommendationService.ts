@@ -5,12 +5,12 @@ export { FinancialPlanInputError, FinancialPlanUnavailableError } from "./errors
 export { scheduledReservationDates } from "./commitmentSchedule.js";
 import { DEBT_COMMITMENT_FIELDS, applyCommitmentBudgets, commitmentKey, debtCommitments, savingsCommitments, statementCommitments, validateCommitmentBudgets, type CommitmentBudget } from "./commitments.js";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast, type ForecastPayload } from "../forecastService.js";
+import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast, type ForecastPayload } from "../forecast/forecastService.js";
 import { recommendPlanCategories, type MlExpenseForecastSnapshot, type MlPlanCategory } from "./mlAdapter.js";
 import { isUserFacingFinancialPlanExplanation, zeroAllocationExplanations, type FinancialPlanEvidence } from "./explanationService.js";
 import { deterministicFinancialPlanExplanations, type FinancialPlanExplanationRequest } from "./explanationRequest.js";
 import { deriveSurplusRecommendation } from "./classificationPolicy.js";
-import { createFinancialConditionAssessment } from "../financialConditionAssessmentService.js";
+import { createFinancialConditionAssessment } from "../classification/financialConditionAssessmentService.js";
 import { getServiceRoleClient } from "../../lib/supabase.js";
 import { scheduledCategoryAmounts, subtractScheduledRequirements } from "./helpers/scheduledCategoryAmounts.js";
 import { scheduledPaymentReservations, type ScheduledPaymentRow } from "./scheduledPaymentDates.js";

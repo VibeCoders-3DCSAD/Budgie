@@ -9,7 +9,7 @@ import {
   registerDevice,
   isDeviceActive,
   SYNCED_TABLES,
-} from "../services/syncService.js";
+} from "../services/sync/syncService.js";
 
 const SYNCED_CURSOR_TABLES = new Set<string>(SYNCED_TABLES);
 const MAX_PUSH_OPERATIONS = 100;

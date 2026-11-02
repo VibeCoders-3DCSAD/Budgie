@@ -79,7 +79,7 @@ Refresh the aggregate fixture after updating the cleaned ML data (from the Odin
 repository root):
 
 ```bash
-pnpm --filter api exec tsx scripts/export-persona-spending.ts /absolute/path/to/odin-ml
+pnpm --filter api persona-spending:export /absolute/path/to/odin-ml
 ```
 
 Only the supported flexible categories are projected onto each persona's daily

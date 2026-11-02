@@ -1,7 +1,7 @@
 import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth, type AuthenticatedRequest } from "../middleware/auth.js";
-import { savedSeasonalPreferences } from "../services/helpers/seasonalAnswers.js";
+import { savedSeasonalPreferences } from "../services/onboarding/seasonalAnswers.js";
 import { seasonalPreferencesError } from "@odin/spending-insights/seasons.js";
 
 const router = Router();

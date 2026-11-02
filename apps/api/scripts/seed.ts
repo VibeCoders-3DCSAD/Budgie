@@ -2,11 +2,11 @@ import { randomBytes, randomInt, randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
-import { provisionPersonaProfile } from "./seed-persona-profile.js";
-import { buildPersonaSeedData, demoPersonas, parseDemoPersona, type DemoPersona } from "./seed-personas.js";
-import { assertSeedConfirmation } from "./resolve-seed-user.js";
-import { summarizePersonaSpending } from "./helpers/persona-spending.js";
-import { buildSeedHolidayPurchases, buildSeedRecurringSpending, buildSeedTuitionMonths } from "./helpers/seed-recurring-spending.js";
+import { provisionPersonaProfile } from "./seed/persona-profile.js";
+import { buildPersonaSeedData, demoPersonas, parseDemoPersona, type DemoPersona } from "./seed/personas.js";
+import { assertSeedConfirmation } from "./seed/resolve-seed-user.js";
+import { summarizePersonaSpending } from "./seed/persona-spending.js";
+import { buildSeedHolidayPurchases, buildSeedRecurringSpending, buildSeedTuitionMonths } from "./seed/recurring-spending.js";
 import {
   buildSeedData,
   legacySeedMarker,
@@ -15,7 +15,7 @@ import {
   seedForecastModelVersion,
   seedMarker,
   type SeedData,
-} from "./seed-history.js";
+} from "./seed/history.js";
 
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 dotenv.config({ path: fileURLToPath(new URL("../.env.local", import.meta.url)), override: true });

@@ -2,7 +2,7 @@ import { Router } from "express";
 import type { Request, Response } from "express";
 import crypto from "node:crypto";
 import { supabase } from "../lib/supabase.js";
-import { runEngine, ENGINE_ERRORS } from "../services/recurringService.js";
+import { runEngine, ENGINE_ERRORS } from "../services/recurring/recurringService.js";
 
 const router = Router();
 

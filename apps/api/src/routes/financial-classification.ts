@@ -4,7 +4,7 @@ import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { getServiceRoleClient } from "../lib/supabase.js";
-import { createFinancialConditionAssessment } from "../services/financialConditionAssessmentService.js";
+import { createFinancialConditionAssessment } from "../services/classification/financialConditionAssessmentService.js";
 
 const router = Router();
 

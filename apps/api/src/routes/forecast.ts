@@ -2,8 +2,8 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
-import { ForecastInterpretationValidationError, interpretForecast, parseForecastInterpretationRequest } from "../services/forecastInterpretationService.js";
-import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast, getMlQuarterlyForecast, parseForecastRequest } from "../services/forecastService.js";
+import { ForecastInterpretationValidationError, interpretForecast, parseForecastInterpretationRequest } from "../services/forecast/forecastInterpretationService.js";
+import { ForecastUnavailableError, ForecastUpstreamError, ForecastValidationError, getMlForecast, getMlQuarterlyForecast, parseForecastRequest } from "../services/forecast/forecastService.js";
 
 const router = Router();
 

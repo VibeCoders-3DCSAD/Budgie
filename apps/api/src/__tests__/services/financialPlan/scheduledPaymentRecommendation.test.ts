@@ -1,13 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ForecastUpstreamError, getMlForecast } from "../../../services/forecastService.js";
+import { ForecastUpstreamError, getMlForecast } from "../../../services/forecast/forecastService.js";
 import { recommendPlanCategories } from "../../../services/financialPlan/mlAdapter.js";
 import { getFinancialPlanRecommendation } from "../../../services/financialPlan/recommendationService.js";
-import { createFinancialConditionAssessment } from "../../../services/financialConditionAssessmentService.js";
+import { createFinancialConditionAssessment } from "../../../services/classification/financialConditionAssessmentService.js";
 
 jest.mock("../../../lib/supabase.js", () => ({ getServiceRoleClient: () => ({}) }));
-jest.mock("../../../services/forecastService.js", () => ({ ...jest.requireActual("../../../services/forecastService.js"), getMlForecast: jest.fn() }));
+jest.mock("../../../services/forecast/forecastService.js", () => ({ ...jest.requireActual("../../../services/forecast/forecastService.js"), getMlForecast: jest.fn() }));
 jest.mock("../../../services/financialPlan/mlAdapter.js", () => ({ recommendPlanCategories: jest.fn() }));
-jest.mock("../../../services/financialConditionAssessmentService.js", () => ({ createFinancialConditionAssessment: jest.fn() }));
+jest.mock("../../../services/classification/financialConditionAssessmentService.js", () => ({ createFinancialConditionAssessment: jest.fn() }));
 
 function client(paid: number, fixed: number | null = null, months = 1, commitmentRows: Record<string, unknown> = {}): SupabaseClient {
   const rows: Record<string, unknown> = {

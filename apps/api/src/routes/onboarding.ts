@@ -4,9 +4,9 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { ONBOARDING_ERRORS } from "../lib/constants.js";
 import { getServiceRoleClient } from "../lib/supabase.js";
-import { createOnboardingFinancialConditionAssessment } from "../services/financialConditionAssessmentService.js";
+import { createOnboardingFinancialConditionAssessment } from "../services/classification/financialConditionAssessmentService.js";
 import { CUSTOM_EVENT_ID } from "@odin/spending-insights/seasons.js";
-import { normalizeSeasonalAnswers, validateSeasonalAnswers } from "../services/helpers/seasonalAnswers.js";
+import { normalizeSeasonalAnswers, validateSeasonalAnswers } from "../services/onboarding/seasonalAnswers.js";
 
 const router = Router();
 

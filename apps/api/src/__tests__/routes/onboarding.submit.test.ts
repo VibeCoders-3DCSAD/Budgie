@@ -21,7 +21,7 @@ jest.mock("../../lib/supabase.js", () => {
   };
 });
 
-jest.mock("../../services/financialConditionAssessmentService.js", () => ({
+jest.mock("../../services/classification/financialConditionAssessmentService.js", () => ({
   createOnboardingFinancialConditionAssessment: jest.fn().mockResolvedValue(null),
 }));
 
@@ -34,7 +34,7 @@ import {
   authHeader,
 } from "../helpers/fixtures.js";
 import { ONBOARDING_ERRORS } from "../../lib/constants.js";
-import { createOnboardingFinancialConditionAssessment } from "../../services/financialConditionAssessmentService.js";
+import { createOnboardingFinancialConditionAssessment } from "../../services/classification/financialConditionAssessmentService.js";
 
 const mockGetUser = supabase.auth.getUser as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;

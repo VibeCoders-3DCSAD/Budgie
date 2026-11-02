@@ -8,6 +8,7 @@
     "start": "node dist/index.js",
     "dummy-data:financial": "tsx scripts/generate-dummy-financial-data.ts",
     "dummy-data:reset": "tsx scripts/reset-dummy-financial-data.ts",
+    "persona-spending:export": "tsx scripts/export-persona-spending.ts",
     "seed": "tsx scripts/seed.ts",
     "test": "RUN_INTEGRATION_TESTS=true jest --silent --runInBand",
     "test:unit": "jest --silent --runInBand --testPathIgnorePatterns=/integration/"

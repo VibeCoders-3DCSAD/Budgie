@@ -2,7 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import dotenv from "dotenv";
 import { fileURLToPath } from "node:url";
-import { assertSeedConfirmation, parseUserSelector, resolveSeedUserId } from "./resolve-seed-user.js";
+import { assertSeedConfirmation, parseUserSelector, resolveSeedUserId } from "./seed/resolve-seed-user.js";
 
 dotenv.config({ path: fileURLToPath(new URL("../.env", import.meta.url)) });
 dotenv.config({ path: fileURLToPath(new URL("../.env.local", import.meta.url)), override: true });

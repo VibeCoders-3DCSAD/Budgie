@@ -1,12 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-jest.mock("../../../services/forecastService.js", () => ({
-  ...jest.requireActual("../../../services/forecastService.js"),
+jest.mock("../../../services/forecast/forecastService.js", () => ({
+  ...jest.requireActual("../../../services/forecast/forecastService.js"),
   getMlForecast: jest.fn(),
 }));
 jest.mock("../../../lib/supabase.js", () => ({ getServiceRoleClient: jest.fn() }));
 
-import { ForecastUpstreamError, getMlForecast } from "../../../services/forecastService.js";
+import { ForecastUpstreamError, getMlForecast } from "../../../services/forecast/forecastService.js";
 import { getFinancialPlanForecast } from "../../../services/financialPlan/planForecast.js";
 
 describe("Financial Plan forecast", () => {

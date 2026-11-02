@@ -1,15 +1,15 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-jest.mock("../../../services/forecastService.js", () => ({
-  ...jest.requireActual("../../../services/forecastService.js"),
+jest.mock("../../../services/forecast/forecastService.js", () => ({
+  ...jest.requireActual("../../../services/forecast/forecastService.js"),
   getMlForecast: jest.fn(),
 }));
 jest.mock("../../../services/financialPlan/mlAdapter.js", () => ({ recommendPlanCategories: jest.fn() }));
-jest.mock("../../../services/financialConditionAssessmentService.js", () => ({ createFinancialConditionAssessment: jest.fn() }));
+jest.mock("../../../services/classification/financialConditionAssessmentService.js", () => ({ createFinancialConditionAssessment: jest.fn() }));
 jest.mock("../../../lib/supabase.js", () => ({ getServiceRoleClient: jest.fn() }));
 
-import { getMlForecast } from "../../../services/forecastService.js";
-import { createFinancialConditionAssessment } from "../../../services/financialConditionAssessmentService.js";
+import { getMlForecast } from "../../../services/forecast/forecastService.js";
+import { createFinancialConditionAssessment } from "../../../services/classification/financialConditionAssessmentService.js";
 import { recommendPlanCategories } from "../../../services/financialPlan/mlAdapter.js";
 import { getFinancialPlanRecommendation } from "../../../services/financialPlan/recommendationService.js";
 
