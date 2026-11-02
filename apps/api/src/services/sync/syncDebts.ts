@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   DEBT_ACCOUNT_FIELDS,
   DEBT_ACCOUNT_TYPES,
@@ -113,16 +114,19 @@ function validateDebtPriorities(payload: Payload): Payload {
 }
 
 export const syncDebts: EntitySyncTable = {
-  debt_accounts: { create: validateDebtAccountCreate, update: validateDebtAccountUpdate },
+  debt_accounts: { rpc: SYNC_RPCS.debt, create: validateDebtAccountCreate, update: validateDebtAccountUpdate },
   debt_payments: {
+    rpc: SYNC_RPCS.debt,
     create: (_ctx, payload) => validateDebtPaymentCreate(payload),
     update: (_ctx, payload) => validateDebtPaymentUpdate(payload),
   },
   debt_strategy_preferences: {
+    rpc: SYNC_RPCS.debt,
     create: (_ctx, payload) => validateDebtStrategy(payload),
     update: (_ctx, payload) => validateDebtStrategy(payload),
   },
   user_debt_priorities: {
+    rpc: SYNC_RPCS.debt,
     create: (_ctx, payload) => validateDebtPriorities(payload),
     update: (_ctx, payload) => validateDebtPriorities(payload),
   },

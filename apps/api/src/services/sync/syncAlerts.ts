@@ -1,4 +1,5 @@
 import { normalizeRecurrenceMonths } from "@odin/spending-insights/recurringMonths.js";
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   ALERT_PREFERENCE_CREATE_FIELDS,
   ALERT_PREFERENCE_UPDATE_FIELDS,
@@ -58,6 +59,7 @@ function validateAnomalyEvaluationUpdate(payload: Payload): Payload {
 
 export const syncAlerts: EntitySyncTable = {
   alert_notification_preferences: {
+    rpc: SYNC_RPCS.alertFeedback,
     create: (_ctx, payload) => {
       const sanitized = allowedPayload(payload, ALERT_PREFERENCE_CREATE_FIELDS);
       requireString(sanitized, "category");
@@ -66,6 +68,7 @@ export const syncAlerts: EntitySyncTable = {
     update: (_ctx, payload) => allowedPayload(payload, ALERT_PREFERENCE_UPDATE_FIELDS),
   },
   anomaly_whitelist_rules: {
+    rpc: SYNC_RPCS.alertFeedback,
     create: (_ctx, payload) => {
       const sanitized = allowedPayload(payload, ANOMALY_WHITELIST_CREATE_FIELDS);
       requireString(sanitized, "merchant_name");
@@ -75,6 +78,7 @@ export const syncAlerts: EntitySyncTable = {
     update: (_ctx, payload) => allowedPayload(payload, ANOMALY_WHITELIST_UPDATE_FIELDS),
   },
   alert_suppression_rules: {
+    rpc: SYNC_RPCS.alertFeedback,
     create: (_ctx, payload) => {
       const sanitized = allowedPayload(payload, ALERT_SUPPRESSION_CREATE_FIELDS);
       requireString(sanitized, "category");
@@ -84,6 +88,7 @@ export const syncAlerts: EntitySyncTable = {
     update: (_ctx, payload) => allowedPayload(payload, ALERT_SUPPRESSION_UPDATE_FIELDS),
   },
   anomaly_evaluations: {
+    rpc: SYNC_RPCS.default,
     create: (_ctx, payload) => validateAnomalyEvaluationCreate(payload),
     update: (_ctx, payload) => validateAnomalyEvaluationUpdate(payload),
   },

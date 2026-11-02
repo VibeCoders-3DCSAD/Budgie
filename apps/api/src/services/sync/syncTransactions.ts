@@ -1,3 +1,4 @@
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   RECURRING_FREQUENCIES,
   RECURRING_OCCURRENCE_FIELDS,
@@ -297,7 +298,7 @@ async function validateRecurringOccurrenceUpdate({ supabase, userId }: SyncConte
 }
 
 export const syncTransactions: EntitySyncTable = {
-  transactions: { create: validateTransactionCreate, update: validateTransactionUpdate },
-  recurring_transaction_templates: { create: validateRecurringTemplateCreate, update: validateRecurringTemplateUpdate },
-  recurring_transaction_occurrences: { create: validateRecurringOccurrenceCreate, update: validateRecurringOccurrenceUpdate },
+  transactions: { rpc: SYNC_RPCS.default, create: validateTransactionCreate, update: validateTransactionUpdate },
+  recurring_transaction_templates: { rpc: SYNC_RPCS.default, create: validateRecurringTemplateCreate, update: validateRecurringTemplateUpdate },
+  recurring_transaction_occurrences: { rpc: SYNC_RPCS.default, create: validateRecurringOccurrenceCreate, update: validateRecurringOccurrenceUpdate },
 };

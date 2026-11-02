@@ -43,3 +43,13 @@ export const SERVER_COLUMNS = new Set([
   "is_system",
   "is_protected_default",
 ]);
+
+// Database functions that apply a prepared sync operation.
+export const SYNC_RPCS = {
+  default: "apply_sync_operation",
+  alertFeedback: "apply_alert_feedback_sync_operation",
+  financialPlan: "apply_financial_plan_sync_operation",
+  scheduledPayment: "apply_scheduled_payment_sync_operation",
+  debt: "apply_debt_sync_operation",
+  creditCard: "apply_credit_card_sync_operation",
+} as const;

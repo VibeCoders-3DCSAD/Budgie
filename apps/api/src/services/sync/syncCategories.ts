@@ -1,3 +1,4 @@
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   CATEGORY_CREATE_FIELDS,
   CATEGORY_UPDATE_FIELDS,
@@ -109,10 +110,12 @@ function validateTaxonomyUpdate(payload: Payload, fields: Set<string>): Payload 
 
 export const syncCategories: EntitySyncTable = {
   categories: {
+    rpc: SYNC_RPCS.default,
     create: (_ctx, payload) => validateCategoryCreate(payload),
     update: (_ctx, payload) => validateTaxonomyUpdate(payload, CATEGORY_UPDATE_FIELDS),
   },
   subcategories: {
+    rpc: SYNC_RPCS.default,
     create: validateSubcategoryCreate,
     update: (_ctx, payload) => validateTaxonomyUpdate(payload, SUBCATEGORY_UPDATE_FIELDS),
   },

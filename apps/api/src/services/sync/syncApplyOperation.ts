@@ -10,7 +10,7 @@ import { syncFinancialPlan } from "./syncFinancialPlan.js";
 import { syncIncomeSources } from "./syncIncomeSources.js";
 import { syncSavings } from "./syncSavings.js";
 import { syncTransactions } from "./syncTransactions.js";
-import type { EntitySyncTable, Payload } from "./syncValidation.js";
+import type { EntitySync, EntitySyncTable, Payload } from "./syncValidation.js";
 
 export type Operation = {
   operation_id: string;
@@ -35,15 +35,25 @@ const ENTITY_SYNC: EntitySyncTable = {
   ...syncFinancialPlan,
 };
 
+function entitySyncFor(entity: string): EntitySync {
+  const entitySync = ENTITY_SYNC[entity];
+  if (!SYNCED_ENTITIES.has(entity) || !entitySync) {
+    throw new Error(`entity '${entity}' is not in the sync allowlist`);
+  }
+  return entitySync;
+}
+
+// Database function that applies a prepared operation for this entity.
+export function syncRpcFor(entity: string): string {
+  return entitySyncFor(entity).rpc;
+}
+
 export async function prepareOperation(
   supabase: SupabaseClient,
   userId: string,
   op: Operation,
 ): Promise<Operation> {
-  const entitySync = SYNCED_ENTITIES.has(op.entity) ? ENTITY_SYNC[op.entity] : undefined;
-  if (!entitySync) {
-    throw new Error(`entity '${op.entity}' is not in the sync allowlist`);
-  }
+  const entitySync = entitySyncFor(op.entity);
   const ctx = { supabase, userId, recordId: op.record_id };
   switch (op.operation_type) {
     case "create":

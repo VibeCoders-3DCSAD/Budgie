@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   INCOME_FREQUENCIES,
   INCOME_SOURCE_CREATE_FIELDS,
@@ -83,5 +84,5 @@ async function validateIncomeSourceUpdate({ supabase, userId }: SyncContext, pay
 }
 
 export const syncIncomeSources: EntitySyncTable = {
-  income_sources: { create: validateIncomeSourceCreate, update: validateIncomeSourceUpdate },
+  income_sources: { rpc: SYNC_RPCS.default, create: validateIncomeSourceCreate, update: validateIncomeSourceUpdate },
 };

@@ -1,4 +1,5 @@
 import { normalizeSavingsInterestReference } from "@odin/savings-interest";
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   FINANCIAL_ACCOUNT_CREATE_FIELDS,
   FINANCIAL_ACCOUNT_UPDATE_FIELDS,
@@ -115,10 +116,12 @@ async function validateSavingsAccountDetails(
 
 export const syncAccounts: EntitySyncTable = {
   financial_accounts: {
+    rpc: SYNC_RPCS.default,
     create: (_ctx, payload) => validateFinancialAccountCreate(payload),
     update: (_ctx, payload) => validateFinancialAccountUpdate(payload),
   },
   savings_account_details: {
+    rpc: SYNC_RPCS.default,
     create: (ctx, payload) => validateSavingsAccountDetails(ctx, payload, true),
     update: (ctx, payload) => validateSavingsAccountDetails(ctx, payload, false),
   },

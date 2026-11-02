@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SYNC_RPCS } from "./constants/entities.js";
 import { FINANCIAL_PLAN_CREATE_FIELDS } from "./constants/financialPlans.js";
 import { verifyAccountOwnership } from "./syncOwnership.js";
 import {
@@ -201,6 +202,7 @@ async function verifyFinancialPlanAllocationReferences(
 
 export const syncFinancialPlan: EntitySyncTable = {
   financial_plans: {
+    rpc: SYNC_RPCS.financialPlan,
     create: validateFinancialPlanCreate,
     update: () => {
       throw new Error("accepted Financial Plans are immutable");

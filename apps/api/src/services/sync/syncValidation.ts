@@ -10,6 +10,8 @@ export type SyncContext = {
 };
 
 export type EntitySync = {
+  // Database function that applies the prepared operation.
+  rpc: string;
   create: (ctx: SyncContext, payload: Payload) => Payload | Promise<Payload>;
   // Entities without an update handler reject updates.
   update?: (ctx: SyncContext, payload: Payload) => Payload | Promise<Payload>;

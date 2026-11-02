@@ -1,3 +1,4 @@
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   SAVINGS_ALLOCATION_PREFERENCE_FIELDS,
   SAVINGS_GOAL_ACTIVITY_FIELDS,
@@ -85,11 +86,13 @@ function validateSavingsAllocationPreference(payload: Payload): Payload {
 
 export const syncSavings: EntitySyncTable = {
   savings_goals: {
+    rpc: SYNC_RPCS.default,
     create: (ctx, payload) => validateSavingsGoal(ctx, payload, true),
     update: (ctx, payload) => validateSavingsGoal(ctx, payload, false),
   },
-  savings_goal_activities: { create: validateSavingsGoalActivityCreate },
+  savings_goal_activities: { rpc: SYNC_RPCS.default, create: validateSavingsGoalActivityCreate },
   savings_allocation_preferences: {
+    rpc: SYNC_RPCS.default,
     create: (_ctx, payload) => validateSavingsAllocationPreference(payload),
     update: (_ctx, payload) => validateSavingsAllocationPreference(payload),
   },

@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { SERVER_COLUMNS } from "./constants/entities.js";
+import { SERVER_COLUMNS, SYNC_RPCS } from "./constants/entities.js";
 import {
   BILLER_PAYMENT_MUTATION,
   SCHEDULED_PAYMENT_FIELDS,
@@ -83,10 +83,12 @@ function validateScheduledPaymentRecordSettlement(payload: Payload): Payload {
 
 export const syncBillersAndRemittances: EntitySyncTable = {
   scheduled_payments: {
+    rpc: SYNC_RPCS.scheduledPayment,
     create: (_ctx, payload) => validateScheduledPayment(payload, true),
     update: (_ctx, payload) => validateScheduledPayment(payload, false),
   },
   scheduled_payment_records: {
+    rpc: SYNC_RPCS.scheduledPayment,
     create: (_ctx, payload) => validateScheduledPaymentRecord(payload),
     update: (_ctx, payload) => validateScheduledPaymentRecordSettlement(payload),
   },

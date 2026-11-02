@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { PULL_PAGE_SIZE } from "@odin/sync-config";
-import { prepareOperation } from "./syncApplyOperation.js";
+import { prepareOperation, syncRpcFor } from "./syncApplyOperation.js";
 
 type PushOperation = {
   operation_id: string;
@@ -94,17 +94,7 @@ export async function pushOperations(
     try {
       const prepared = await prepareOperation(supabase, userId, op);
       auditPayload = { redacted: true, fields: Object.keys(prepared.payload) };
-      const rpcName = ["alert_notification_preferences", "anomaly_whitelist_rules", "alert_suppression_rules"].includes(prepared.entity)
-        ? "apply_alert_feedback_sync_operation"
-        : prepared.entity === "financial_plans"
-          ? "apply_financial_plan_sync_operation"
-        : prepared.entity === "scheduled_payments" || prepared.entity === "scheduled_payment_records"
-          ? "apply_scheduled_payment_sync_operation"
-        : prepared.entity === "debt_accounts" || prepared.entity === "debt_payments" || prepared.entity === "user_debt_priorities" || prepared.entity === "debt_strategy_preferences"
-          ? "apply_debt_sync_operation"
-        : prepared.entity === "credit_card_cycles" || prepared.entity === "credit_card_details" || prepared.entity === "credit_card_repayment_preferences" || prepared.entity === "credit_card_installments" || prepared.entity === "credit_card_transactions" || prepared.entity === "credit_card_statements" || prepared.entity === "credit_card_payments" || prepared.entity === "credit_card_settlements" || prepared.entity === "credit_card_statement_strategies"
-          ? "apply_credit_card_sync_operation"
-          : "apply_sync_operation";
+      const rpcName = syncRpcFor(prepared.entity);
       const { data, error } = await supabase.rpc(rpcName, {
         p_operation_id: prepared.operation_id,
         p_device_id: deviceId,

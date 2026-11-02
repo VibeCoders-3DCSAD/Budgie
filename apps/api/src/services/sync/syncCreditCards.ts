@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { SYNC_RPCS } from "./constants/entities.js";
 import {
   CREDIT_CARD_CYCLE_CREATE_FIELDS,
   CREDIT_CARD_CYCLE_FIELDS,
@@ -404,14 +405,14 @@ async function validateCreditCardTransactionCreate({ supabase, userId }: SyncCon
 }
 
 export const syncCreditCards: EntitySyncTable = {
-  credit_card_cycles: { create: validateCycleCreate, update: validateCycleUpdate },
-  credit_card_statements: { create: validateStatementCreate, update: validateStatementUpdate },
-  credit_card_payments: { create: validatePaymentCreate, update: validatePaymentUpdate },
-  credit_card_details: { create: validateDetailsCreate, update: validateDetailsUpdate },
-  credit_card_repayment_preferences: { create: validateRepaymentPreferenceCreate, update: validateRepaymentPreferenceUpdate },
-  credit_card_installments: { create: validateInstallmentCreate },
+  credit_card_cycles: { rpc: SYNC_RPCS.creditCard, create: validateCycleCreate, update: validateCycleUpdate },
+  credit_card_statements: { rpc: SYNC_RPCS.creditCard, create: validateStatementCreate, update: validateStatementUpdate },
+  credit_card_payments: { rpc: SYNC_RPCS.creditCard, create: validatePaymentCreate, update: validatePaymentUpdate },
+  credit_card_details: { rpc: SYNC_RPCS.creditCard, create: validateDetailsCreate, update: validateDetailsUpdate },
+  credit_card_repayment_preferences: { rpc: SYNC_RPCS.creditCard, create: validateRepaymentPreferenceCreate, update: validateRepaymentPreferenceUpdate },
+  credit_card_installments: { rpc: SYNC_RPCS.creditCard, create: validateInstallmentCreate },
   // Settlements and statement strategies validate every write as a full record.
-  credit_card_settlements: { create: validateSettlement, update: validateSettlement },
-  credit_card_statement_strategies: { create: validateStatementStrategy, update: validateStatementStrategy },
-  credit_card_transactions: { create: validateCreditCardTransactionCreate },
+  credit_card_settlements: { rpc: SYNC_RPCS.creditCard, create: validateSettlement, update: validateSettlement },
+  credit_card_statement_strategies: { rpc: SYNC_RPCS.creditCard, create: validateStatementStrategy, update: validateStatementStrategy },
+  credit_card_transactions: { rpc: SYNC_RPCS.creditCard, create: validateCreditCardTransactionCreate },
 };
