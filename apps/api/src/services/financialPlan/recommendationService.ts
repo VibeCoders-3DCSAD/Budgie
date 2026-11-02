@@ -19,10 +19,8 @@ import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-in
 import { recurringMonthSpend } from "@odin/spending-insights/recurringMonths.js";
 import { recurringSpendBySlug, unusualSpending, withRecurringSpend, type AnomalyEvaluation } from "./helpers/recurringSpending.js";
 import { currentCalendarMonth, MANILA_TIME_ZONE } from "../../lib/date/manila.js";
-import { financialPlanPeriod, forecastHistoryStart } from "./period.js";
+import { financialPlanPeriod, forecastHistoryStart, MAX_HISTORY } from "./period.js";
 
-// Matches the most transactions a forecast request accepts, so a busy year is not cut short.
-const MAX_HISTORY = 2_000;
 const ESSENTIAL_HFCE_CATEGORY_SLUGS = new Set(["food", "housing_water_utilities", "health", "communication", "transport", "education", "furnishings_household", "clothing_footwear"]);
 const SEASONAL_LABELS: Record<string, string> = { q1: "January–March", q2: "April–June", q3: "July–September", q4: "October–December", rainy_season: "Rainy Season", back_to_school: "Back-to-School Season", undas: "Undas / All Souls' Day", christmas_ber_months: "Christmas and Ber Months", new_year: "New Year", summer: "Summer", annual_payments: "Tax and Annual-Payment Season", family_celebrations: "Birthday and Family-Celebration Months" };
 const SEASONAL_WINDOWS: Record<string, string> = { q1: "January to March", q2: "April to June", q3: "July to September", q4: "October to December", rainy_season: "June to November", back_to_school: "June to August", undas: "October to November", christmas_ber_months: "September to December", new_year: "January", summer: "March to May", annual_payments: "January to April", family_celebrations: "varies by the selected month" };

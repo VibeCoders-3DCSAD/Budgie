@@ -1,5 +1,6 @@
 import { manilaMonthStart, manilaToday, manilaYearMonth } from "../../lib/date/manila.js";
 import { trustedMlHeaders } from "../../lib/mlInferenceGateway.js";
+import { UUID_PATTERN } from "../../lib/uuid.js";
 
 export type ForecastTransaction = {
   transactionId: string;
@@ -58,7 +59,6 @@ const FORECAST_QUARTERS = 4;
 const MONTHS_PER_QUARTER = 3;
 const MAX_TEXT_LENGTH = 160;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HFCE_CATEGORIES = new Set(["alcohol_tobacco", "clothing_footwear", "communication", "education", "food", "furnishings_household", "health", "housing_water_utilities", "miscellaneous_goods_services", "recreation_culture", "restaurants_hotels", "transport"]);
 
 export class ForecastValidationError extends Error {}
@@ -111,7 +111,7 @@ function forecastClock(asOf?: string): Date {
 function parseTransaction(value: unknown): ForecastTransaction {
   if (!value || typeof value !== "object" || Array.isArray(value)) throw new ForecastValidationError("Transaction is invalid");
   const input = value as Record<string, unknown>;
-  if (typeof input.transactionId !== "string" || !UUID.test(input.transactionId)) throw new ForecastValidationError("transactionId is invalid");
+  if (typeof input.transactionId !== "string" || !UUID_PATTERN.test(input.transactionId)) throw new ForecastValidationError("transactionId is invalid");
   if (typeof input.date !== "string" || !ISO_DATE.test(input.date) || Number.isNaN(Date.parse(`${input.date}T00:00:00Z`))) throw new ForecastValidationError("date is invalid");
   if (typeof input.amount !== "number" || !Number.isFinite(input.amount) || input.amount <= 0) throw new ForecastValidationError("amount is invalid");
   if (typeof input.category !== "string" || !input.category.trim() || input.category.length > MAX_TEXT_LENGTH) throw new ForecastValidationError("category is invalid");

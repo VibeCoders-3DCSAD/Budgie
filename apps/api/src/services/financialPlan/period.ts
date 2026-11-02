@@ -1,6 +1,9 @@
 import { currentCalendarMonth, manilaMonthStart } from "../../lib/date/manila.js";
 import { FinancialPlanInputError } from "./errors.js";
 
+// The most history transactions read. Matches the most a forecast request accepts, so a busy year is not cut short.
+export const MAX_HISTORY = 2_000;
+
 // The first day of the twelfth Manila month before this one, where the Spending Forecast's history starts.
 export function forecastHistoryStart(now = new Date()): string {
   return manilaMonthStart(12, now);

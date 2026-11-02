@@ -1,4 +1,4 @@
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_PATTERN } from "../../lib/uuid.js";
 
 // Ownership and live balances are checked under database locks by the sync RPC.
 export function validateSavingsExpenseWithdrawalPayload(value: unknown): void {
@@ -9,8 +9,8 @@ export function validateSavingsExpenseWithdrawalPayload(value: unknown): void {
   for (const entry of value) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)
       || Object.keys(entry).sort().join(",") !== "amount_centavos,id,savings_goal_id"
-      || typeof entry.id !== "string" || !UUID.test(entry.id)
-      || typeof entry.savings_goal_id !== "string" || !UUID.test(entry.savings_goal_id)
+      || typeof entry.id !== "string" || !UUID_PATTERN.test(entry.id)
+      || typeof entry.savings_goal_id !== "string" || !UUID_PATTERN.test(entry.savings_goal_id)
       || !Number.isSafeInteger(entry.amount_centavos) || entry.amount_centavos <= 0
       || goals.has(entry.savings_goal_id) || ids.has(entry.id)) throw new Error("invalid savings goal withdrawal split");
     goals.add(entry.savings_goal_id); ids.add(entry.id);
