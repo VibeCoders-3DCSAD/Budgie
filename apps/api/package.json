@@ -10,8 +10,9 @@
     "dummy-data:reset": "tsx scripts/reset-dummy-financial-data.ts",
     "persona-spending:export": "tsx scripts/export-persona-spending.ts",
     "seed": "tsx scripts/seed.ts",
-    "test": "RUN_INTEGRATION_TESTS=true jest --silent --runInBand",
-    "test:unit": "jest --silent --runInBand --testPathIgnorePatterns=/integration/"
+    "test": "jest --silent --runInBand --testPathIgnorePatterns='\\.integration\\.test\\.ts$'",
+    "test:unit": "pnpm run test",
+    "test:integration": "RUN_INTEGRATION_TESTS=true jest --silent --runInBand --testPathPattern='\\.integration\\.test\\.ts$'"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.57.4",

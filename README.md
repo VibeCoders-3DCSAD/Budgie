@@ -251,7 +251,8 @@ pnpm dev:web        # Expo web
 pnpm dev:api        # Express API (defaults to port 3001)
 pnpm --filter api build
 pnpm --filter app exec tsc --noEmit
-pnpm test           # Run all tests
+pnpm test           # Run API unit tests and app tests
+pnpm --filter api test:integration  # Writes test users and rows; local Supabase only (SUPABASE_URL must be 127.0.0.1/localhost)
 ```
 
 ## Graphify
