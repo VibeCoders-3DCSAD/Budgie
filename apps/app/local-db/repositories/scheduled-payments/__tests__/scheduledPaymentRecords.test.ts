@@ -97,7 +97,7 @@ describe("uncategorized billers", () => {
     expect(await postDueScheduledPayments("user-1", "device-1", "2026-10-01")).toBe(1);
     const [transaction] = await listTransactions("user-1");
     expect(transaction).toMatchObject({ name: "Padala kay Nanay", transaction_type: "expense", category_label: null, is_scheduled_payment: 1 });
-    expect(harness.queued("transactions")[0]!.payload).toMatchObject({ subcategory_id: null, merchant_name: "Padala kay Nanay", client_mutation_id: expect.stringMatching(/^scheduled-payment:.+:2026-10-01$/) });
+    expect(harness.queued("transactions")[0]!.payload).toMatchObject({ entry_source: "recurring", subcategory_id: null, merchant_name: "Padala kay Nanay", client_mutation_id: expect.stringMatching(/^scheduled-payment:.+:2026-10-01$/) });
   });
 
   it("mark manual payments as biller payments too", async () => {
@@ -106,6 +106,7 @@ describe("uncategorized billers", () => {
     await recordScheduledPayment("user-1", "device-1", { id: "record-1", scheduledPaymentId: payment.id, occurrenceDate: "2026-10-01", amountCentavos: 1000, paymentDate: "2026-09-30", sourceAccountId: "acct-cash", notes: null });
 
     expect(harness.queued("transactions")[0]!.payload).toMatchObject({ subcategory_id: null, client_mutation_id: `scheduled-payment:${payment.id}:record:record-1` });
+    expect(harness.queued("transactions")[0]!.payload).not.toHaveProperty("entry_source");
   });
 
   it("the ledger still rejects any other uncategorized expense", async () => {

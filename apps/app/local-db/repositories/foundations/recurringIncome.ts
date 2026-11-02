@@ -70,6 +70,7 @@ export async function postDueRecurringIncome(userId: string, deviceId: string, t
           const ids = recurringIncomePostIds(template.id, payday);
           if (await alreadyPosted(db, template.id, payday, ids)) continue;
           await createIncomeInTransaction(db, userId, deviceId, {
+            entry_source: "recurring",
             amount_centavos: template.amount_centavos,
             destination_account_id: template.destination_account_id,
             subcategory_id: template.subcategory_id,

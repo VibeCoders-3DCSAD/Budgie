@@ -250,6 +250,8 @@ export function scheduledPaymentMutationId(scheduledPaymentId: string, source: "
 
 async function writePayment(db: SQLite.SQLiteDatabase, userId: string, deviceId: string, payment: Row, entry: ScheduledPaymentEntry, source: "manual" | "auto", ids: { transactionId?: string; recordId: string }): Promise<void> {
   const { transaction } = await createExpenseInTransaction(db, userId, deviceId, {
+    // Only auto-posts are "recurring"; a recorded payment keeps the default, as any other expense does.
+    entry_source: source === "auto" ? "recurring" : undefined,
     savings_goal_withdrawals: entry.savingsGoalWithdrawals,
     amount_centavos: entry.amountCentavos,
     source_account_id: entry.sourceAccountId,

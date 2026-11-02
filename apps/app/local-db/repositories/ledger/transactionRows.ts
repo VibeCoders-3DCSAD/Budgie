@@ -75,9 +75,9 @@ export function buildTransactionInsert(
         amount_centavos, subcategory_id, source_account_id, destination_account_id, source_savings_goal_id, destination_savings_goal_id,
        recurring_template_id, merchant_name, counterparty_name, notes,
         client_mutation_id, metadata, version, deleted, created_at, updated_at)
-       VALUES (?, ?, ?, 'posted', 'manual', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', 1, 0, ?, ?)`,
+       VALUES (?, ?, ?, 'posted', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, '{}', 1, 0, ?, ?)`,
     params: [
-      id, userId, transactionType, input.transaction_date, ts, postingDate,
+      id, userId, transactionType, "entry_source" in input ? input.entry_source ?? "manual" : "manual", input.transaction_date, ts, postingDate,
        input.amount_centavos, subcategoryId, sourceAccountId, destinationAccountId,
        "source_savings_goal_id" in input ? input.source_savings_goal_id ?? null : null,
        "destination_savings_goal_id" in input ? input.destination_savings_goal_id ?? null : null,

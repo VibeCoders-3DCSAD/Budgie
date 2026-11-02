@@ -40,7 +40,11 @@ export type Transaction = {
 
 export type TransactionListItem = TransactionListRow;
 
+// "recurring" marks an automatic post (an income payday or a biller auto-post); the server jobs write the same.
+export type TransactionEntrySource = "manual" | "recurring";
+
 export type CreateIncomeInput = {
+  entry_source?: TransactionEntrySource;
   amount_centavos: number;
   destination_account_id: string;
   subcategory_id: string;
@@ -51,6 +55,7 @@ export type CreateIncomeInput = {
 };
 
 export type CreateExpenseInput = {
+  entry_source?: TransactionEntrySource;
   savings_goal_withdrawals?: SavingsExpenseWithdrawal[];
   amount_centavos: number;
   source_account_id: string;

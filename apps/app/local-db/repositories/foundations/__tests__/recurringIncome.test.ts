@@ -21,7 +21,7 @@ function balance() {
 }
 
 function posts() {
-  return harness.sqlite.prepare(`SELECT o.id AS occurrence_id, o.status, t.id AS transaction_id, t.transaction_date, t.amount_centavos, t.merchant_name, t.transaction_type
+  return harness.sqlite.prepare(`SELECT o.id AS occurrence_id, o.status, t.id AS transaction_id, t.transaction_date, t.amount_centavos, t.merchant_name, t.transaction_type, t.entry_source
     FROM recurring_transaction_occurrences o JOIN transactions t ON t.id = o.generated_transaction_id WHERE o.deleted = 0 ORDER BY o.scheduled_date`).all();
 }
 
@@ -47,10 +47,12 @@ describe("postDueRecurringIncome", () => {
     expect(await postDueRecurringIncome("user-1", "device-1", "2026-11-30")).toBe(0);
     const ids = recurringIncomePostIds(source.recurringTemplateId!, "2026-11-15");
     expect(posts()).toEqual([
-      { occurrence_id: ids.occurrenceId, status: "posted", transaction_id: ids.transactionId, transaction_date: "2026-11-15", amount_centavos: 2_500_000, merchant_name: "Salary", transaction_type: "income" },
+      { occurrence_id: ids.occurrenceId, status: "posted", transaction_id: ids.transactionId, transaction_date: "2026-11-15", amount_centavos: 2_500_000, merchant_name: "Salary", transaction_type: "income", entry_source: "recurring" },
       expect.objectContaining({ transaction_date: "2026-11-30" }),
     ]);
     expect(balance()).toBe(5_000_000);
+    // The server job writes the same tag, so a payday looks the same whoever posts it.
+    expect(harness.queued("transactions")[0]!.payload).toMatchObject({ entry_source: "recurring" });
     expect(harness.queued("recurring_transaction_occurrences").map((operation) => operation.payload)).toEqual([
       { recurring_template_id: source.recurringTemplateId, scheduled_date: "2026-11-15", generated_transaction_id: ids.transactionId },
       expect.objectContaining({ scheduled_date: "2026-11-30" }),
