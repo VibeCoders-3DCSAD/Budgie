@@ -507,6 +507,46 @@ curl -X POST https://your-api.com/odin/internal/daily-financial-reports/run \
 
 Do not call this endpoint with a user session or from the mobile app.
 
+### Sync Validation
+
+Every pushed sync operation is validated before it reaches the sync RPC. `syncService.ts` calls `prepareOperation` (`apps/api/src/services/sync/syncApplyOperation.ts`), which:
+
+1. Rejects entities missing from `SYNCED_ENTITIES` or from the entity table.
+2. On create, passes the full payload to the entity's `create` validator.
+3. On update, keeps only the `changed_fields` (plus the savings links for transactions) and passes them to `update`. Entities without an `update` validator reject updates.
+4. Passes deletes through. The RPC checks ownership.
+
+Validators are grouped by feature in `apps/api/src/services/sync/`:
+
+| File | Entities |
+|---|---|
+| `syncAlerts.ts` | alert preferences, anomaly whitelist and suppression rules, anomaly evaluations |
+| `syncCategories.ts` | categories, subcategories |
+| `syncAccounts.ts` | financial accounts, savings account details |
+| `syncTransactions.ts` | transactions, recurring templates and occurrences |
+| `syncCreditCards.ts` | cycles, statements, payments, details, repayment preferences, installments, settlements, statement strategies, card transactions |
+| `syncDebts.ts` | debt accounts, payments, strategy, priorities |
+| `syncSavings.ts` | savings goals, goal activities, allocation preferences |
+| `syncIncomeSources.ts` | income sources |
+| `syncBillersAndRemittances.ts` | scheduled payments and payment records |
+| `syncFinancialPlan.ts` | financial plans (create only; accepted plans are immutable) |
+
+Shared pieces:
+
+- `constants/`: per-feature field allowlists and enum lists.
+- `syncValidation.ts`: the `SyncContext` (`supabase`, `userId`, `recordId`) and `EntitySync` types, `allowedPayload` (rejects unknown fields and strips server columns), and field checks.
+- `syncOwnership.ts`: account, category and subcategory ownership checks.
+
+Each validator takes `(ctx, payload)` and returns the sanitized payload, or throws with the rejection reason. Each table entry also names the database function (`rpc`) that applies the operation. `syncService.ts` reads it through `syncRpcFor(entity)`. The function names live in `SYNC_RPCS` in `constants/entities.ts`.
+
+**Adding a new synced entity:**
+
+1. Add its field constants to the matching file in `constants/`.
+2. In the feature module, write `create` (and `update` if updates are allowed) and add an entry to that module's table with its `rpc` (`SYNC_RPCS.default` unless the entity has its own database function).
+3. Add the entity name to `SYNCED_ENTITIES` in `constants/entities.ts`.
+
+`prepareOperation` and `syncService.ts` do not need to change.
+
 ### Savings interest configuration
 
 All savings interest configuration lives inside Advanced Options. The form supports Daily Balance or ADB, Simple or Compound behavior, and fixed nominal annual rates only. None stores 0%, disables interest settings and preserves historical transactions. Tiered and conditional controls are excluded.
