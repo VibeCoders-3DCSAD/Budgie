@@ -15,7 +15,7 @@ import {
   CREDIT_CARD_STATEMENT_UPDATE_FIELDS,
   CREDIT_CARD_TRANSACTION_FIELDS,
 } from "./constants/creditCards.js";
-import { verifyAccountOwnership } from "./syncOwnership.js";
+import { findOwnedRow, requireOwnedRow, verifyAccountOwnership } from "./syncOwnership.js";
 import {
   allowedPayload,
   optionalFiniteInteger,
@@ -42,28 +42,12 @@ async function verifyStatementCycle(
   cycleId: string,
   statementDate: string,
 ): Promise<void> {
-  const { data: cycle, error } = await supabase
-    .from("credit_card_cycles")
-    .select("id, cycle_start_date, statement_date, account_id")
-    .eq("id", cycleId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (error) throw new Error(`credit-card cycle validation failed: ${error.message}`);
+  const cycle = await findOwnedRow<{ cycle_start_date: string; statement_date: string | null; account_id: string }>(supabase, userId, { table: "credit_card_cycles", match: { id: cycleId }, select: "id, cycle_start_date, statement_date, account_id", errorPrefix: "credit-card cycle validation" });
   const today = new Date().toISOString().slice(0, 10);
   if (!cycle || cycle.statement_date !== null || statementDate <= cycle.cycle_start_date || statementDate > today) {
     throw new Error("credit-card statement cycle is invalid");
   }
-  const { data: account, error: accountError } = await supabase
-    .from("financial_accounts")
-    .select("id")
-    .eq("id", cycle.account_id)
-    .eq("user_id", userId)
-    .eq("kind", "credit_card")
-    .eq("deleted", false)
-    .maybeSingle();
-  if (accountError) throw new Error(`credit-card account validation failed: ${accountError.message}`);
-  if (!account) throw new Error("credit-card statement cycle is invalid");
+  await requireOwnedRow(supabase, userId, { table: "financial_accounts", match: { id: cycle.account_id, kind: "credit_card" }, errorPrefix: "credit-card account validation", notFound: "credit-card statement cycle is invalid" });
 }
 
 async function verifyCreditCardPaymentReferences(
@@ -71,42 +55,13 @@ async function verifyCreditCardPaymentReferences(
   userId: string,
   payload: Payload,
 ): Promise<void> {
-  const { data: statement, error: statementError } = await supabase
-    .from("credit_card_statements")
-    .select("id, authoritative, statement_balance_centavos")
-    .eq("id", payload.statement_id as string)
-    .eq("cycle_id", payload.cycle_id as string)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (statementError) throw new Error(`credit-card statement validation failed: ${statementError.message}`);
+  const statement = await findOwnedRow<{ authoritative: boolean; statement_balance_centavos: number }>(supabase, userId, { table: "credit_card_statements", match: { id: payload.statement_id as string, cycle_id: payload.cycle_id as string }, select: "id, authoritative, statement_balance_centavos", errorPrefix: "credit-card statement validation" });
   if (!statement || statement.authoritative !== true) throw new Error("payment must reference an authoritative statement in its billing cycle");
   if ((payload.amount_centavos as number) > statement.statement_balance_centavos) throw new Error("payment amount cannot exceed the statement balance");
 
-  const { data: source, error: sourceError } = await supabase
-    .from("financial_accounts")
-    .select("id")
-    .eq("id", payload.source_account_id as string)
-    .eq("user_id", userId)
-    .neq("kind", "credit_card")
-    .eq("status", "active")
-    .eq("deleted", false)
-    .maybeSingle();
-  if (sourceError) throw new Error(`payment source-account validation failed: ${sourceError.message}`);
-  if (!source) throw new Error("payment source account must be an active non-credit-card account");
+  await requireOwnedRow(supabase, userId, { table: "financial_accounts", match: { id: payload.source_account_id as string, status: "active" }, notMatch: { kind: "credit_card" }, errorPrefix: "payment source-account validation", notFound: "payment source account must be an active non-credit-card account" });
 
-  const { data: transaction, error: transactionError } = await supabase
-    .from("transactions")
-    .select("id")
-    .eq("id", payload.transaction_id as string)
-    .eq("user_id", userId)
-    .eq("transaction_type", "expense")
-    .eq("source_account_id", payload.source_account_id as string)
-    .eq("amount_centavos", payload.amount_centavos as number)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (transactionError) throw new Error(`payment transaction validation failed: ${transactionError.message}`);
-  if (!transaction) throw new Error("payment transaction must match its amount and source account");
+  await requireOwnedRow(supabase, userId, { table: "transactions", match: { id: payload.transaction_id as string, transaction_type: "expense", source_account_id: payload.source_account_id as string, amount_centavos: payload.amount_centavos as number }, errorPrefix: "payment transaction validation", notFound: "payment transaction must match its amount and source account" });
 }
 
 async function verifyOptionalAccountId({ supabase, userId }: SyncContext, sanitized: Payload): Promise<void> {
@@ -135,16 +90,7 @@ async function validateCycleUpdate(ctx: SyncContext, payload: Payload): Promise<
     if (sanitized[field] !== undefined) requireDateString(sanitized, field);
   }
   if (sanitized.statement_date !== undefined) {
-    const { data: statement, error } = await supabase
-      .from("credit_card_statements")
-      .select("id")
-      .eq("cycle_id", recordId)
-      .eq("user_id", userId)
-      .eq("statement_date", sanitized.statement_date)
-      .eq("deleted", false)
-      .maybeSingle();
-    if (error) throw new Error(`credit-card statement lookup failed: ${error.message}`);
-    if (!statement) throw new Error("statement_date must match a recorded statement on this billing cycle");
+    await requireOwnedRow(supabase, userId, { table: "credit_card_statements", match: { cycle_id: recordId, statement_date: sanitized.statement_date as string }, errorPrefix: "credit-card statement lookup", notFound: "statement_date must match a recorded statement on this billing cycle" });
   }
   for (const [key, value] of Object.entries(sanitized)) {
     if (key === "statement_date" && value === null) continue;
@@ -197,26 +143,10 @@ async function validateStatementUpdate({ supabase, userId, recordId }: SyncConte
   if (balance !== undefined && minimum !== undefined && minimum > balance) {
     throw new Error("minimum_due_centavos must be <= statement_balance_centavos");
   }
-  const { data: statement, error } = await supabase
-    .from("credit_card_statements")
-    .select("cycle_id")
-    .eq("id", recordId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (error) throw new Error(`credit-card statement lookup failed: ${error.message}`);
-  if (!statement) throw new Error("credit-card statement not found or inaccessible");
+  const statement = await requireOwnedRow<{ cycle_id: string }>(supabase, userId, { table: "credit_card_statements", match: { id: recordId }, select: "cycle_id", errorPrefix: "credit-card statement lookup", notFound: "credit-card statement not found or inaccessible" });
   const statementDate = sanitized.statement_date as string | undefined;
   if (statementDate !== undefined) {
-    const { data: cycle, error: cycleError } = await supabase
-      .from("credit_card_cycles")
-      .select("cycle_start_date")
-      .eq("id", statement.cycle_id)
-      .eq("user_id", userId)
-      .eq("deleted", false)
-      .maybeSingle();
-    if (cycleError) throw new Error(`credit-card cycle lookup failed: ${cycleError.message}`);
-    if (!cycle) throw new Error("credit-card statement cycle is invalid");
+    const cycle = await requireOwnedRow<{ cycle_start_date: string }>(supabase, userId, { table: "credit_card_cycles", match: { id: statement.cycle_id }, select: "cycle_start_date", errorPrefix: "credit-card cycle lookup", notFound: "credit-card statement cycle is invalid" });
     const today = new Date().toISOString().slice(0, 10);
     if (statementDate <= cycle.cycle_start_date || statementDate > today) {
       throw new Error("statement_date must be after the billing cycle start and no later than today");
@@ -338,14 +268,7 @@ async function validateInstallmentCreate({ supabase, userId }: SyncContext, payl
   if (!["zero_interest", "interest_bearing"].includes(sanitized.interest_type as string)) throw new Error("interest_type is invalid");
   if (!["active", "early_settlement_requested", "completed"].includes(sanitized.settlement_status as string)) throw new Error("settlement_status is invalid");
   await verifyAccountOwnership(supabase, userId, sanitized.account_id as string);
-  const { data: transaction, error: transactionError } = await supabase
-    .from("transactions")
-    .select("id, transaction_type, source_account_id")
-    .eq("id", sanitized.transaction_id as string)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (transactionError) throw new Error(`installment transaction validation failed: ${transactionError.message}`);
+  const transaction = await findOwnedRow<{ transaction_type: string; source_account_id: string | null }>(supabase, userId, { table: "transactions", match: { id: sanitized.transaction_id as string }, select: "id, transaction_type, source_account_id", errorPrefix: "installment transaction validation" });
   if (!transaction || transaction.transaction_type !== "expense" || transaction.source_account_id !== sanitized.account_id) {
     throw new Error("installment transaction does not belong to the selected credit card");
   }
@@ -358,9 +281,7 @@ async function validateSettlement({ supabase, userId }: SyncContext, payload: Pa
   for (const field of ["remaining_principal_centavos", "settlement_amount_centavos"]) requireBigInt(sanitized, field);
   if (sanitized.pretermination_fee_centavos !== undefined) requireBigInt(sanitized, "pretermination_fee_centavos");
   if (!["requested", "recognized", "rejected"].includes(sanitized.status as string)) throw new Error("settlement status is invalid");
-  const { data: installment, error } = await supabase.from("credit_card_installments").select("id").eq("id", sanitized.installment_id as string).eq("user_id", userId).eq("deleted", false).maybeSingle();
-  if (error) throw new Error(`settlement installment validation failed: ${error.message}`);
-  if (!installment) throw new Error("settlement installment is not accessible");
+  await requireOwnedRow(supabase, userId, { table: "credit_card_installments", match: { id: sanitized.installment_id as string }, errorPrefix: "settlement installment validation", notFound: "settlement installment is not accessible" });
   return sanitized;
 }
 
@@ -375,9 +296,7 @@ async function validateStatementStrategy({ supabase, userId }: SyncContext, payl
   const sanitized = allowedPayload(payload, CREDIT_CARD_STATEMENT_STRATEGY_FIELDS);
   for (const field of ["statement_id", "strategy"]) requireString(sanitized, field);
   if (!REPAYMENT_STRATEGIES.includes(sanitized.strategy as string)) throw new Error("statement repayment strategy is invalid");
-  const { data: statement, error } = await supabase.from("credit_card_statements").select("statement_balance_centavos, minimum_due_centavos").eq("id", sanitized.statement_id as string).eq("user_id", userId).eq("authoritative", true).eq("deleted", false).maybeSingle();
-  if (error) throw new Error(`statement repayment strategy validation failed: ${error.message}`);
-  if (!statement) throw new Error("statement repayment strategy requires an authoritative owned statement");
+  const statement = await requireOwnedRow<{ statement_balance_centavos: number; minimum_due_centavos: number }>(supabase, userId, { table: "credit_card_statements", match: { id: sanitized.statement_id as string, authoritative: true }, select: "statement_balance_centavos, minimum_due_centavos", errorPrefix: "statement repayment strategy validation", notFound: "statement repayment strategy requires an authoritative owned statement" });
   const balance = Number(statement.statement_balance_centavos);
   const minimum = Number(statement.minimum_due_centavos);
   const strategy = sanitized.strategy as string;

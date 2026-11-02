@@ -7,7 +7,7 @@ import {
   DEBT_PRIORITY_FIELDS,
   DEBT_STRATEGY_FIELDS,
 } from "./constants/debts.js";
-import { verifyAccountOwnership } from "./syncOwnership.js";
+import { requireOwnedRow, verifyAccountOwnership } from "./syncOwnership.js";
 import {
   allowedPayload,
   optionalString,
@@ -40,9 +40,7 @@ async function verifyDebtPresetReferences(supabase: SupabaseClient, userId: stri
   const sourceId = salary?.linkedIncomeSourceId ?? business?.linkedBusinessOrIncomeSourceId;
   if (!sourceId) return;
   if (typeof sourceId !== "string") throw new Error("linked income source must be a string");
-  const { data, error } = await supabase.from("income_sources").select("id").eq("id", sourceId).eq("user_id", userId).eq("deleted", false).maybeSingle();
-  if (error) throw new Error(`income source validation failed: ${error.message}`);
-  if (!data) throw new Error("linked income source is not accessible");
+  await requireOwnedRow(supabase, userId, { table: "income_sources", match: { id: sourceId }, errorPrefix: "income source validation", notFound: "linked income source is not accessible" });
 }
 
 async function validateDebtAccountCreate({ supabase, userId }: SyncContext, payload: Payload): Promise<Payload> {

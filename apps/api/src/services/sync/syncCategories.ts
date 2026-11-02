@@ -18,6 +18,7 @@ import {
   type Payload,
   type SyncContext,
 } from "./syncValidation.js";
+import { requireOwnedRow } from "./syncOwnership.js";
 
 function validateTaxonomyVisuals(payload: Payload): void {
   if (payload.icon_key !== undefined && (typeof payload.icon_key !== "string" || !TAXONOMY_ICON_KEYS.has(payload.icon_key))) {
@@ -83,16 +84,7 @@ async function validateSubcategoryCreate({ supabase, userId }: SyncContext, payl
 
   if (sanitized.kind === "expense") {
     requireString(sanitized, "category_id");
-    const { data: category, error } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("id", sanitized.category_id as string)
-      .eq("deleted", false)
-      .eq("is_active", true)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) throw new Error(`category_id validation failed: ${error.message}`);
-    if (!category) throw new Error("category_id does not reference an accessible active category");
+    await requireOwnedRow(supabase, userId, { table: "categories", match: { id: sanitized.category_id as string, is_active: true }, errorPrefix: "category_id validation", notFound: "category_id does not reference an accessible active category" });
   } else if (sanitized.category_id !== undefined && sanitized.category_id !== null) {
     throw new Error("category_id must not be set for non-expense subcategories");
   }

@@ -20,6 +20,7 @@ import {
   type Payload,
   type SyncContext,
 } from "./syncValidation.js";
+import { requireOwnedRow } from "./syncOwnership.js";
 
 function validateFinancialAccountCreate(payload: Payload): Payload {
   const sanitized = allowedPayload(payload, FINANCIAL_ACCOUNT_CREATE_FIELDS);
@@ -106,9 +107,7 @@ async function validateSavingsAccountDetails(
     if (sanitized.account_type !== "time_deposit" && hasContributionSchedule && scheduleFields.some((field) => sanitized[field] == null)) throw new Error("Savings contribution schedule is incomplete");
   }
   if (accountId) {
-    const { data: account, error } = await supabase.from("financial_accounts").select("id, opened_on").eq("id", accountId).eq("user_id", userId).eq("kind", "savings").eq("deleted", false).maybeSingle();
-    if (error) throw new Error(`savings account validation failed: ${error.message}`);
-    if (!account) throw new Error("savings account details require an owned savings account");
+    const account = await requireOwnedRow<{ opened_on: string | null }>(supabase, userId, { table: "financial_accounts", match: { id: accountId, kind: "savings" }, select: "id, opened_on", errorPrefix: "savings account validation", notFound: "savings account details require an owned savings account" });
     if (creating && sanitized.account_type === "time_deposit" && account.opened_on && (sanitized.maturity_date as string) <= account.opened_on) throw new Error("Time Deposit maturity date must be after its start date");
   }
   return sanitized;

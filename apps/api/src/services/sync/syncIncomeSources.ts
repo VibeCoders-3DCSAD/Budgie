@@ -5,7 +5,7 @@ import {
   INCOME_SOURCE_CREATE_FIELDS,
   INCOME_SOURCE_UPDATE_FIELDS,
 } from "./constants/incomeSources.js";
-import { verifyAccountOwnership, verifySubcategoryOwnership } from "./syncOwnership.js";
+import { requireOwnedRow, verifyAccountOwnership, verifySubcategoryOwnership } from "./syncOwnership.js";
 import {
   allowedPayload,
   optionalBoolean,
@@ -21,14 +21,7 @@ import {
 } from "./syncValidation.js";
 
 async function verifyRecurringTemplate(supabase: SupabaseClient, userId: string, templateId: string): Promise<void> {
-  const { data: template, error: templateErr } = await supabase
-    .from("recurring_transaction_templates")
-    .select("id")
-    .eq("id", templateId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (templateErr) throw new Error(`recurring_template_id validation failed: ${templateErr.message}`);
-  if (!template) throw new Error("recurring_template_id does not reference an accessible recurring template");
+  await requireOwnedRow(supabase, userId, { table: "recurring_transaction_templates", match: { id: templateId }, includeDeleted: true, errorPrefix: "recurring_template_id validation", notFound: "recurring_template_id does not reference an accessible recurring template" });
 }
 
 async function validateIncomeSourceCreate({ supabase, userId }: SyncContext, payload: Payload): Promise<Payload> {

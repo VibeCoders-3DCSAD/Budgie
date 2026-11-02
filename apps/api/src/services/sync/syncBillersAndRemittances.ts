@@ -21,18 +21,12 @@ import {
   type EntitySyncTable,
   type Payload,
 } from "./syncValidation.js";
+import { requireOwnedRow } from "./syncOwnership.js";
 
 export async function verifyUncategorizedBillerPayment(supabase: SupabaseClient, userId: string, clientMutationId: unknown): Promise<void> {
   const scheduledPaymentId = typeof clientMutationId === "string" ? BILLER_PAYMENT_MUTATION.exec(clientMutationId)?.[1] : undefined;
   if (!scheduledPaymentId) throw new Error("expense requires a category unless it pays a biller or remittance");
-  const { data, error } = await supabase
-    .from("scheduled_payments")
-    .select("id")
-    .eq("id", scheduledPaymentId)
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) throw new Error(`biller validation failed: ${error.message}`);
-  if (!data) throw new Error("biller or remittance not found or inaccessible");
+  await requireOwnedRow(supabase, userId, { table: "scheduled_payments", match: { id: scheduledPaymentId }, includeDeleted: true, errorPrefix: "biller validation", notFound: "biller or remittance not found or inaccessible" });
 }
 
 // Ownership of the subcategory, account, scheduled payment and transaction is checked by the sync RPC.

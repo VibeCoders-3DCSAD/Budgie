@@ -11,11 +11,7 @@ import {
 import { validateSavingsExpenseWithdrawalPayload } from "./savingsExpenseWithdrawals.js";
 import { validateSavingsGoalContributionPayload } from "./savingsGoalContribution.js";
 import { verifyUncategorizedBillerPayment } from "./syncBillersAndRemittances.js";
-import {
-  verifyAccountOwnership,
-  verifyCategoryOwnership,
-  verifySubcategoryOwnership,
-} from "./syncOwnership.js";
+import { requireOwnedRow, verifyAccountOwnership, verifyCategoryOwnership, verifySubcategoryOwnership } from "./syncOwnership.js";
 import {
   allowedPayload,
   optionalNumber,
@@ -107,15 +103,7 @@ async function validateTransactionUpdate({ supabase, userId, recordId }: SyncCon
     }
   }
 
-  const { data: current, error } = await supabase
-    .from("transactions")
-    .select("id, transaction_type")
-    .eq("id", recordId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (error) throw new Error(`transaction lookup failed: ${error.message}`);
-  if (!current) throw new Error("transaction not found or inaccessible");
+  const current = await requireOwnedRow<{ transaction_type: string }>(supabase, userId, { table: "transactions", match: { id: recordId }, select: "id, transaction_type", errorPrefix: "transaction lookup", notFound: "transaction not found or inaccessible" });
 
   const txType = current.transaction_type as string;
   if (sanitized.savings_goal_contribution !== undefined && txType !== "transfer") throw new Error("savings contribution requires a transfer");
@@ -227,15 +215,7 @@ async function validateRecurringTemplateUpdate({ supabase, userId, recordId }: S
     }
   }
 
-  const { data: current, error } = await supabase
-    .from("recurring_transaction_templates")
-    .select("id, transaction_type, subcategory_id, source_account_id, destination_account_id, starts_on, ends_on")
-    .eq("id", recordId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (error) throw new Error(`recurring template lookup failed: ${error.message}`);
-  if (!current) throw new Error("recurring template not found or inaccessible");
+  const current = await requireOwnedRow<Payload>(supabase, userId, { table: "recurring_transaction_templates", match: { id: recordId }, select: "id, transaction_type, subcategory_id, source_account_id, destination_account_id, starts_on, ends_on", errorPrefix: "recurring template lookup", notFound: "recurring template not found or inaccessible" });
 
   validateDateOrdering({ ...current, ...sanitized }, "starts_on", "ends_on");
   const transactionType = current.transaction_type as string;
@@ -255,28 +235,12 @@ async function validateRecurringTemplateUpdate({ supabase, userId, recordId }: S
 }
 
 async function verifyRecurringTemplate({ supabase, userId }: SyncContext, templateId: string): Promise<void> {
-  const { data: template, error: templateErr } = await supabase
-    .from("recurring_transaction_templates")
-    .select("id")
-    .eq("id", templateId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (templateErr) throw new Error(`recurring template validation failed: ${templateErr.message}`);
-  if (!template) throw new Error("recurring template not found or inaccessible");
+  await requireOwnedRow(supabase, userId, { table: "recurring_transaction_templates", match: { id: templateId }, errorPrefix: "recurring template validation", notFound: "recurring template not found or inaccessible" });
 }
 
 async function verifyGeneratedTransaction({ supabase, userId }: SyncContext, transactionId: unknown): Promise<void> {
   if (typeof transactionId !== "string" || !transactionId) return;
-  const { data: tx, error: txErr } = await supabase
-    .from("transactions")
-    .select("id")
-    .eq("id", transactionId)
-    .eq("user_id", userId)
-    .eq("deleted", false)
-    .maybeSingle();
-  if (txErr) throw new Error(`transaction lookup failed: ${txErr.message}`);
-  if (!tx) throw new Error("generated_transaction_id not found or inaccessible");
+  await requireOwnedRow(supabase, userId, { table: "transactions", match: { id: transactionId }, errorPrefix: "transaction lookup", notFound: "generated_transaction_id not found or inaccessible" });
 }
 
 async function validateRecurringOccurrenceCreate(ctx: SyncContext, payload: Payload): Promise<Payload> {

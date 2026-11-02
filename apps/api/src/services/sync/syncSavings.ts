@@ -19,6 +19,7 @@ import {
   type Payload,
   type SyncContext,
 } from "./syncValidation.js";
+import { findOwnedRow } from "./syncOwnership.js";
 
 async function validateSavingsGoal({ supabase, userId }: SyncContext, payload: Payload, creating: boolean): Promise<Payload> {
   const sanitized = allowedPayload(payload, SAVINGS_GOAL_FIELDS);
@@ -69,11 +70,9 @@ async function validateSavingsGoalActivityCreate({ supabase, userId }: SyncConte
   requirePositiveInteger(sanitized, "amount_centavos");
   if (sanitized.activity_kind !== "contribution" && sanitized.activity_kind !== "withdrawal") throw new Error("savings activity kind is invalid");
   optionalString(sanitized, "notes");
-  const { data: goal, error: goalError } = await supabase.from("savings_goals").select("id, status").eq("id", sanitized.savings_goal_id as string).eq("user_id", userId).eq("deleted", false).maybeSingle();
-  if (goalError) throw new Error(`savings goal validation failed: ${goalError.message}`);
+  const goal = await findOwnedRow<{ status: string }>(supabase, userId, { table: "savings_goals", match: { id: sanitized.savings_goal_id as string }, select: "id, status", errorPrefix: "savings goal validation" });
   if (!goal || goal.status !== "active") throw new Error("savings activity requires an active owned savings goal");
-  const { data: transaction, error: transactionError } = await supabase.from("transactions").select("id, transaction_type").eq("id", sanitized.transaction_id as string).eq("user_id", userId).eq("deleted", false).maybeSingle();
-  if (transactionError) throw new Error(`savings transaction validation failed: ${transactionError.message}`);
+  const transaction = await findOwnedRow<{ transaction_type: string }>(supabase, userId, { table: "transactions", match: { id: sanitized.transaction_id as string }, select: "id, transaction_type", errorPrefix: "savings transaction validation" });
   if (!transaction || transaction.transaction_type !== "transfer") throw new Error("savings activity requires an owned transfer transaction");
   return sanitized;
 }
