@@ -7,15 +7,18 @@ import {
   applyPullRow,
   SYNCED_TABLES,
 } from "./pullConvergence";
-import { syncQueueEligibleStatusesClause, syncQueueOrderByClause } from "./queueOrder";
-import { markSyncConflict, rebaseLegacyDebtPriorityConflict } from "./syncConflict";
+import {
+  syncQueueEligibleStatusesClause,
+  syncQueueOrderByClause,
+  syncQueueUnsyncedStatusesClause,
+} from "./queueOrder";
+import { markSyncConflict, markSyncRejection, rebaseLegacyDebtPriorityConflict } from "./syncConflict";
 import { repairCreditCardPaymentCreateRows } from "./repairCreditCardPaymentCreates";
 import { repairCreditCardDetailCreateRows } from "./repairCreditCardDetailCreates";
 import { retryAnomalyEvaluationPulls } from "./retryAnomalyEvaluationPulls";
 
 const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const REQUEST_TIMEOUT = 10_000;
-const MAX_SYNC_ATTEMPTS = 3;
 const MAX_PULL_PAGES_PER_SYNC = 3;
 const PULL_PAGE_DELAY_MS = 100;
 const PROGRESS_REPORT_ROWS = 25;
@@ -45,6 +48,8 @@ type SyncResult = {
   pushed: number;
   pulled: number;
   errors: number;
+  // Changes queued before the run that are still not on the server.
+  pendingPushes: number;
   successful: boolean;
   hasMore: boolean;
 };
@@ -84,8 +89,9 @@ export async function runSync(
   accessToken = await authorizeLocalRequest(userId, accessToken);
   const syncKey = `${userId}:${deviceId}`;
   const existing = syncPromises.get(syncKey);
-  // Every run pushes, so an in-flight run covers a push-only request; a push-only run does not cover a pull.
-  if (existing && (existing.pull || !pull)) return existing.promise;
+  // A push-only caller needs its own latest changes on the server, and an in-flight run only pushes
+  // what was queued when it started, so it waits and runs again. A pull request can share a full run.
+  if (existing && existing.pull && pull) return existing.promise;
   if (existing) {
     await existing.promise.catch(() => {});
     return runSync(userId, deviceId, accessToken, options);
@@ -107,7 +113,7 @@ async function runSyncInternal(
   { pull, untilComplete = false, onProgress }: SyncOptions & { pull: boolean },
 ): Promise<SyncResult> {
   if (!userId || !accessToken || !deviceId) {
-    return { pushed: 0, pulled: 0, errors: 0, successful: false, hasMore: false };
+    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, successful: false, hasMore: false };
   }
 
   const db = await initDatabase();
@@ -119,11 +125,12 @@ async function runSyncInternal(
   try {
     await ensureDeviceRegistered(db, userId, deviceId, accessToken);
   } catch {
-    return { pushed: 0, pulled: 0, errors: 0, successful: false, hasMore: syncState.pullPending };
+    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, successful: false, hasMore: syncState.pullPending };
   }
 
-  const { pushed, errors } = await pushQueue(db, userId, deviceId, accessToken);
-  if (!pull) return { pushed, pulled: 0, errors, successful: errors === 0, hasMore: syncState.pullPending };
+  const { pushed, errors, pendingPushes } = await drainPushQueue(db, userId, deviceId, accessToken);
+  const pushSuccessful = errors === 0 && pendingPushes === 0;
+  if (!pull) return { pushed, pulled: 0, errors, pendingPushes, successful: pushSuccessful, hasMore: syncState.pullPending };
 
   let pulled = await retryAnomalyEvaluationPulls(db, userId);
   let pullSuccessful = true;
@@ -169,7 +176,7 @@ async function runSyncInternal(
 
   await saveCursors(db, userId, deviceId, cursors, hasMore);
 
-  return { pushed, pulled, errors, successful: pullSuccessful && errors === 0, hasMore };
+  return { pushed, pulled, errors, pendingPushes, successful: pullSuccessful && pushSuccessful, hasMore };
 }
 
 async function resetTaxonomyCursorsIfEmpty(
@@ -187,29 +194,81 @@ async function resetTaxonomyCursorsIfEmpty(
   delete cursors.subcategories;
 }
 
+const PUSH_BATCH_SIZE = 50;
+
+type PushOutcome = { pushed: number; errors: number; pendingPushes: number };
+
+// Pushes every change queued before this call, one batch at a time. Each operation is tried at
+// most once per call, so failing rows cannot take every batch, and changes queued while it runs
+// wait for the next call. pendingPushes counts the earlier changes still not on the server.
+async function drainPushQueue(
+  db: SQLite.SQLiteDatabase,
+  userId: string,
+  deviceId: string,
+  accessToken: string,
+): Promise<PushOutcome> {
+  const boundary = await db.getFirstAsync<{ last_rowid: number | null }>(
+    `SELECT MAX(rowid) AS last_rowid FROM sync_queue
+     WHERE user_id = ? AND device_id = ? AND ${syncQueueUnsyncedStatusesClause}`,
+    userId,
+    deviceId,
+  );
+  const lastRowid = boundary?.last_rowid ?? null;
+  if (lastRowid === null) return { pushed: 0, errors: 0, pendingPushes: 0 };
+
+  const attempted = new Set<string>();
+  let pushed = 0;
+  let errors = 0;
+
+  for (;;) {
+    const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted);
+    pushed += batch.pushed;
+    errors += batch.errors;
+    if (batch.selected === 0 || batch.requestFailed) break;
+  }
+
+  const remaining = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) AS count FROM sync_queue
+     WHERE user_id = ? AND device_id = ? AND rowid <= ? AND ${syncQueueUnsyncedStatusesClause}`,
+    userId,
+    deviceId,
+    lastRowid,
+  );
+  return { pushed, errors, pendingPushes: remaining?.count ?? 0 };
+}
+
 async function pushQueue(
   db: SQLite.SQLiteDatabase,
   userId: string,
   deviceId: string,
   accessToken: string,
-  retryLegacyDebtPriority = true,
-): Promise<{ pushed: number; errors: number }> {
+  lastRowid: number,
+  attempted: Set<string>,
+): Promise<{ pushed: number; errors: number; selected: number; requestFailed: boolean }> {
+  const excluded = [...attempted];
+  const exclusionClause = excluded.length > 0
+    ? `AND operation_id NOT IN (${excluded.map(() => "?").join(", ")})`
+    : "";
   const rows = await db.getAllAsync<QueueRow>(
     `SELECT * FROM sync_queue
-     WHERE user_id = ? AND device_id = ?
-        AND ${syncQueueEligibleStatusesClause}
-           ORDER BY ${syncQueueOrderByClause} LIMIT 50`,
+     WHERE user_id = ? AND device_id = ? AND rowid <= ?
+        AND ${syncQueueEligibleStatusesClause} ${exclusionClause}
+           ORDER BY ${syncQueueOrderByClause} LIMIT ${PUSH_BATCH_SIZE}`,
     userId,
     deviceId,
+    lastRowid,
+    ...excluded,
   );
+  const idle = { pushed: 0, errors: 0, selected: rows.length, requestFailed: false };
 
-  if (rows.length === 0) return { pushed: 0, errors: 0 };
+  if (rows.length === 0) return idle;
+  for (const row of rows) attempted.add(row.operation_id);
 
   const activeRows = await discardOrphanedCreates(db, rows);
-  if (activeRows.length === 0) return { pushed: 0, errors: 0 };
+  if (activeRows.length === 0) return idle;
 
   const repairedRows = await repairLegacyDerivedUpdates(db, activeRows);
-  if (repairedRows.length === 0) return { pushed: 0, errors: 0 };
+  if (repairedRows.length === 0) return idle;
 
   await repairIncomeSourceSyncRows(db, repairedRows);
   await repairCreditCardDetailSyncRows(db, userId, deviceId, repairedRows);
@@ -229,7 +288,7 @@ async function pushQueue(
 
   let response: Response;
   try {
-      response = await fetchWithTimeout(`${API_BASE}/odin/api/sync/push`, {
+    response = await fetchWithTimeout(`${API_BASE}/odin/api/sync/push`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -238,13 +297,13 @@ async function pushQueue(
       body: JSON.stringify({ payload: { device_id: deviceId, operations } }),
     });
   } catch {
-      await bumpQueueAttempts(db, userId, deviceId, repairedRows, "network error");
-      return { pushed: 0, errors: repairedRows.length };
+    await recordRequestFailure(db, userId, deviceId, repairedRows, "network error");
+    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true };
   }
 
   if (!response.ok) {
-    await bumpQueueAttempts(db, userId, deviceId, repairedRows, `server error: ${response.status}`);
-    return { pushed: 0, errors: repairedRows.length };
+    await recordRequestFailure(db, userId, deviceId, repairedRows, `server error: ${response.status}`);
+    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true };
   }
 
   const body = await response.json();
@@ -252,7 +311,6 @@ async function pushQueue(
 
   let pushed = 0;
   let errors = 0;
-  let rebasedLegacyDebtPriority = false;
   const rowsByOperationId = new Map(repairedRows.map((row) => [row.operation_id, row]));
 
   for (const result of results) {
@@ -262,29 +320,23 @@ async function pushQueue(
         result.operation_id,
       );
       pushed++;
-    } else if (result.status === "conflict") {
+      continue;
+    }
+    if (result.status === "conflict") {
+      // A rebased row has a base version now, so it is resent at most once in the next batch.
       if (await rebaseLegacyDebtPriorityConflict(db, rowsByOperationId.get(result.operation_id), result)) {
-        rebasedLegacyDebtPriority = true;
+        attempted.delete(result.operation_id);
         continue;
       }
       await markSyncConflict(db, result);
       errors++;
-    } else {
-      await db.runAsync(
-        `UPDATE sync_queue SET status = 'failed', attempts = attempts + 1,
-         last_error = ? WHERE operation_id = ?`,
-        result.reason ?? "unknown error",
-        result.operation_id,
-      );
-      errors++;
+      continue;
     }
+    await markSyncRejection(db, result.operation_id, result.reason);
+    errors++;
   }
 
-  if (rebasedLegacyDebtPriority && retryLegacyDebtPriority) {
-    return pushQueue(db, userId, deviceId, accessToken, false);
-  }
-
-  return { pushed, errors };
+  return { pushed, errors, selected: rows.length, requestFailed: false };
 }
 
 async function repairCreditCardTransactionSyncRows(
@@ -519,7 +571,10 @@ async function repairCreditCardDetailSyncRows(
   }
 }
 
-async function bumpQueueAttempts(
+// A failed request says nothing about its rows: the server reports each bad operation in its results,
+// and request errors (network, outage, rate limit, inactive device) are about the connection. So the
+// rows keep their attempts and only remember the error.
+async function recordRequestFailure(
   db: SQLite.SQLiteDatabase,
   userId: string,
   deviceId: string,
@@ -528,12 +583,8 @@ async function bumpQueueAttempts(
 ): Promise<void> {
   for (const row of rows) {
     await db.runAsync(
-      `UPDATE sync_queue
-       SET attempts = attempts + 1, last_error = ?,
-           status = CASE WHEN attempts + 1 >= ? THEN 'failed' ELSE status END
-       WHERE operation_id = ? AND user_id = ? AND device_id = ?`,
+      "UPDATE sync_queue SET last_error = ? WHERE operation_id = ? AND user_id = ? AND device_id = ?",
       error,
-      MAX_SYNC_ATTEMPTS,
       row.operation_id,
       userId,
       deviceId,

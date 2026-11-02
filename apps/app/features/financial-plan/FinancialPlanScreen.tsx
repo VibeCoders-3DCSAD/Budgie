@@ -127,10 +127,11 @@ export default function FinancialPlanScreen({ userId, deviceId, accessToken, syn
     setError(null);
     try {
       // The server plan excludes synced unusual-spending evaluations from its forecast history,
-      // so local changes must reach it first; pulling the server's changes back is not needed here.
+      // so every local change must reach it first; pulling the server's changes back is not needed here.
+      // A push-only sync succeeds only when nothing queued before it is left unsynced.
       const syncResult = await runSync(userId, deviceId, accessToken, { pull: false });
       if (controller.signal.aborted) return;
-      if (!syncResult.successful) throw new Error("Sync your recent spending insights before generating a Financial Plan.");
+      if (!syncResult.successful) throw new Error("Some of your changes have not synced yet. Sync them before generating a Financial Plan.");
       const { response, body } = await requestFinancialPlanRecommendation(accessToken, [...includedIds], [...includedCategoryIds], plannedAmountCentavos, nextManualAllocations, nextReservationSkips, controller.signal, __DEV__ ? devPlanMonth : undefined);
       if (controller.signal.aborted) return;
       if (!response.ok || !body.payload) throw new Error(body.message ?? "Your Financial Plan could not be generated.");

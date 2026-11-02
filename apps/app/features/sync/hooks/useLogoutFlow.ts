@@ -8,10 +8,14 @@ import { runSync } from "../../../local-db/sync/runSync";
 import { useConnectivityStore } from "../../../services/connectivity";
 import { clearTransactionCache } from "../../ledger/transactionCache";
 import {
-  countExhaustedSyncRows, countRetryableSyncRows, countUnsyncedRows, discardExhaustedSyncRows, getRetryableSyncStats,
+  countExhaustedSyncRows, countRetryableSyncRows, countUnsyncedRows, discardExhaustedSyncRows,
 } from "../services/syncQueue";
 import type { SyncEngine } from "./useSyncEngine";
 import type { SyncIssues } from "./useSyncIssues";
+
+// Enough to ride out a brief outage before telling the user to try again.
+const LOGOUT_SYNC_ROUNDS = 3;
+const LOGOUT_SYNC_RETRY_MS = 5_000;
 
 const LOGOUT_SYNC_MESSAGES = [
   "Hold on, we're trying to sync unsynced changes",
@@ -110,17 +114,12 @@ export function useLogoutFlow({ userId, deviceId, accessToken, engine, issues, o
 
         stopLogoutSyncMessages = engine.startRotatingMessages(LOGOUT_SYNC_MESSAGES);
 
-        let retryable = await getRetryableSyncStats(userId, deviceId);
-        while (retryable.count > 0) {
+        // One sync sends the whole queue, so later rounds only matter after a failed request, which
+        // leaves the queue as it was. Retry a fixed number of times instead of waiting for progress.
+        for (let round = 1; round <= LOGOUT_SYNC_ROUNDS && await countRetryableSyncRows(userId, deviceId) > 0; round++) {
+          if (round > 1) await sleep(LOGOUT_SYNC_RETRY_MS);
           await runSync(userId, deviceId, accessToken);
           await engine.refreshQueueCount();
-
-          const nextRetryable = await getRetryableSyncStats(userId, deviceId);
-          if (nextRetryable.count === 0) break;
-          if (nextRetryable.count === retryable.count && nextRetryable.attempts === retryable.attempts) break;
-
-          retryable = nextRetryable;
-          await sleep(5_000);
         }
 
         const stillPending = await countUnsyncedRows(userId, deviceId);

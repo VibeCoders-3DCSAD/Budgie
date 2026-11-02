@@ -1,8 +1,9 @@
 import { initDatabase } from "../../../local-db/client";
 import { cleanupDiscardedSyncRows } from "../../../local-db/helpers";
+import { MAX_SYNC_ATTEMPTS } from "../../../local-db/sync/queueOrder";
 
 // Every query is scoped to the signed-in user and this device's queue.
-export const MAX_SYNC_ATTEMPTS = 3;
+export { MAX_SYNC_ATTEMPTS };
 export const SYNC_ISSUES_PAGE_SIZE = 50;
 
 export type SyncQueueIssue = {
@@ -43,17 +44,6 @@ export function countRetryableSyncRows(userId: string, deviceId: string) {
        AND status IN ('pending', 'failed') AND attempts < ?`,
     userId, deviceId, MAX_SYNC_ATTEMPTS,
   );
-}
-
-export async function getRetryableSyncStats(userId: string, deviceId: string) {
-  const db = await initDatabase();
-  const row = await db.getFirstAsync<{ cnt: number; attempts: number }>(
-    `SELECT COUNT(*) as cnt, COALESCE(SUM(attempts), 0) as attempts FROM sync_queue
-     WHERE user_id = ? AND device_id = ?
-       AND status IN ('pending', 'failed') AND attempts < ?`,
-    userId, deviceId, MAX_SYNC_ATTEMPTS,
-  );
-  return { count: row?.cnt ?? 0, attempts: row?.attempts ?? 0 };
 }
 
 export function countExhaustedSyncRows(userId: string, deviceId: string) {

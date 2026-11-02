@@ -12,7 +12,8 @@ describe("markSyncConflict", () => {
     });
 
     expect(db.runAsync).toHaveBeenCalledWith(
-      expect.stringContaining("status = 'failed', attempts = attempts + 1"),
+      expect.stringContaining("status = 'failed', attempts = MAX(attempts + 1, ?)"),
+      3,
       JSON.stringify({
         reason: "credit-card version changed",
         currentVersion: 3,

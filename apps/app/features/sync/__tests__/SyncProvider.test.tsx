@@ -29,7 +29,6 @@ jest.mock("../services/syncQueue", () => ({
   countUnsyncedRows: jest.fn(async () => 0),
   countRetryableSyncRows: jest.fn(async () => 0),
   countExhaustedSyncRows: jest.fn(async () => 0),
-  getRetryableSyncStats: jest.fn(async () => ({ count: 0, attempts: 0 })),
   loadSyncIssuesPage: jest.fn(async () => ({ rows: [], total: 0, failedTotal: 0, pendingTotal: 0 })),
   discardSyncIssue: jest.fn(), retrySyncIssue: jest.fn(), discardExhaustedSyncRows: jest.fn(),
 }));
@@ -40,16 +39,21 @@ import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import { postDueRecurringIncome } from "../../../local-db/repositories/foundations/recurringIncome";
 import { postDueScheduledPayments } from "../../../local-db/repositories/scheduled-payments/scheduledPayments";
 import { runSync } from "../../../local-db/sync/runSync";
-import { countExhaustedSyncRows, loadSyncIssuesPage } from "../services/syncQueue";
-import { SyncProvider, useSync } from "../SyncProvider";
+import { countExhaustedSyncRows, countRetryableSyncRows, countUnsyncedRows, loadSyncIssuesPage } from "../services/syncQueue";
+import { SyncProvider, useLogout, useSync } from "../SyncProvider";
 
 function Probe() {
   const { syncVersion, handleSync } = useSync();
   return <Pressable accessibilityLabel="sync" onPress={() => { void handleSync(); }}><Text>{`version:${syncVersion}`}</Text></Pressable>;
 }
 
+function LogoutProbe() {
+  const { handleLogout, logoutError } = useLogout();
+  return <Pressable accessibilityLabel="logout" onPress={() => { void handleLogout(); }}><Text>{logoutError ?? "no-error"}</Text></Pressable>;
+}
+
 function renderProvider() {
-  return render(<SyncProvider userId="user-1" deviceId="device-1" accessToken="token" onLoggedOut={jest.fn()}><Probe /></SyncProvider>);
+  return render(<SyncProvider userId="user-1" deviceId="device-1" accessToken="token" onLoggedOut={jest.fn()}><Probe /><LogoutProbe /></SyncProvider>);
 }
 
 beforeEach(() => jest.clearAllMocks());
@@ -81,5 +85,26 @@ describe("SyncProvider", () => {
     expect(screen.getByLabelText("Discard failed changes")).toBeTruthy();
     expect(runSync).toHaveBeenCalledTimes(1);
     screen.unmount();
+  });
+
+  it("retries a failed logout sync a fixed number of times even when the queue does not change", async () => {
+    jest.useFakeTimers();
+    try {
+      const screen = renderProvider();
+      await waitFor(() => expect(runSync).toHaveBeenCalledTimes(1));
+      jest.mocked(runSync).mockClear();
+      // A network failure leaves the queue exactly as it was.
+      jest.mocked(countUnsyncedRows).mockResolvedValue(1);
+      jest.mocked(countRetryableSyncRows).mockResolvedValue(1);
+      jest.mocked(countExhaustedSyncRows).mockResolvedValue(0);
+
+      fireEvent.press(screen.getByLabelText("logout"));
+      await waitFor(() => expect(screen.getByText("We couldn't finish syncing your changes. Please try again before logging out.")).toBeTruthy(), { timeout: 15_000 });
+
+      expect(runSync).toHaveBeenCalledTimes(3);
+      screen.unmount();
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });
