@@ -2,11 +2,11 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { ACTIVE_REQUEST_STATUSES } from "../lib/constants.js";
 
 const router = Router();
 
 const VALID_FORMATS = ["json", "csv"];
-const ACTIVE_STATUSES = ["requested", "processing"];
 
 router.get("/data-export-requests", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
   const userId = request.userId!;
@@ -68,7 +68,7 @@ router.post("/data-export-requests", requireAuth, async (request: AuthenticatedR
     .from("data_export_requests")
     .update({ status: "cancelled" })
     .eq("user_id", userId)
-    .in("status", ACTIVE_STATUSES);
+    .in("status", ACTIVE_REQUEST_STATUSES);
 
   if (cancelError) {
     response.status(500).json({

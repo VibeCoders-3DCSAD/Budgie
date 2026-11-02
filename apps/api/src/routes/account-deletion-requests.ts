@@ -2,10 +2,10 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { ACTIVE_REQUEST_STATUSES } from "../lib/constants.js";
 
 const router = Router();
 
-const ACTIVE_STATUSES = ["requested", "processing"];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -36,7 +36,7 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
     .from("account_deletion_requests")
     .select("id")
     .eq("user_id", userId)
-    .in("status", ACTIVE_STATUSES)
+    .in("status", ACTIVE_REQUEST_STATUSES)
     .limit(1);
 
   if (active && active.length > 0) {
@@ -182,7 +182,7 @@ router.post("/account-deletion-requests/:id/cancel", requireAuth, async (request
     })
     .eq("id", requestId)
     .eq("user_id", userId)
-    .in("status", ACTIVE_STATUSES)
+    .in("status", ACTIVE_REQUEST_STATUSES)
     .select("id, status, cancelled_at")
     .single();
 

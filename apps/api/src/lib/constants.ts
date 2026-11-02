@@ -41,3 +41,6 @@ export const ONBOARDING_ERRORS = {
   submit_failed: "Failed to submit onboarding session.",
   submit_not_confirmed: "You must confirm data use before submitting.",
 } as const;
+
+// Deletion and data-export requests in these statuses are still open.
+export const ACTIVE_REQUEST_STATUSES = ["requested", "processing"];
