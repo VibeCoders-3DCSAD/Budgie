@@ -7,6 +7,7 @@ Issues found in self-reviews of `audit.md` fixes. None is a regression; each is 
 | 1, 2 | Findings 2 and 5 | 2026-11-02 | Sync |
 | 3 | Findings 16–20 | 2026-11-03 | Account reads |
 | 4 | Finding 24 | 2026-11-03 | Dates |
+| 5 | Finding 28 | 2026-11-03 | Screen composition |
 
 ## 1. Very large queues can exceed SQLite's bound-parameter limit
 
@@ -53,3 +54,15 @@ Tracing shows they do not. `getRequiredDebtTotal` (`features/debt-manager/helper
 Finding 24 moved the business rules to the Manila day: which cycle is open, when a statement may be recorded, and when a debt is behind. The credit-card screen still marks a cycle as waiting for its statement with the device's day, and the statement form and its "no later than today" check limit the statement date to the device's day. On a device in Manila the two days are the same. On a device set to a zone west of Manila (for example a user abroad), they can differ for part of each day. The screen then offers "Add statement" for a cycle the repository still treats as open, and saving fails with "Statements can only be recorded after the billing cycle has closed."
 
 **Fix:** Decide whether the statement date is the user's own calendar day or the Manila day. If it is the Manila day, pass `localToday()` to `CreditCardCollections` and the statement form, and use it for the statement-date bound. Either way, the "pending statement" badge should use the same day as the closed-cycle check. Test a device zone of UTC−5 at 20:00 local on a cutoff day.
+
+## 5. The Debt Manager screen combines data loading and cycle editing with presentation
+
+**Severity:** WARNING — Code Quality
+
+**Files:** `apps/app/features/debt-manager/DebtManagerScreen.tsx` (`load`, `openCycleEditor`, `saveCycle`)
+
+This is the same coupling as finding 28's `FinancialPlanScreen`. The 222-line screen holds 21 `useState` values and imports eight local-database repository modules. Its `load()` runs nine awaits one after another: the active credit-card accounts, `ensureCurrentCreditCardCycles`, then seven list reads (cycles, cycle transactions, statements, installments, payments, strategies, settlements). It also owns the error and stale-data handling for those reads and the inline billing-cycle editor (`editingCycle`, `cycleStart`, `cycleCutoff`, `cycleError`, `cycleSaving`, `cycleNotice`, `cyclePicker`), so loading and editing edge cases can only be tested through the whole screen.
+
+The seven list reads take only `userId`, so they load every credit card's data even when the screen shows a single `accountId`, and the screen filters most of it afterwards. The cost of this has not been measured.
+
+**Fix:** Extract a feature-local data-loading hook (for example `useDebtManagerData`) that owns the reads, error and stale state, and a separate cycle-editor hook for the billing-cycle draft, validation and save. The screen then composes the existing components. When `accountId` is given, consider scoping the reads to that account.
