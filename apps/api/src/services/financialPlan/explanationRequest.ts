@@ -1,3 +1,4 @@
+import { isCalendarDate } from "../../lib/date/calendarDate.js";
 import { HFCE_CATEGORY_SLUGS } from "./spendingReasonCatalog.js";
 import { MAX_CUSTOM_EVENTS } from "@odin/spending-insights/seasons.js";
 import { explainFinancialPlan, fallbackFinancialPlanExplanations, isUserFacingFinancialPlanExplanation, seasonalForecastMismatchExplanations, budgetConstraintExplanations, type FinancialPlanEvidence } from "./explanationService.js";
@@ -87,7 +88,7 @@ function optionalPlanContext(evidence: Record<string, unknown>): Pick<FinancialP
     context.confirmedExpenses = list(evidence.confirmedExpenses, 1_000).map((item) => {
       const expense = record(item);
       const dueDate = text(expense.dueDate, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate) || !Number.isFinite(Date.parse(`${dueDate}T00:00:00Z`)) || new Date(`${dueDate}T00:00:00Z`).toISOString().slice(0, 10) !== dueDate) invalid();
+      if (!isCalendarDate(dueDate)) invalid();
       return { scheduledPaymentId: text(expense.scheduledPaymentId, MAX_LABEL), categorySlug: categorySlug(expense.categorySlug), dueDate, amountCentavos: nonnegativeCentavos(expense.amountCentavos) };
     });
   }

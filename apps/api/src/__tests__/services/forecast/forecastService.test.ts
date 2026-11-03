@@ -211,6 +211,15 @@ describe("forecast ML adapter", () => {
     expect(() => parseForecastRequest({ historicalTransactions: [transaction], asOf: "2026-10-19" })).toThrow("asOf cannot be in the future");
   });
 
+  it("rejects impossible calendar days instead of rolling them into the next month", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-18T12:00:00.000Z"));
+    for (const day of ["2026-02-29", "2026-02-30", "2026-04-31"]) {
+      expect(() => parseForecastRequest({ historicalTransactions: [transaction], asOf: day })).toThrow("asOf is invalid");
+      expect(() => parseForecastRequest({ historicalTransactions: [{ ...transaction, date: day }] })).toThrow("date is invalid");
+    }
+    expect(parseForecastRequest({ historicalTransactions: [{ ...transaction, date: "2024-02-29" }], asOf: "2026-09-30" }).asOf).toBe("2026-09-30");
+  });
+
   it("has no past forecast without spending before the asOf day", async () => {
     process.env.FORECASTING_ML_BASE_URL = "http://ml.internal";
     const fetcher = jest.fn();
