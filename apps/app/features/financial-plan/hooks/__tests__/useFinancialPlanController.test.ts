@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react-native";
 import { useCommitmentDraft } from "../useCommitmentDraft";
 import { useFinancialPlanController } from "../useFinancialPlanController";
+import { usePlanCategorySelection } from "../usePlanCategorySelection";
 
 const mockGetAcceptedFinancialPlanForPeriod = jest.fn();
 const mockGetFinancialPlanSpending = jest.fn();
@@ -72,7 +73,8 @@ const savedPlan = {
 async function renderSelectingController() {
   const hook = renderHook(() => {
     const commitments = useCommitmentDraft();
-    return useFinancialPlanController({ userId: "user-1", deviceId: "device-1", accessToken: "token", syncVersion: 0, commitments });
+    const categorySelection = usePlanCategorySelection("user-1", "device-1");
+    return useFinancialPlanController({ userId: "user-1", deviceId: "device-1", accessToken: "token", syncVersion: 0, commitments, categorySelection });
   });
   await waitFor(() => expect(hook.result.current.state).toBe("selecting"));
   expect(hook.result.current.planningAmountError).toBeNull();

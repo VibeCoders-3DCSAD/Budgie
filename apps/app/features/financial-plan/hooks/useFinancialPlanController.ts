@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createFinancialPlan, deleteFinancialPlan, getAcceptedFinancialPlanForPeriod, getCurrentFinancialPlanPeriod, getFinancialPlanLabels, getFinancialPlanSpending, type AcceptedFinancialPlan } from "../../../local-db/repositories/financial-plans/financialPlans";
 import { getPlanCommitmentPayments } from "../../../local-db/repositories/financial-plans/financialPlanCommitmentReview";
-import { listPlanRecommendations, type PlanRecommendations } from "../../../local-db/repositories/forecast/forecastTransactions";
-import { listCategories, listSubcategories, updateCategory, updateSubcategory, type Category, type Subcategory } from "../../../local-db/repositories/ledger/taxonomy";
+import { listPlanRecommendations } from "../../../local-db/repositories/forecast/forecastTransactions";
+import { listCategories, listSubcategories } from "../../../local-db/repositories/ledger/taxonomy";
 import { listFinancialAccounts } from "../../../local-db/repositories/foundations/financialFoundations";
 import { runSync } from "../../../local-db/sync/runSync";
 import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
@@ -12,8 +12,8 @@ import type { PlanCommitmentPayments } from "../helpers/commitmentPayments";
 import { recommendPlanAmount } from "../helpers/planAmountRecommendation";
 import { applyFinancialPlanLabels, applyFinancialPlanSpending, remainingUnallocatedCentavos, toCentavos } from "../helpers/financialPlanPresentation";
 import type { FinancialPlanAllocation, FinancialPlanRecommendation } from "../types";
-import type { PlanCategoryRuleUpdate } from "../components/PlanCategoryRuleEditor";
 import type { CommitmentDraft } from "./useCommitmentDraft";
+import type { PlanCategorySelection } from "./usePlanCategorySelection";
 
 export type FinancialPlanState = "loading" | "generating" | "selecting" | "budgeting" | "ready" | "infeasible" | "stale" | "saving" | "saved" | "error";
 
@@ -24,6 +24,7 @@ type Options = {
   syncVersion: number;
   onSyncRequested?: () => Promise<void>;
   commitments: CommitmentDraft;
+  categorySelection: PlanCategorySelection;
 };
 
 function getCurrentPeriodPlan(userId: string, planMonth?: string): Promise<AcceptedFinancialPlan | null> {
@@ -63,23 +64,14 @@ async function loadSavedPlanView(userId: string, savedPlan: AcceptedFinancialPla
 }
 
 // Loads the month's plan inputs or its saved plan, generates recommendations, and saves or resets the accepted plan.
-export function useFinancialPlanController({ userId, deviceId, accessToken, syncVersion, onSyncRequested, commitments }: Options) {
+export function useFinancialPlanController({ userId, deviceId, accessToken, syncVersion, onSyncRequested, commitments, categorySelection }: Options) {
   const { reset: resetCommitments, clearValidity, hasInvalidCommitments } = commitments;
+  const { initialize: initializeCategories, includedIds, includedCategoryIds } = categorySelection;
   const [plan, setPlan] = useState<FinancialPlanRecommendation | null>(null);
   const [state, setState] = useState<FinancialPlanState>("loading");
   const [error, setError] = useState<string | null>(null);
   const [planSpentCentavos, setPlanSpentCentavos] = useState<number | null>(null);
   const [commitmentPaymentsPaid, setCommitmentPaymentsPaid] = useState<PlanCommitmentPayments | null>(null);
-  const [categories, setCategories] = useState<Subcategory[]>([]);
-  const [topLevelCategories, setTopLevelCategories] = useState<Category[]>([]);
-  const [includedIds, setIncludedIds] = useState<Set<string>>(new Set());
-  const [includedCategoryIds, setIncludedCategoryIds] = useState<Set<string>>(new Set());
-  const [recommendedIds, setRecommendedIds] = useState<Set<string>>(new Set());
-  const [recommendedCategoryIds, setRecommendedCategoryIds] = useState<Set<string>>(new Set());
-  const [historyIds, setHistoryIds] = useState<Set<string>>(new Set());
-  const [historyCategoryIds, setHistoryCategoryIds] = useState<Set<string>>(new Set());
-  const [seasonalRecommendations, setSeasonalRecommendations] = useState(false);
-  const [expectedSpend, setExpectedSpend] = useState<PlanRecommendations["expectedSpend"]>();
   const [planForecast, setPlanForecast] = useState<Record<string, number> | null>(null);
   const [availableMoneyCentavos, setAvailableMoneyCentavos] = useState(0);
   const [plannedAmount, setPlannedAmount] = useState("");
@@ -176,23 +168,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       setCommitmentPaymentsPaid(previewPayments);
       const labeled = applyFinancialPlanLabels({ allocations: [], ...preview }, previewLabels);
       resetCommitments(labeled);
-      setTopLevelCategories(topLevelResult);
-      setCategories(result);
-      const validRecentIds = new Set(recommendations.subcategoryIds.filter((id) => result.some((category) => category.id === id)));
-      const requiredIds = result.filter((category) => category.fixed_amount_centavos !== null || category.minimum_amount_centavos !== null).map((category) => category.id);
-      const validRecentCategoryIds = new Set(recommendations.categoryIds.filter((id) => topLevelResult.some((category) => category.id === id)));
-      const requiredCategoryIds = topLevelResult.filter((category) => category.fixed_amount_centavos != null || category.minimum_amount_centavos != null).map((category) => category.id);
-      setRecommendedIds(validRecentIds);
-      setHistoryIds(new Set(recommendations.historySubcategoryIds));
-      setHistoryCategoryIds(new Set(recommendations.historyCategoryIds));
-      setSeasonalRecommendations(recommendations.seasonal);
-      const parentIdsWithHistory = result.filter((subcategory) => validRecentIds.has(subcategory.id)).flatMap((subcategory) => subcategory.category_id ? [subcategory.category_id] : []);
-      setRecommendedCategoryIds(new Set([...validRecentCategoryIds, ...parentIdsWithHistory]));
-      const initialIds = new Set([...requiredIds, ...validRecentIds]);
-      const initialCategoryIds = new Set([...requiredCategoryIds, ...validRecentCategoryIds]);
-      setIncludedIds(initialIds);
-      setIncludedCategoryIds(initialCategoryIds);
-      setExpectedSpend(recommendations.expectedSpend);
+      const initialSelection = initializeCategories(topLevelResult, result, recommendations);
       setPlanForecast(forecast);
       setManualAllocations([]);
       setReservationSkips({ debtRepayments: false, savingsContributions: false, scheduledPayments: false });
@@ -202,7 +178,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
         .reduce((sum, account) => sum + account.currentBalanceCentavos, 0);
       setAvailableMoneyCentavos(available);
       // Starts at what the month needs, never more than the money available.
-      const recommended = recommendPlanAmount({ commitments: labeled, topLevelCategories: topLevelResult, subcategories: result, includedCategoryIds: initialCategoryIds, includedIds: initialIds, expectedSpend: recommendations.expectedSpend, forecast }).totalCentavos;
+      const recommended = recommendPlanAmount({ commitments: labeled, topLevelCategories: topLevelResult, subcategories: result, includedCategoryIds: initialSelection.includedCategoryIds, includedIds: initialSelection.includedIds, expectedSpend: recommendations.expectedSpend, forecast }).totalCentavos;
       setPlannedAmount((current) => current || ((recommended > 0 ? Math.min(recommended, available) : available) / 100).toFixed(2));
       setState("selecting");
     }).catch((cause) => {
@@ -211,7 +187,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       setState("error");
     });
     return () => { active = false; requestAbort.current?.abort(); };
-  }, [reloadKey, selectedMonth, userId, accessToken, devPlanMonth, resetCommitments]);
+  }, [reloadKey, selectedMonth, userId, accessToken, devPlanMonth, resetCommitments, initializeCategories]);
 
   useEffect(() => {
     if (observedSyncVersion.current === syncVersion) return;
@@ -270,46 +246,6 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
     setCommitmentsEdited(true);
     if (state !== "stale") setState(updated.status === "INFEASIBLE" ? "infeasible" : "ready");
     setReservationSkips((current) => ({ ...current, commitmentBudgets: planCommitmentBudgets(updated) }));
-  };
-
-  const toggleSubcategory = (id: string) => {
-    setIncludedIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-    const categoryId = categories.find((category) => category.id === id)?.category_id;
-    if (categoryId) setIncludedCategoryIds((current) => { const next = new Set(current); next.delete(categoryId); return next; });
-  };
-
-  const toggleTopLevelCategory = (id: string) => {
-    setIncludedCategoryIds((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-    setIncludedIds((current) => new Set([...current].filter((subcategoryId) => categories.find((category) => category.id === subcategoryId)?.category_id !== id)));
-  };
-
-  const saveCategoryRule = async (subcategory: Subcategory, update: PlanCategoryRuleUpdate) => {
-    const { subcategory: saved } = await updateSubcategory(userId, deviceId, subcategory.id, {
-      minimum_amount_centavos: update.minimumAmountCentavos,
-      fixed_amount_centavos: update.fixedAmountCentavos,
-      always_in_budget: update.rule !== "FLEXIBLE",
-    });
-    setCategories((current) => current.map((item) => item.id === saved.id ? saved : item));
-    if (update.rule !== "FLEXIBLE") setIncludedIds((current) => new Set([...current, saved.id]));
-  };
-
-  const saveTopLevelCategoryRule = async (category: Category, update: PlanCategoryRuleUpdate) => {
-    const { category: saved } = await updateCategory(userId, deviceId, category.id, {
-      minimum_amount_centavos: update.minimumAmountCentavos,
-      fixed_amount_centavos: update.fixedAmountCentavos,
-      always_in_budget: update.rule !== "FLEXIBLE",
-    });
-    setTopLevelCategories((current) => current.map((item) => item.id === saved.id ? saved : item));
-    if (update.rule !== "FLEXIBLE") setIncludedCategoryIds((current) => new Set([...current, saved.id]));
   };
 
   const savePlan = async () => {
@@ -442,8 +378,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
   return {
     plan, state, error, planSpentCentavos, commitmentPaymentsPaid, savedPlanId, commitmentsEdited, acceptConfirmOpen, reservationSkips, manualAllocations,
     selectedMonth, isDevPreview, changeDevPlanMonth,
-    categories, topLevelCategories, includedIds, includedCategoryIds, recommendedIds, recommendedCategoryIds, historyIds, historyCategoryIds, seasonalRecommendations, expectedSpend, planForecast,
-    toggleSubcategory, toggleTopLevelCategory, saveCategoryRule, saveTopLevelCategoryRule,
+    planForecast,
     availableMoneyCentavos, plannedAmount, setPlannedAmount, plannedAmountCentavos, planningAmountError,
     loadRecommendation, continueFromSelection, allocateCommitmentDraft, leaveCommitmentReview, backToSetup, retry, skipReservation,
     changeFlexibleAmount, changeWeight, updateSurplus, updateReservationAmount,
