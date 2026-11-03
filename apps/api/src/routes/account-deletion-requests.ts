@@ -18,6 +18,13 @@ function respondActiveRequestExists(response: Response): void {
   });
 }
 
+function respondCreateFailed(response: Response): void {
+  response.status(500).json({
+    error: "Internal Server Error",
+    message: "Failed to create deletion request",
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -52,10 +59,7 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
 
   if (activeError) {
     console.error("[account-deletion] active request lookup failed", { user_id: userId, code: activeError.code });
-    response.status(500).json({
-      error: "Internal Server Error",
-      message: "Failed to create deletion request",
-    });
+    respondCreateFailed(response);
     return;
   }
 
@@ -90,10 +94,7 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
   }
 
   if (error || !data) {
-    response.status(500).json({
-      error: "Internal Server Error",
-      message: "Failed to create deletion request",
-    });
+    respondCreateFailed(response);
     return;
   }
 
