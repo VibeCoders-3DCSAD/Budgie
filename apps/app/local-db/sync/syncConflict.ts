@@ -23,6 +23,7 @@ const PERMANENT_REJECTIONS: readonly string[] = [
   SYNC_REJECTION_REASONS.versionConflict,
   SYNC_REJECTION_REASONS.recordDeleted,
   SYNC_REJECTION_REASONS.invalidOperation,
+  SYNC_REJECTION_REASONS.payloadTooLarge,
 ];
 
 // A conflict is exhausted at once and waits in the Sync Issues sheet for the user.

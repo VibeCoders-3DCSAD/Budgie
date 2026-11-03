@@ -12,6 +12,8 @@ export type SyncQueueIssue = {
   operation_type: string;
   record_id: string;
   failure_message: string;
+  // The latest rejection reason or conflict metadata; null until a sync attempt fails.
+  last_error: string | null;
   status: string;
   attempts: number;
   created_at: string;
@@ -58,7 +60,7 @@ export async function loadSyncIssuesPage(userId: string, deviceId: string, offse
   const total = await countExhaustedSyncRows(userId, deviceId);
   const pendingTotal = await countRetryableSyncRows(userId, deviceId);
   const rows = await db.getAllAsync<SyncQueueIssue>(
-    `SELECT q.operation_id, q.entity, q.operation_type, q.record_id, q.failure_message, q.status, q.attempts, q.created_at,
+    `SELECT q.operation_id, q.entity, q.operation_type, q.record_id, q.failure_message, q.last_error, q.status, q.attempts, q.created_at,
              COALESCE(c.label, s.label) as item_label
      FROM sync_queue q
      LEFT JOIN categories c ON q.entity = 'categories' AND q.record_id = c.id AND q.user_id = c.user_id

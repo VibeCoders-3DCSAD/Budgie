@@ -356,7 +356,7 @@ async function pushQueue(
 
   if (response.status === 413) {
     // One operation alone is over the limit, so resending it can never succeed; it waits in Sync Issues.
-    for (const row of repairedRows) await markSyncRejection(db, row.operation_id, SYNC_REJECTION_REASONS.invalidOperation);
+    for (const row of repairedRows) await markSyncRejection(db, row.operation_id, SYNC_REJECTION_REASONS.payloadTooLarge);
     return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: false, operationIds };
   }
 

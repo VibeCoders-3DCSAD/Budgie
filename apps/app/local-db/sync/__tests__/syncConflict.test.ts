@@ -1,4 +1,4 @@
-import { markSyncConflict, rebaseLegacyDebtPriorityConflict } from "../syncConflict";
+import { markSyncConflict, markSyncRejection, rebaseLegacyDebtPriorityConflict } from "../syncConflict";
 
 describe("markSyncConflict", () => {
   it("keeps a repayment-strategy version conflict visible for resolution", async () => {
@@ -21,6 +21,24 @@ describe("markSyncConflict", () => {
       }),
       "operation-1",
     );
+  });
+});
+
+describe("markSyncRejection", () => {
+  it("exhausts an operation too large to sync so it is not retried", async () => {
+    const db = { runAsync: jest.fn(async () => ({ changes: 1 })) };
+
+    await markSyncRejection(db, "operation-1", "payload_too_large");
+
+    expect(db.runAsync).toHaveBeenCalledWith(expect.stringContaining("attempts = MAX(attempts + 1, ?)"), 3, "payload_too_large", "operation-1");
+  });
+
+  it("keeps retrying a reference that may still sync", async () => {
+    const db = { runAsync: jest.fn(async () => ({ changes: 1 })) };
+
+    await markSyncRejection(db, "operation-1", "reference_unavailable");
+
+    expect(db.runAsync).toHaveBeenCalledWith(expect.any(String), 0, "reference_unavailable", "operation-1");
   });
 });
 

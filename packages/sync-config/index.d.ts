@@ -6,6 +6,7 @@ export const SYNC_REJECTION_REASONS: Readonly<{
   recordNotFound: "record_not_found";
   referenceUnavailable: "reference_unavailable";
   invalidOperation: "invalid_operation";
+  payloadTooLarge: "payload_too_large";
   rejected: "sync_rejected";
 }>;
 

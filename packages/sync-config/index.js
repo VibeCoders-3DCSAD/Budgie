@@ -10,6 +10,8 @@ const SYNC_REJECTION_REASONS = Object.freeze({
   referenceUnavailable: "reference_unavailable",
   // The operation failed request validation; resending it unchanged can never succeed.
   invalidOperation: "invalid_operation",
+  // A single operation is over the push size limit; resending it unchanged can never succeed.
+  payloadTooLarge: "payload_too_large",
   rejected: "sync_rejected",
 });
 

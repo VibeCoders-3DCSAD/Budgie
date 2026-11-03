@@ -4,6 +4,7 @@ import { ActivityIndicator, Modal, PanResponder, Pressable, ScrollView, Text, Vi
 import { ActionSheet } from "../../../components/ActionSheet";
 import { BottomSheetSurface } from "../../../components/BottomSheetSurface";
 import { shellPalette as palette } from "../../shell/theme";
+import { syncIssueMessage } from "../helpers/syncIssueMessage";
 import type { SyncIssues } from "../hooks/useSyncIssues";
 
 type Props = { issues: SyncIssues; isLoggingOut: boolean; onConfirmDiscard: () => void };
@@ -65,7 +66,7 @@ export function SyncIssuesSheet({ issues, isLoggingOut, onConfirmDiscard }: Prop
                     {formatSyncAction(issue.operation_type)} {issue.item_label ?? formatSyncEntity(issue.entity)} {issue.status === "failed" ? "Failed" : "Waiting"}
                   </Text>
                   <Text style={{ fontFamily: "Manrope", fontSize: 11.5, color: palette.mut, marginTop: 3 }}>
-                    {issue.status === "failed" ? issue.failure_message : "This change is waiting to sync."}
+                    {issue.status === "failed" ? syncIssueMessage(issue) : "This change is waiting to sync."}
                   </Text>
                   <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 8 }}>
                     {issue.status === "failed" ? (

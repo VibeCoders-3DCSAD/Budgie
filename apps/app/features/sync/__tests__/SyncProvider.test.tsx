@@ -76,12 +76,17 @@ describe("SyncProvider", () => {
     await waitFor(() => expect(runSync).toHaveBeenCalledTimes(1));
     jest.mocked(countExhaustedSyncRows).mockResolvedValue(2);
     jest.mocked(loadSyncIssuesPage).mockResolvedValue({
-      rows: [{ operation_id: "op-1", entity: "categories", operation_type: "update", record_id: "c", failure_message: "Rejected", status: "failed", attempts: 3, created_at: "", item_label: "Food" }],
+      rows: [
+        { operation_id: "op-1", entity: "categories", operation_type: "update", record_id: "c", failure_message: "Rejected", last_error: "invalid_operation", status: "failed", attempts: 3, created_at: "", item_label: "Food" },
+        { operation_id: "op-2", entity: "categories", operation_type: "create", record_id: "d", failure_message: "Rejected", last_error: "payload_too_large", status: "failed", attempts: 3, created_at: "", item_label: "Bills" },
+      ],
       total: 2, failedTotal: 2, pendingTotal: 0,
     });
     fireEvent.press(screen.getByLabelText("sync"));
     await waitFor(() => expect(screen.getByText("Unsynced changes")).toBeTruthy());
     expect(screen.getByText("Update Food Failed")).toBeTruthy();
+    expect(screen.getByText("Rejected")).toBeTruthy();
+    expect(screen.getByText("This change is too large to sync. Edit it to be shorter or discard it.")).toBeTruthy();
     expect(screen.getByLabelText("Discard failed changes")).toBeTruthy();
     expect(runSync).toHaveBeenCalledTimes(1);
     screen.unmount();

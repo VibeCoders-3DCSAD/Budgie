@@ -238,6 +238,7 @@ describe("runSync push draining", () => {
 
     expect(pushedBatches).toEqual([["huge", "after-1", "after-2"], ["huge"], ["after-1"], ["after-2"]]);
     expect(queueRow("huge")).toEqual({ status: "failed", attempts: 3 });
+    expect(sqlite.prepare("SELECT last_error FROM sync_queue WHERE operation_id = ?").get("huge")).toEqual({ last_error: "payload_too_large" });
     expect(queueRow("after-1").status).toBe("synced");
     expect(queueRow("after-2").status).toBe("synced");
     expect(result).toMatchObject({ pushed: 2, errors: 1, pendingPushes: 1, successful: false });
