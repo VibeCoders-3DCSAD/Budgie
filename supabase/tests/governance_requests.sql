@@ -96,6 +96,24 @@ BEGIN
   EXCEPTION WHEN unique_violation THEN NULL;
   END;
 
+  -- Deletion requests: one active request per user, whether requested or already confirmed.
+  INSERT INTO public.account_deletion_requests (user_id) VALUES ('7a000000-0000-4000-8000-000000000001');
+  BEGIN
+    INSERT INTO public.account_deletion_requests (user_id) VALUES ('7a000000-0000-4000-8000-000000000001');
+    RAISE EXCEPTION 'a second active deletion request must be rejected';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+  UPDATE public.account_deletion_requests SET status = 'processing'
+  WHERE user_id = '7a000000-0000-4000-8000-000000000001';
+  BEGIN
+    INSERT INTO public.account_deletion_requests (user_id) VALUES ('7a000000-0000-4000-8000-000000000001');
+    RAISE EXCEPTION 'a confirmed deletion request must block another';
+  EXCEPTION WHEN unique_violation THEN NULL;
+  END;
+  UPDATE public.account_deletion_requests SET status = 'cancelled', cancelled_at = now()
+  WHERE user_id = '7a000000-0000-4000-8000-000000000001';
+  INSERT INTO public.account_deletion_requests (user_id) VALUES ('7a000000-0000-4000-8000-000000000001');
+
   IF has_function_privilege('anon', 'public.replace_data_export_request(jsonb)', 'EXECUTE') THEN
     RAISE EXCEPTION 'anon must not be able to replace exports';
   END IF;

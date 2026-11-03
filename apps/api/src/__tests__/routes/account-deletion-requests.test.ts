@@ -23,8 +23,8 @@ import { authHeader, validAccessToken, validUserId } from "../helpers/fixtures.j
 const mockGetUser = supabase.auth.getUser as jest.Mock;
 const mockFrom = supabase.from as jest.Mock;
 
-function createActiveChain(data?: unknown[]) {
-  const limit = jest.fn().mockResolvedValue({ data: data ?? [], error: null });
+function createActiveChain(data?: unknown[], error: unknown = null) {
+  const limit = jest.fn().mockResolvedValue({ data: error ? null : data ?? [], error });
   const in_ = jest.fn().mockReturnValue({ limit });
   const eq = jest.fn().mockReturnValue({ in: in_ });
   const select = jest.fn().mockReturnValue({ eq });
@@ -37,9 +37,9 @@ function mockActive(data?: unknown[]) {
   return chain;
 }
 
-function mockActiveThenInsert(insertResult: Record<string, unknown>) {
+function mockActiveThenInsert(insertResult: Record<string, unknown> | null, insertError: unknown = null) {
   const active = createActiveChain();
-  const single = jest.fn().mockReturnValue({ data: insertResult, error: null });
+  const single = jest.fn().mockReturnValue({ data: insertResult, error: insertError });
   const select = jest.fn().mockReturnValue({ single });
   const insert = jest.fn().mockReturnValue({ select });
   mockFrom.mockImplementation((table: string) => {
@@ -109,6 +109,34 @@ describe("POST /odin/api/account-deletion-requests", () => {
 
     expect(response.status).toBe(409);
     expect(response.body.error).toBe("Conflict");
+  });
+
+  it("answers 409 when a concurrent submission created the active request first", async () => {
+    mockAuth();
+    mockActiveThenInsert(null, { code: "23505", message: "duplicate key value violates unique constraint" });
+
+    const response = await request(app)
+      .post("/odin/api/account-deletion-requests")
+      .set(authHeader())
+      .send({ payload: {} });
+
+    expect(response.status).toBe(409);
+    expect(response.body.error).toBe("Conflict");
+  });
+
+  it("does not create a request when the active-request lookup fails", async () => {
+    mockAuth();
+    const active = createActiveChain(undefined, { code: "57014", message: "canceling statement due to statement timeout" });
+    const insert = jest.fn();
+    mockFrom.mockImplementation(() => ({ select: active.select, insert }));
+
+    const response = await request(app)
+      .post("/odin/api/account-deletion-requests")
+      .set(authHeader())
+      .send({ payload: {} });
+
+    expect(response.status).toBe(500);
+    expect(insert).not.toHaveBeenCalled();
   });
 
   it("scopes creation by user_id", async () => {

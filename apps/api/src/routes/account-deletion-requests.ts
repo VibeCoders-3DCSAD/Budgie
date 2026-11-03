@@ -8,6 +8,16 @@ import { resolveScheduledDeleteAt } from "../services/accountDeletion/deletionSc
 const router = Router();
 
 
+// The database allows one active deletion request per user.
+const UNIQUE_VIOLATION = "23505";
+
+function respondActiveRequestExists(response: Response): void {
+  response.status(409).json({
+    error: "Conflict",
+    message: "An active deletion request already exists",
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -33,18 +43,24 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
     return;
   }
 
-  const { data: active } = await authenticatedSupabase
+  const { data: active, error: activeError } = await authenticatedSupabase
     .from("account_deletion_requests")
     .select("id")
     .eq("user_id", userId)
     .in("status", ACTIVE_REQUEST_STATUSES)
     .limit(1);
 
-  if (active && active.length > 0) {
-    response.status(409).json({
-      error: "Conflict",
-      message: "An active deletion request already exists",
+  if (activeError) {
+    console.error("[account-deletion] active request lookup failed", { user_id: userId, code: activeError.code });
+    response.status(500).json({
+      error: "Internal Server Error",
+      message: "Failed to create deletion request",
     });
+    return;
+  }
+
+  if (active && active.length > 0) {
+    respondActiveRequestExists(response);
     return;
   }
 
@@ -66,6 +82,12 @@ router.post("/account-deletion-requests", requireAuth, async (request: Authentic
     })
     .select("id, status, requested_at, scheduled_delete_at")
     .single();
+
+  // A concurrent submission created the active request between the check above and this insert.
+  if (error?.code === UNIQUE_VIOLATION) {
+    respondActiveRequestExists(response);
+    return;
+  }
 
   if (error || !data) {
     response.status(500).json({
