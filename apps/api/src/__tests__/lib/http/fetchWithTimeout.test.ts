@@ -1,4 +1,4 @@
-import { fetchWithTimeout } from "../../../lib/supabase.js";
+import { fetchWithTimeout } from "../../../lib/http/fetchWithTimeout.js";
 
 // Headers arrive at once; the body never does unless the request is aborted.
 function stalledBody(signal: AbortSignal | null | undefined) {

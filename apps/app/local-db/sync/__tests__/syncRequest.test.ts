@@ -1,4 +1,5 @@
 import { jest } from "@jest/globals";
+import { stalledResponse } from "../../../lib/helpers/__tests__/stalledResponse";
 
 const mockRelease = jest.fn();
 const mockAuthorizedFetch = jest.fn<(url: string, init?: RequestInit) => Promise<Response>>();
@@ -13,11 +14,7 @@ afterEach(() => { jest.useRealTimers(); mockRelease.mockReset(); });
 
 it("aborts a sync response whose body stalls, and stops tracking it only afterwards", async () => {
   jest.useFakeTimers();
-  mockAuthorizedFetch.mockImplementation(async (_url, init) => new Response(new ReadableStream({
-    start(controller) {
-      init?.signal?.addEventListener("abort", () => controller.error(new DOMException("aborted", "AbortError")));
-    },
-  })));
+  mockAuthorizedFetch.mockImplementation(async (_url, init) => stalledResponse(init?.signal));
   const { fetchWithTimeout } = await import("../syncRequest");
 
   const pending = fetchWithTimeout("https://example.test/sync/pull", { timeout: 1_000 }).catch((error: unknown) => error);

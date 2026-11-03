@@ -1,15 +1,7 @@
 import { jest } from "@jest/globals";
+import { stalledResponse } from "./stalledResponse";
 
 jest.mock("expo/virtual/env", () => ({ env: process.env }));
-
-// Headers arrive at once; the body never does unless the request is aborted.
-function stalledBody(signal: AbortSignal | null | undefined) {
-  return new Response(new ReadableStream({
-    start(controller) {
-      signal?.addEventListener("abort", () => controller.error(new DOMException("aborted", "AbortError")));
-    },
-  }), { status: 200 });
-}
 
 describe("fetchWithTimeout", () => {
   const originalFetch = global.fetch;
@@ -17,7 +9,7 @@ describe("fetchWithTimeout", () => {
 
   it("aborts a response whose body stalls after the headers", async () => {
     jest.useFakeTimers();
-    global.fetch = jest.fn(async (_input: unknown, init?: RequestInit) => stalledBody(init?.signal)) as unknown as typeof fetch;
+    global.fetch = jest.fn(async (_input: unknown, init?: RequestInit) => stalledResponse(init?.signal)) as unknown as typeof fetch;
     const { REQUEST_TIMEOUT_MS } = await import("../../api");
     const { fetchWithTimeout } = await import("../fetchWithTimeout");
 
@@ -28,7 +20,7 @@ describe("fetchWithTimeout", () => {
   });
 
   it("still cancels the body when the caller aborts", async () => {
-    global.fetch = jest.fn(async (_input: unknown, init?: RequestInit) => stalledBody(init?.signal)) as unknown as typeof fetch;
+    global.fetch = jest.fn(async (_input: unknown, init?: RequestInit) => stalledResponse(init?.signal)) as unknown as typeof fetch;
     const { fetchWithTimeout } = await import("../fetchWithTimeout");
     const caller = new AbortController();
 
