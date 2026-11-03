@@ -1,7 +1,11 @@
-# Sync Follow-ups
+# Audit Follow-ups
 
-**Date:** 2026-11-02 (Asia/Manila)
-**Context:** Found in the self-review of the fixes for audit findings 2 and 5 (`audit.md`). Neither is a regression; both are left for a later change.
+Issues found in self-reviews of `audit.md` fixes. None is a regression; each is left for a later change.
+
+| # | Found while fixing | Date | Area |
+|---|---|---|---|
+| 1, 2 | Findings 2 and 5 | 2026-11-02 | Sync |
+| 3 | Findings 16–20 | 2026-11-03 | Account reads |
 
 ## 1. Very large queues can exceed SQLite's bound-parameter limit
 
@@ -26,3 +30,15 @@ This needs an unusually large offline queue, so it is unlikely in practice.
 This is not a regression. Before the fix those rows were retried, and failed, on every sync, so `successful` was already false. Now that they are excluded from automatic retries, a full sync can tell them apart.
 
 **Fix:** Return exhausted rows as a separate count (for example `awaitingUser`). For a full sync, report success when the only unsent rows are exhausted ones, and surface them through the existing Sync Issues badge. The Financial Plan's push-only sync must keep blocking on them, because the server plan would otherwise miss those changes. Test a full sync with one exhausted row (successful, dashboard refreshes) and a push-only sync with the same row (not successful).
+
+## 3. Debt reminders and the required-debt total load every account to find credit cards
+
+**Severity:** WARNING — Performance
+
+**Files:** `apps/app/local-db/repositories/dashboard/dashboardReminders.ts` (`listUpcomingDebt`); `apps/app/features/debt-manager/queries/requiredDebtTotalQueries.ts` (`getRequiredDebtTotalForPeriod`)
+
+Both call `listFinancialAccounts(userId)` with no filter. That reads every account, archived ones included, with all three detail joins, and passes the result on as `creditCards`. This is the unbounded read from finding 19, left in place during that fix because these callers might depend on archived cards.
+
+Tracing shows they do not. `getRequiredDebtTotal` (`features/debt-manager/helpers/requiredDebtTotal.ts`) keeps only `kind === "credit_card" && status === "active"` in both of its card paths (`getCreditCardObligations` and `getEstimatedCreditCardObligations`). Cycles and statements of other accounts are dropped. Both callers use their own account list only to look up names for the obligations that come back, which belong to active cards.
+
+**Fix:** Pass `{ kind: "credit_card", status: "active" }` to `listFinancialAccounts` in both callers. Check that the dashboard's upcoming-debt section and the Debt Manager's required total stay the same for a user with one active and one archived card, where the archived card still has an unpaid statement.
