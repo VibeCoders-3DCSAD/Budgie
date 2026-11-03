@@ -10,3 +10,5 @@ export const SYNC_REJECTION_REASONS: Readonly<{
 }>;
 
 export type SyncRejectionReason = typeof SYNC_REJECTION_REASONS[keyof typeof SYNC_REJECTION_REASONS];
+
+export const DEVICE_NOT_REGISTERED: "device_not_registered";

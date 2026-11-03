@@ -13,4 +13,8 @@ const SYNC_REJECTION_REASONS = Object.freeze({
   rejected: "sync_rejected",
 });
 
-module.exports = { PULL_PAGE_SIZE, SYNC_REJECTION_REASONS };
+// Code on a push the server refuses because it has no active registration for the device.
+// The client registers the device again and resends the batch.
+const DEVICE_NOT_REGISTERED = "device_not_registered";
+
+module.exports = { PULL_PAGE_SIZE, SYNC_REJECTION_REASONS, DEVICE_NOT_REGISTERED };

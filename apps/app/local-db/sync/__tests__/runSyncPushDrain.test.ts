@@ -128,6 +128,47 @@ describe("runSync push draining", () => {
     expect(queueRow("inactive-device")).toEqual({ status: "pending", attempts: 0 });
   });
 
+  it("registers the device again and resends the batch when the server no longer knows it", async () => {
+    enqueue("after-lost-registration");
+    const calls: string[] = [];
+    let registered = false;
+    global.fetch = jest.fn(async (url: unknown, init?: RequestInit) => {
+      if (String(url).endsWith("/sync/register-device")) {
+        calls.push("register");
+        registered = true;
+        return { ok: true, status: 200, json: async () => ({}) };
+      }
+      calls.push("push");
+      if (!registered) return { ok: false, status: 400, json: async () => ({ code: "device_not_registered" }) };
+      const operations = JSON.parse(String(init?.body)).payload.operations as PushOperation[];
+      return { ok: true, status: 200, json: async () => ({ payload: { results: operations.map(reply) } }) };
+    }) as unknown as typeof fetch;
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(calls).toEqual(["push", "register", "push"]);
+    expect(queueRow("after-lost-registration")).toEqual({ status: "synced", attempts: 0 });
+    expect(result).toMatchObject({ pushed: 1, errors: 0, pendingPushes: 0, successful: true });
+  });
+
+  it("registers again only once per run", async () => {
+    enqueue("still-unregistered");
+    const calls: string[] = [];
+    global.fetch = jest.fn(async (url: unknown) => {
+      calls.push(String(url).endsWith("/sync/register-device") ? "register" : "push");
+      if (String(url).endsWith("/sync/register-device")) return { ok: true, status: 200, json: async () => ({}) };
+      return { ok: false, status: 400, json: async () => ({ code: "device_not_registered" }) };
+    }) as unknown as typeof fetch;
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(calls).toEqual(["push", "register", "push"]);
+    expect(queueRow("still-unregistered")).toEqual({ status: "pending", attempts: 0 });
+    expect(result).toMatchObject({ pushed: 0, pendingPushes: 1, successful: false });
+  });
+
   it("sends a malformed operation straight to Sync Issues without holding back the rest", async () => {
     enqueue("malformed");
     enqueue("valid");

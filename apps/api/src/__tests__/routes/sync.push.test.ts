@@ -70,6 +70,16 @@ describe("POST /odin/api/sync/push", () => {
     ]));
   });
 
+  it("tells the client its device is not registered so it can register again", async () => {
+    mockIsDeviceActive.mockResolvedValue(false as never);
+
+    const response = await push([operation("good-1")]);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBe("device_not_registered");
+    expect(mockPushOperations).not.toHaveBeenCalled();
+  });
+
   it("answers a batch of only malformed operations without applying anything", async () => {
     const response = await push([operation("bad", { changed_fields: "note" })]);
 

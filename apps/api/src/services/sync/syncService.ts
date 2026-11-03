@@ -254,31 +254,25 @@ export async function pullChanges(
   return { cursors: newCursors, changes, has_more: hasMore, successful };
 }
 
+// Registers the device, or reactivates it and records it as seen. Throws unless the write is confirmed,
+// so the client never treats a failed registration as done.
 export async function registerDevice(
   supabase: SupabaseClient,
   userId: string,
   deviceId: string,
 ): Promise<void> {
   assertDeviceId(deviceId);
-  const { data: existing } = await supabase
+  const { data, error } = await supabase
     .from("user_devices")
-    .select("id")
-    .eq("user_id", userId)
-    .eq("device_id", deviceId)
+    .upsert(
+      { user_id: userId, device_id: deviceId, is_active: true, last_seen_at: new Date().toISOString() },
+      { onConflict: "user_id,device_id" },
+    )
+    .select("is_active")
     .maybeSingle();
 
-  if (existing) {
-    await supabase
-      .from("user_devices")
-      .update({ last_seen_at: new Date().toISOString(), is_active: true })
-      .eq("user_id", userId)
-      .eq("device_id", deviceId);
-  } else {
-    await supabase.from("user_devices").insert({
-      user_id: userId,
-      device_id: deviceId,
-    });
-  }
+  if (error) throw new Error(`device registration failed: ${error.message}`);
+  if (data?.is_active !== true) throw new Error("device registration was not saved");
 }
 
 function assertDeviceId(deviceId: string): void {

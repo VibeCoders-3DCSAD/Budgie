@@ -1,4 +1,5 @@
 import * as SQLite from "expo-sqlite";
+import { DEVICE_NOT_REGISTERED } from "@odin/sync-config";
 import { authorizedFetch, authorizeLocalRequest, rejectServerSession, trackProtectedRequest } from "../../lib/localAccess";
 import { initDatabase } from "../client";
 import { enqueueOperation } from "../helpers";
@@ -219,9 +220,23 @@ async function drainPushQueue(
   const attempted = new Set<string>();
   let pushed = 0;
   let errors = 0;
+  let reregistered = false;
 
   for (;;) {
     const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted);
+    // The server has no active registration for this device, though this device skipped
+    // registering because it registered before. Register again once and resend the same batch.
+    if (batch.deviceNotRegistered && !reregistered) {
+      reregistered = true;
+      try {
+        await registerDevice(deviceId, accessToken);
+      } catch {
+        errors += batch.errors;
+        break;
+      }
+      for (const operationId of batch.operationIds) attempted.delete(operationId);
+      continue;
+    }
     pushed += batch.pushed;
     errors += batch.errors;
     if (batch.selected === 0 || batch.requestFailed) break;
@@ -237,6 +252,15 @@ async function drainPushQueue(
   return { pushed, errors, pendingPushes: remaining?.count ?? 0 };
 }
 
+type PushBatchOutcome = {
+  pushed: number;
+  errors: number;
+  selected: number;
+  requestFailed: boolean;
+  deviceNotRegistered?: boolean;
+  operationIds: string[];
+};
+
 async function pushQueue(
   db: SQLite.SQLiteDatabase,
   userId: string,
@@ -244,7 +268,7 @@ async function pushQueue(
   accessToken: string,
   lastRowid: number,
   attempted: Set<string>,
-): Promise<{ pushed: number; errors: number; selected: number; requestFailed: boolean }> {
+): Promise<PushBatchOutcome> {
   const excluded = [...attempted];
   const exclusionClause = excluded.length > 0
     ? `AND operation_id NOT IN (${excluded.map(() => "?").join(", ")})`
@@ -259,7 +283,8 @@ async function pushQueue(
     lastRowid,
     ...excluded,
   );
-  const idle = { pushed: 0, errors: 0, selected: rows.length, requestFailed: false };
+  const operationIds = rows.map((row) => row.operation_id);
+  const idle = { pushed: 0, errors: 0, selected: rows.length, requestFailed: false, operationIds };
 
   if (rows.length === 0) return idle;
   for (const row of rows) attempted.add(row.operation_id);
@@ -298,12 +323,13 @@ async function pushQueue(
     });
   } catch {
     await recordRequestFailure(db, userId, deviceId, repairedRows, "network error");
-    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true };
+    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true, operationIds };
   }
 
   if (!response.ok) {
     await recordRequestFailure(db, userId, deviceId, repairedRows, `server error: ${response.status}`);
-    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true };
+    const deviceNotRegistered = response.status === 400 && await errorCode(response) === DEVICE_NOT_REGISTERED;
+    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true, deviceNotRegistered, operationIds };
   }
 
   const body = await response.json();
@@ -336,7 +362,7 @@ async function pushQueue(
     errors++;
   }
 
-  return { pushed, errors, selected: rows.length, requestFailed: false };
+  return { pushed, errors, selected: rows.length, requestFailed: false, operationIds };
 }
 
 async function repairCreditCardTransactionSyncRows(
@@ -574,6 +600,15 @@ async function repairCreditCardDetailSyncRows(
 // A failed request says nothing about its rows: the server reports each bad operation in its results,
 // and request errors (network, outage, rate limit, inactive device) are about the connection. So the
 // rows keep their attempts and only remember the error.
+async function errorCode(response: Response): Promise<unknown> {
+  try {
+    const body = await response.json();
+    return body?.code;
+  } catch {
+    return undefined;
+  }
+}
+
 async function recordRequestFailure(
   db: SQLite.SQLiteDatabase,
   userId: string,
@@ -727,7 +762,10 @@ async function ensureDeviceRegistered(
     userId,
   );
   if (existing?.device_id === deviceId) return;
+  await registerDevice(deviceId, accessToken);
+}
 
+async function registerDevice(deviceId: string, accessToken: string): Promise<void> {
   const response = await fetchWithTimeout(`${API_BASE}/odin/api/sync/register-device`, {
     method: "POST",
     headers: {

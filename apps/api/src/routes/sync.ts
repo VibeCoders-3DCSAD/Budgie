@@ -10,7 +10,7 @@ import {
   isDeviceActive,
 } from "../services/sync/syncService.js";
 import { hasOperationId, isCursorMap, isDeviceId, isPushOperation, MAX_PUSH_OPERATIONS } from "../services/sync/syncRequestValidation.js";
-import { SYNC_REJECTION_REASONS } from "@odin/sync-config";
+import { DEVICE_NOT_REGISTERED, SYNC_REJECTION_REASONS } from "@odin/sync-config";
 
 const router = Router();
 
@@ -57,6 +57,7 @@ router.post(
         console.warn("[sync/push] device inactive", { userId, device_id });
         response.status(400).json({
           error: "Bad Request",
+          code: DEVICE_NOT_REGISTERED,
           message: "Device is not registered or has been deactivated",
         });
         return;
