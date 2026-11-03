@@ -33,6 +33,22 @@ function enqueue(id: string, entity = "transactions", createdAt = "2026-11-01T00
   ).run(id, entity, `record-${id}`, createdAt);
 }
 
+function exhaust(id: string) {
+  sqlite.prepare("UPDATE sync_queue SET status = 'failed', attempts = 3 WHERE operation_id = ?").run(id);
+}
+
+// A full sync also pulls; the server has nothing new to send.
+function answerPullsWithNothing() {
+  // Later migrations add these; only the parts a pull with no changes touches are created here.
+  sqlite.exec("CREATE TABLE sync_pull_failures (user_id TEXT, table_name TEXT, record_id TEXT, payload TEXT, updated_at TEXT)");
+  sqlite.exec("ALTER TABLE sync_state ADD COLUMN pull_pending INTEGER NOT NULL DEFAULT 0");
+  const respondToPush = (global.fetch as unknown as jest.Mock<(...args: any[]) => any>).getMockImplementation()!;
+  global.fetch = jest.fn(async (url: unknown, init?: RequestInit) => {
+    if (String(url).includes("/sync/pull")) return Response.json({ payload: { changes: {}, has_more: {}, cursors: {} } });
+    return respondToPush(url, init);
+  }) as unknown as typeof fetch;
+}
+
 function queueRow(id: string) {
   return sqlite.prepare("SELECT status, attempts FROM sync_queue WHERE operation_id = ?").get(id) as { status: string; attempts: number };
 }
@@ -268,5 +284,62 @@ describe("runSync push draining", () => {
 
     await expect(later).resolves.toMatchObject({ pendingPushes: 0, successful: true });
     expect(pushedBatches).toEqual([["first"], ["second"]]);
+  });
+
+  it("stops after 5,000 operations in one run and leaves the rest for the next run", async () => {
+    const insert = sqlite.prepare(
+      `INSERT INTO sync_queue (operation_id, user_id, device_id, entity, record_id, operation_type, created_at)
+       VALUES (?, 'user-1', 'device-1', 'transactions', ?, 'update', '2026-11-01T00:00:00.000Z')`,
+    );
+    for (let index = 0; index <= 5_000; index++) {
+      const id = `op-${String(index).padStart(4, "0")}`;
+      insert.run(id, `record-${id}`);
+    }
+
+    const { runSync } = await import("../runSync");
+    const first = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(pushedBatches.flat()).toHaveLength(5_000);
+    expect(first).toMatchObject({ pushed: 5_000, errors: 0, pendingPushes: 1, successful: false });
+
+    pushedBatches = [];
+    const second = await runSync("user-1", "device-1", "token", { pull: false });
+    expect(pushedBatches).toEqual([["op-5000"]]);
+    expect(second).toMatchObject({ pushed: 1, pendingPushes: 0, successful: true });
+  });
+
+  it("lets a full sync succeed when the only unsent change waits in Sync Issues", async () => {
+    enqueue("waiting");
+    exhaust("waiting");
+    enqueue("valid", "transactions", "2026-11-02T00:00:00.000Z");
+    answerPullsWithNothing();
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token");
+
+    expect(pushedBatches).toEqual([["valid"]]);
+    expect(result).toMatchObject({ pushed: 1, errors: 0, pendingPushes: 1, awaitingUser: 1, successful: true });
+  });
+
+  it("keeps a push-only sync unsuccessful while a change waits in Sync Issues", async () => {
+    enqueue("waiting");
+    exhaust("waiting");
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(pushedBatches).toEqual([]);
+    expect(result).toMatchObject({ pushed: 0, errors: 0, pendingPushes: 1, awaitingUser: 1, successful: false });
+  });
+
+  it("still fails a full sync when a change is rejected during it", async () => {
+    enqueue("rejected");
+    reply = (operation) => ({ operation_id: operation.operation_id, status: "rejected", reason: "invalid_operation" });
+    answerPullsWithNothing();
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token");
+
+    expect(result).toMatchObject({ errors: 1, pendingPushes: 1, awaitingUser: 1, successful: false });
   });
 });

@@ -39,7 +39,7 @@ describe("runSync push-only mode", () => {
     const { runSync } = await import("../runSync");
     const result = await runSync("user-1", "device-1", "token", { pull: false });
 
-    expect(result).toEqual({ pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, successful: true, hasMore: false });
+    expect(result).toEqual({ pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, awaitingUser: 0, successful: true, hasMore: false });
     expect(fetchMock).not.toHaveBeenCalled();
     expect(db.runAsync).not.toHaveBeenCalled();
   });

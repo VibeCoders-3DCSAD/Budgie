@@ -9,6 +9,7 @@ import {
   SYNCED_TABLES,
 } from "./pullConvergence";
 import {
+  MAX_SYNC_ATTEMPTS,
   syncQueueEligibleStatusesClause,
   syncQueueOrderByClause,
   syncQueueUnsyncedStatusesClause,
@@ -51,6 +52,8 @@ type SyncResult = {
   errors: number;
   // Changes queued before the run that are still not on the server.
   pendingPushes: number;
+  // The part of pendingPushes that has used up its attempts and waits for the user in Sync Issues.
+  awaitingUser: number;
   successful: boolean;
   hasMore: boolean;
 };
@@ -114,7 +117,7 @@ async function runSyncInternal(
   { pull, untilComplete = false, onProgress }: SyncOptions & { pull: boolean },
 ): Promise<SyncResult> {
   if (!userId || !accessToken || !deviceId) {
-    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, successful: false, hasMore: false };
+    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, awaitingUser: 0, successful: false, hasMore: false };
   }
 
   const db = await initDatabase();
@@ -126,12 +129,17 @@ async function runSyncInternal(
   try {
     await ensureDeviceRegistered(db, userId, deviceId, accessToken);
   } catch {
-    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, successful: false, hasMore: syncState.pullPending };
+    return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, awaitingUser: 0, successful: false, hasMore: syncState.pullPending };
   }
 
-  const { pushed, errors, pendingPushes } = await drainPushQueue(db, userId, deviceId, accessToken);
-  const pushSuccessful = errors === 0 && pendingPushes === 0;
-  if (!pull) return { pushed, pulled: 0, errors, pendingPushes, successful: pushSuccessful, hasMore: syncState.pullPending };
+  const { pushed, errors, pendingPushes, awaitingUser } = await drainPushQueue(db, userId, deviceId, accessToken);
+  // A push-only caller needs every change on the server, so changes waiting in Sync Issues still block it.
+  if (!pull) {
+    const successful = errors === 0 && pendingPushes === 0;
+    return { pushed, pulled: 0, errors, pendingPushes, awaitingUser, successful, hasMore: syncState.pullPending };
+  }
+  // A full sync is not retrying changes that wait in Sync Issues, so they do not make it fail.
+  const pushSuccessful = errors === 0 && pendingPushes === awaitingUser;
 
   let pulled = await retryAnomalyEvaluationPulls(db, userId);
   let pullSuccessful = true;
@@ -177,7 +185,7 @@ async function runSyncInternal(
 
   await saveCursors(db, userId, deviceId, cursors, hasMore);
 
-  return { pushed, pulled, errors, pendingPushes, successful: pullSuccessful && pushSuccessful, hasMore };
+  return { pushed, pulled, errors, pendingPushes, awaitingUser, successful: pullSuccessful && pushSuccessful, hasMore };
 }
 
 async function resetTaxonomyCursorsIfEmpty(
@@ -196,12 +204,16 @@ async function resetTaxonomyCursorsIfEmpty(
 }
 
 const PUSH_BATCH_SIZE = 50;
+// Each batch excludes the operations already tried with one bound parameter per ID, and SQLite
+// allows at most 32,766, so one call tries at most this many. The rest stay pending for the next sync.
+const MAX_PUSH_OPERATIONS_PER_SYNC = 5_000;
 
-type PushOutcome = { pushed: number; errors: number; pendingPushes: number };
+type PushOutcome = { pushed: number; errors: number; pendingPushes: number; awaitingUser: number };
 
-// Pushes every change queued before this call, one batch at a time. Each operation is tried at
-// most once per call, so failing rows cannot take every batch, and changes queued while it runs
-// wait for the next call. pendingPushes counts the earlier changes still not on the server.
+// Pushes every change queued before this call, one batch at a time, up to MAX_PUSH_OPERATIONS_PER_SYNC.
+// Each operation is tried at most once per call, so failing rows cannot take every batch, and changes
+// queued while it runs wait for the next call. pendingPushes counts the earlier changes still not on
+// the server, and awaitingUser those of them that wait in Sync Issues.
 // A batch over the API's body limit (413) is sent again in halves for the rest of the call.
 async function drainPushQueue(
   db: SQLite.SQLiteDatabase,
@@ -216,7 +228,7 @@ async function drainPushQueue(
     deviceId,
   );
   const lastRowid = boundary?.last_rowid ?? null;
-  if (lastRowid === null) return { pushed: 0, errors: 0, pendingPushes: 0 };
+  if (lastRowid === null) return { pushed: 0, errors: 0, pendingPushes: 0, awaitingUser: 0 };
 
   const attempted = new Set<string>();
   let pushed = 0;
@@ -224,8 +236,9 @@ async function drainPushQueue(
   let reregistered = false;
   let batchSize = PUSH_BATCH_SIZE;
 
-  for (;;) {
-    const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted, batchSize);
+  while (attempted.size < MAX_PUSH_OPERATIONS_PER_SYNC) {
+    const limit = Math.min(batchSize, MAX_PUSH_OPERATIONS_PER_SYNC - attempted.size);
+    const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted, limit);
     // The server has no active registration for this device, though this device skipped
     // registering because it registered before. Register again once and resend the same batch.
     if (batch.deviceNotRegistered && !reregistered) {
@@ -248,14 +261,15 @@ async function drainPushQueue(
     if (batch.selected === 0 || batch.requestFailed) break;
   }
 
-  const remaining = await db.getFirstAsync<{ count: number }>(
-    `SELECT COUNT(*) AS count FROM sync_queue
+  const remaining = await db.getFirstAsync<{ count: number; exhausted: number | null }>(
+    `SELECT COUNT(*) AS count, SUM(CASE WHEN attempts >= ? THEN 1 ELSE 0 END) AS exhausted FROM sync_queue
      WHERE user_id = ? AND device_id = ? AND rowid <= ? AND ${syncQueueUnsyncedStatusesClause}`,
+    MAX_SYNC_ATTEMPTS,
     userId,
     deviceId,
     lastRowid,
   );
-  return { pushed, errors, pendingPushes: remaining?.count ?? 0 };
+  return { pushed, errors, pendingPushes: remaining?.count ?? 0, awaitingUser: remaining?.exhausted ?? 0 };
 }
 
 type PushBatchOutcome = {
