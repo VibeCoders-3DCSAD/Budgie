@@ -183,6 +183,55 @@ describe("runSync push draining", () => {
     expect(queueRow("valid").status).toBe("synced");
   });
 
+  it("resends a batch over the body limit in smaller batches within the same run", async () => {
+    for (let index = 0; index < 50; index++) enqueue(`op-${String(index).padStart(2, "0")}`);
+    const respond = (global.fetch as unknown as jest.Mock<(...args: any[]) => any>).getMockImplementation()!;
+    global.fetch = jest.fn(async (url: unknown, init?: RequestInit) => {
+      const operations = JSON.parse(String(init?.body)).payload.operations as PushOperation[];
+      if (operations.length > 25) {
+        pushedBatches.push(operations.map((operation) => operation.operation_id));
+        return Response.json({ error: "Payload Too Large" }, { status: 413 });
+      }
+      return respond(url, init);
+    }) as unknown as typeof fetch;
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(pushedBatches.map((batch) => batch.length)).toEqual([50, 25, 25]);
+    expect(queueRow("op-00")).toEqual({ status: "synced", attempts: 0 });
+    expect(result).toMatchObject({ pushed: 50, errors: 0, pendingPushes: 0, successful: true });
+  });
+
+  it("sends an operation that is too large even alone to Sync Issues and still pushes the rest", async () => {
+    enqueue("huge");
+    enqueue("after-1", "transactions", "2026-11-02T00:00:00.000Z");
+    enqueue("after-2", "transactions", "2026-11-02T00:00:00.000Z");
+    const respond = (global.fetch as unknown as jest.Mock<(...args: any[]) => any>).getMockImplementation()!;
+    global.fetch = jest.fn(async (url: unknown, init?: RequestInit) => {
+      const operations = JSON.parse(String(init?.body)).payload.operations as PushOperation[];
+      if (operations.some((operation) => operation.operation_id === "huge")) {
+        pushedBatches.push(operations.map((operation) => operation.operation_id));
+        return Response.json({ error: "Payload Too Large" }, { status: 413 });
+      }
+      return respond(url, init);
+    }) as unknown as typeof fetch;
+
+    const { runSync } = await import("../runSync");
+    const result = await runSync("user-1", "device-1", "token", { pull: false });
+
+    expect(pushedBatches).toEqual([["huge", "after-1", "after-2"], ["huge"], ["after-1"], ["after-2"]]);
+    expect(queueRow("huge")).toEqual({ status: "failed", attempts: 3 });
+    expect(queueRow("after-1").status).toBe("synced");
+    expect(queueRow("after-2").status).toBe("synced");
+    expect(result).toMatchObject({ pushed: 2, errors: 1, pendingPushes: 1, successful: false });
+
+    // The exhausted row waits for the user instead of being sent again on the next run.
+    pushedBatches = [];
+    await runSync("user-1", "device-1", "token", { pull: false });
+    expect(pushedBatches).toEqual([]);
+  });
+
   it("leaves changes queued during a run for the next run", async () => {
     enqueue("before");
     reply = (operation) => {

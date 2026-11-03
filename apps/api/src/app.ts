@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import { STATUS_CODES } from "node:http";
 import type { Request, Response, NextFunction } from "express";
 import authRoutes from "./routes/auth.js";
 import meRoutes from "./routes/me.js";
@@ -57,13 +58,40 @@ app.use("/odin/api/recurring", recurringRoutes);
 app.use("/odin/api/forecast", forecastRoutes);
 app.use("/odin/api/financial-plans", financialPlanRoutes);
 
+type HttpError = Error & { type?: string; status?: unknown; statusCode?: unknown; expose?: unknown };
+
+// body-parser/http-errors mark client errors that are safe to report with `expose`; only the status is reused.
+function exposedClientStatus(error: HttpError): number | null {
+  const status = typeof error.status === "number" ? error.status : error.statusCode;
+  if (error.expose !== true || typeof status !== "number") return null;
+  if (status < 400 || status > 499) return null;
+  return status;
+}
+
 app.use((error: Error, request: Request, response: Response, _next: NextFunction) => {
-  const parseError = error as Error & { type?: string };
+  const parseError = error as HttpError;
+
+  if (parseError.type === "entity.too.large") {
+    response.status(413).json({
+      error: "Payload Too Large",
+      message: "Request body is too large",
+    });
+    return;
+  }
 
   if (parseError.type === "entity.parse.failed" || error instanceof SyntaxError) {
     response.status(400).json({
       error: "Bad Request",
       message: "Invalid JSON in request body",
+    });
+    return;
+  }
+
+  const clientStatus = exposedClientStatus(parseError);
+  if (clientStatus !== null) {
+    response.status(clientStatus).json({
+      error: STATUS_CODES[clientStatus] ?? "Bad Request",
+      message: "The request could not be processed",
     });
     return;
   }

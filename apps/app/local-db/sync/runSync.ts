@@ -1,5 +1,5 @@
 import * as SQLite from "expo-sqlite";
-import { DEVICE_NOT_REGISTERED } from "@odin/sync-config";
+import { DEVICE_NOT_REGISTERED, SYNC_REJECTION_REASONS } from "@odin/sync-config";
 import { authorizeLocalRequest } from "../../lib/localAccess";
 import { initDatabase } from "../client";
 import { enqueueOperation } from "../helpers";
@@ -202,6 +202,7 @@ type PushOutcome = { pushed: number; errors: number; pendingPushes: number };
 // Pushes every change queued before this call, one batch at a time. Each operation is tried at
 // most once per call, so failing rows cannot take every batch, and changes queued while it runs
 // wait for the next call. pendingPushes counts the earlier changes still not on the server.
+// A batch over the API's body limit (413) is sent again in halves for the rest of the call.
 async function drainPushQueue(
   db: SQLite.SQLiteDatabase,
   userId: string,
@@ -221,9 +222,10 @@ async function drainPushQueue(
   let pushed = 0;
   let errors = 0;
   let reregistered = false;
+  let batchSize = PUSH_BATCH_SIZE;
 
   for (;;) {
-    const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted);
+    const batch = await pushQueue(db, userId, deviceId, accessToken, lastRowid, attempted, batchSize);
     // The server has no active registration for this device, though this device skipped
     // registering because it registered before. Register again once and resend the same batch.
     if (batch.deviceNotRegistered && !reregistered) {
@@ -235,6 +237,10 @@ async function drainPushQueue(
         break;
       }
       for (const operationId of batch.operationIds) attempted.delete(operationId);
+      continue;
+    }
+    if (batch.tooLarge) {
+      batchSize = Math.max(1, Math.floor(batch.selected / 2));
       continue;
     }
     pushed += batch.pushed;
@@ -258,6 +264,7 @@ type PushBatchOutcome = {
   selected: number;
   requestFailed: boolean;
   deviceNotRegistered?: boolean;
+  tooLarge?: boolean;
   operationIds: string[];
 };
 
@@ -268,6 +275,7 @@ async function pushQueue(
   accessToken: string,
   lastRowid: number,
   attempted: Set<string>,
+  batchSize: number,
 ): Promise<PushBatchOutcome> {
   const excluded = [...attempted];
   const exclusionClause = excluded.length > 0
@@ -277,7 +285,7 @@ async function pushQueue(
     `SELECT * FROM sync_queue
      WHERE user_id = ? AND device_id = ? AND rowid <= ?
         AND ${syncQueueEligibleStatusesClause} ${exclusionClause}
-           ORDER BY ${syncQueueOrderByClause} LIMIT ${PUSH_BATCH_SIZE}`,
+           ORDER BY ${syncQueueOrderByClause} LIMIT ${batchSize}`,
     userId,
     deviceId,
     lastRowid,
@@ -324,6 +332,18 @@ async function pushQueue(
   } catch {
     await recordRequestFailure(db, userId, deviceId, repairedRows, "network error");
     return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true, operationIds };
+  }
+
+  if (response.status === 413 && repairedRows.length > 1) {
+    // Too large to send together: release these rows so the caller resends them in smaller batches.
+    for (const operationId of operationIds) attempted.delete(operationId);
+    return { pushed: 0, errors: 0, selected: rows.length, requestFailed: false, tooLarge: true, operationIds };
+  }
+
+  if (response.status === 413) {
+    // One operation alone is over the limit, so resending it can never succeed; it waits in Sync Issues.
+    for (const row of repairedRows) await markSyncRejection(db, row.operation_id, SYNC_REJECTION_REASONS.invalidOperation);
+    return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: false, operationIds };
   }
 
   if (!response.ok) {
