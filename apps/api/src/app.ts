@@ -58,7 +58,7 @@ app.use("/odin/api/recurring", recurringRoutes);
 app.use("/odin/api/forecast", forecastRoutes);
 app.use("/odin/api/financial-plans", financialPlanRoutes);
 
-type HttpError = Error & { type?: string; status?: unknown; statusCode?: unknown; expose?: unknown };
+type HttpError = Error & { type?: string; status?: unknown; statusCode?: unknown; expose?: unknown; length?: unknown; limit?: unknown };
 
 // body-parser/http-errors mark client errors that are safe to report with `expose`; only the status is reused.
 function exposedClientStatus(error: HttpError): number | null {
@@ -72,6 +72,14 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
   const parseError = error as HttpError;
 
   if (parseError.type === "entity.too.large") {
+    // express.json runs before auth, so no user is known yet; body-parser sets `length` and `limit` in bytes.
+    console.warn("Request body too large", {
+      method: request.method,
+      path: request.originalUrl,
+      contentLength: request.headers["content-length"],
+      length: parseError.length,
+      limit: parseError.limit,
+    });
     response.status(413).json({
       error: "Payload Too Large",
       message: "Request body is too large",

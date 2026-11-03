@@ -22,8 +22,15 @@ import app from "../app.js";
 
 describe("final error handler", () => {
   let consoleError: ReturnType<typeof jest.spyOn>;
-  beforeEach(() => { consoleError = jest.spyOn(console, "error").mockImplementation(() => {}); });
-  afterEach(() => consoleError.mockRestore());
+  let consoleWarn: ReturnType<typeof jest.spyOn>;
+  beforeEach(() => {
+    consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    consoleWarn = jest.spyOn(console, "warn").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    consoleError.mockRestore();
+    consoleWarn.mockRestore();
+  });
 
   it("answers a JSON body over the 1 MB limit with 413 and a fixed message", async () => {
     const response = await request(app)
@@ -34,6 +41,13 @@ describe("final error handler", () => {
     expect(response.status).toBe(413);
     expect(response.body).toEqual({ error: "Payload Too Large", message: "Request body is too large" });
     expect(consoleError).not.toHaveBeenCalled();
+    expect(consoleWarn).toHaveBeenCalledWith("Request body too large", {
+      method: "POST",
+      path: "/odin/api/recurring/boom",
+      contentLength: expect.any(String),
+      length: expect.any(Number),
+      limit: 1024 * 1024,
+    });
   });
 
   it("still answers malformed JSON with 400", async () => {
