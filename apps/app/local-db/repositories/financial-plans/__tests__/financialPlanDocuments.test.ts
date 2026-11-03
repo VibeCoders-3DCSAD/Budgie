@@ -57,6 +57,8 @@ it("restores a synced plan's full snapshot on another device, including category
   const remote = normalizePullRow("financial_plans", {
     id: "synced-plan", user_id: "user-1", period_start: "2026-10-01", period_end: "2026-10-31", status: "accepted", forecast_month: "2026-10", forecast_total_centavos: 0,
     forecast_model_version: "v1", forecast_generated_at: "2026-10-15T03:00:00Z", forecast_quality: "FALLBACK", available_funds_centavos: 70_000, debt_surplus_centavos: 0, savings_surplus_centavos: 0,
+    // The server pulls with select("*"), so unset nullable columns arrive as null rather than missing.
+    classification_status: null, classification_rule_set_version: null, classification_assessed_at: null, required_funds_centavos: null, shortfall_centavos: null,
     input_snapshot_json: inputSnapshot, recommendation_json: syncedRecommendation, version: 1, deleted: false, updated_at: "2026-10-15T03:00:00Z",
   }, "user-1");
   await applyPullRow(harness.db as never, "financial_plans", remote);

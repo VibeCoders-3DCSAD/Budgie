@@ -1,44 +1,29 @@
-import { DatabaseSync, type SQLInputValue } from "node:sqlite";
-import m051 from "../../../migrations/051_savings_goals";
-import m053 from "../../../migrations/053_savings_goal_model";
-import m056 from "../../../migrations/056_savings_goal_contribution_schedule";
-import m074 from "../../../migrations/074_remove_savings_goal_category";
-import m084 from "../../../migrations/084_savings_goal_account_link";
+import { createSqliteHarness } from "../../__tests__/sqliteHarness";
 import { createSavingsGoal, getSavingsGoal, updateSavingsGoal } from "../savingsGoals";
 import { listActiveSavingsGoalAccounts } from "../savingsGoalAccounts";
 
-let mockSqlite: DatabaseSync;
-const mockDb = {
-  execAsync: async (sql: string) => { mockSqlite.exec(sql); },
-  runAsync: async (sql: string, ...args: SQLInputValue[]) => mockSqlite.prepare(sql).run(...args),
-  getFirstAsync: async (sql: string, ...args: SQLInputValue[]) => mockSqlite.prepare(sql).get(...args) ?? null,
-  getAllAsync: async (sql: string, ...args: SQLInputValue[]) => mockSqlite.prepare(sql).all(...args),
-  withTransactionAsync: async (callback: () => Promise<void>) => {
-    mockSqlite.exec("BEGIN");
-    try { await callback(); mockSqlite.exec("COMMIT"); } catch (error) { mockSqlite.exec("ROLLBACK"); throw error; }
-  },
-};
+let harness: ReturnType<typeof createSqliteHarness>;
+let mockSqlite: ReturnType<typeof createSqliteHarness>["sqlite"];
+let mockDb: ReturnType<typeof createSqliteHarness>["db"];
 jest.mock("../../../client", () => ({ initDatabase: async () => mockDb }));
 
 const input = { name: "Travel", linkedAccountId: "active-account", goalType: "custom" as const, targetAmountCentavos: 100_000, startingAmountCentavos: 0, targetDate: "2026-12-31", priority: "high" as const };
 
 describe("savings goal account persistence in SQLite", () => {
   beforeEach(async () => {
-    mockSqlite = new DatabaseSync(":memory:");
+    // The app's full migration chain, so the fixture cannot drift from the schema the repositories write.
+    harness = createSqliteHarness();
+    await harness.migrateAll();
+    mockSqlite = harness.sqlite;
+    mockDb = harness.db;
     mockSqlite.exec(`
-      PRAGMA foreign_keys = ON;
-      CREATE TABLE financial_accounts (id text PRIMARY KEY, user_id text, name text, kind text DEFAULT 'bank', status text, deleted integer DEFAULT 0);
-      INSERT INTO financial_accounts (id, user_id, name, status, deleted) VALUES
-        ('active-account', 'user-1', 'Main account', 'active', 0),
-        ('other-account', 'user-2', 'Other user', 'active', 0),
-        ('archived-account', 'user-1', 'Archived', 'archived', 0),
-        ('deleted-account', 'user-1', 'Deleted', 'active', 1);
-      INSERT INTO financial_accounts (id, user_id, name, kind, status) VALUES
-        ('credit-card', 'user-1', 'Rewards Visa', 'credit_card', 'active');
-      CREATE TABLE transactions (id text);
-      CREATE TABLE sync_queue (operation_id text, user_id text, device_id text, entity text, record_id text, operation_type text, base_version integer, changed_fields text, payload text, failure_message text, status text, attempts integer, last_error text, created_at text);
+      INSERT INTO financial_accounts (id, user_id, name, kind, status, deleted, created_at, updated_at) VALUES
+        ('active-account', 'user-1', 'Main account', 'bank', 'active', 0, '2026-10-01', '2026-10-01'),
+        ('other-account', 'user-2', 'Other user', 'bank', 'active', 0, '2026-10-01', '2026-10-01'),
+        ('archived-account', 'user-1', 'Archived', 'bank', 'archived', 0, '2026-10-01', '2026-10-01'),
+        ('deleted-account', 'user-1', 'Deleted', 'bank', 'active', 1, '2026-10-01', '2026-10-01'),
+        ('credit-card', 'user-1', 'Rewards Visa', 'credit_card', 'active', 0, '2026-10-01', '2026-10-01');
     `);
-    for (const migration of [m051, m053, m056, m074, m084]) await migration.up(mockDb as never);
   });
   afterEach(() => mockSqlite.close());
 
