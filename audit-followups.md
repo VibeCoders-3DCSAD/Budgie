@@ -6,6 +6,7 @@ Issues found in self-reviews of `audit.md` fixes. None is a regression; each is 
 |---|---|---|---|
 | 1, 2 | Findings 2 and 5 | 2026-11-02 | Sync |
 | 3 | Findings 16–20 | 2026-11-03 | Account reads |
+| 4 | Finding 24 | 2026-11-03 | Dates |
 
 ## 1. Very large queues can exceed SQLite's bound-parameter limit
 
@@ -42,3 +43,13 @@ Both call `listFinancialAccounts(userId)` with no filter. That reads every accou
 Tracing shows they do not. `getRequiredDebtTotal` (`features/debt-manager/helpers/requiredDebtTotal.ts`) keeps only `kind === "credit_card" && status === "active"` in both of its card paths (`getCreditCardObligations` and `getEstimatedCreditCardObligations`). Cycles and statements of other accounts are dropped. Both callers use their own account list only to look up names for the obligations that come back, which belong to active cards.
 
 **Fix:** Pass `{ kind: "credit_card", status: "active" }` to `listFinancialAccounts` in both callers. Check that the dashboard's upcoming-debt section and the Debt Manager's required total stay the same for a user with one active and one archived card, where the archived card still has an unpaid statement.
+
+## 4. The credit-card screen and statement date still use the device's day
+
+**Severity:** WARNING — Logic
+
+**Files:** `apps/app/features/debt-manager/credit-cards/components/CreditCardCollections.tsx` (`isoToday`); `apps/app/features/debt-manager/credit-cards/components/CreditCardStatementForm.tsx`; `apps/app/local-db/repositories/credit-cards/creditCardStatements.ts` (`createCreditCardStatement`, `deviceToday`)
+
+Finding 24 moved the business rules to the Manila day: which cycle is open, when a statement may be recorded, and when a debt is behind. The credit-card screen still marks a cycle as waiting for its statement with the device's day, and the statement form and its "no later than today" check limit the statement date to the device's day. On a device in Manila the two days are the same. On a device set to a zone west of Manila (for example a user abroad), they can differ for part of each day. The screen then offers "Add statement" for a cycle the repository still treats as open, and saving fails with "Statements can only be recorded after the billing cycle has closed."
+
+**Fix:** Decide whether the statement date is the user's own calendar day or the Manila day. If it is the Manila day, pass `localToday()` to `CreditCardCollections` and the statement form, and use it for the statement-date bound. Either way, the "pending statement" badge should use the same day as the closed-cycle check. Test a device zone of UTC−5 at 20:00 local on a cutoff day.

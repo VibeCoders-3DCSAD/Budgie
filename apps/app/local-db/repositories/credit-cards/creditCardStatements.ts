@@ -4,6 +4,7 @@ import type { SyncOperation } from "../../types";
 import { validateIsoDate } from "./creditCardCycleDates";
 import { getDb, now } from "../helpers/db";
 import { deviceToday } from "../../../lib/dates";
+import { localToday } from "../../../features/billers/schedule";
 
 export type CreditCardStatement = {
   id: string;
@@ -113,7 +114,7 @@ export async function createCreditCardStatement(
       userId,
     );
     if (!cycle) throw new LocalDbError("NOT_FOUND", "Credit card billing cycle not found.");
-    if (cycle.cutoff_date >= new Date().toISOString().slice(0, 10)) {
+    if (cycle.cutoff_date >= localToday()) {
       throw new LocalDbError("VALIDATION_ERROR", "Statements can only be recorded after the billing cycle has closed.");
     }
     if (cycle.statement_date) throw new LocalDbError("VALIDATION_ERROR", "A statement has already been recorded for this billing cycle.");

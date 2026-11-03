@@ -1,3 +1,4 @@
+import { jest } from "@jest/globals";
 import {
   calculateCurrentCreditCardCycle,
   calculateSuccessorCreditCardCycle,
@@ -49,5 +50,15 @@ describe("credit-card cycle dates", () => {
       cycle_start_date: "2026-09-06",
       cutoff_date: "2026-10-04",
     });
+  });
+
+  it("defaults to the Manila day, which starts at 16:00 UTC", () => {
+    jest.useFakeTimers().setSystemTime(new Date("2026-10-15T16:30:00.000Z"));
+    try {
+      // Cutoff day 15: the 15th closes in UTC, but it is already the 16th in Manila.
+      expect(calculateCurrentCreditCardCycle({ account_id: "card-1", cutoff_day: 15 })).toMatchObject({ cycle_start_date: "2026-10-16", cutoff_date: "2026-11-15" });
+    } finally {
+      jest.useRealTimers();
+    }
   });
 });

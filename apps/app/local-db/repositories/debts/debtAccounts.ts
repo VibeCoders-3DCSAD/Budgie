@@ -3,6 +3,7 @@ import { enqueueOperation, LocalDbError } from "../../helpers";
 import type { SyncOperation } from "../../types";
 import { randomUUID } from "../../uuid";
 import { getDb, now } from "../helpers/db";
+import { localToday } from "../../../features/billers/schedule";
 
 export const DEBT_TYPES = ["personal_loan", "salary_loan", "multipurpose_loan", "business_loan", "auto_loan", "custom_debt"] as const;
 export const DEBT_STATUSES = ["active", "archived", "deleted", "paid_off"] as const;
@@ -84,7 +85,7 @@ function normalizeStatus(value: string, deleted: number): DebtAccountStatus { re
 export function deriveDebtProgress(debt: Pick<DebtAccount, "currentBalanceCentavos" | "minimumPaymentCentavos" | "nextDueDate" | "status">): DebtProgressStatus {
   if (debt.status === "paid_off" || debt.currentBalanceCentavos === 0) return "finished";
   if (!debt.nextDueDate || debt.minimumPaymentCentavos <= 0) return "no_payments";
-  return debt.nextDueDate < new Date().toISOString().slice(0, 10) ? "behind" : "on_schedule";
+  return debt.nextDueDate < localToday() ? "behind" : "on_schedule";
 }
 
 function mapDebt(row: DebtAccountRow): DebtAccount {

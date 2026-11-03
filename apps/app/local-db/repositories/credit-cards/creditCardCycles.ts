@@ -2,6 +2,7 @@ import { enqueueOperation, LocalDbError } from "../../helpers";
 import { randomUUID } from "../../uuid";
 import type { SyncOperation } from "../../types";
 import { getDb, now } from "../helpers/db";
+import { localToday } from "../../../features/billers/schedule";
 import {
   calculateCurrentCreditCardCycle,
   calculateSuccessorCreditCardCycle,
@@ -81,7 +82,7 @@ export async function listCreditCardCycles(userId: string, accountId?: string): 
 export async function getCurrentCreditCardCycle(
   userId: string,
   accountId: string,
-  asOfDate = new Date().toISOString().slice(0, 10),
+  asOfDate = localToday(),
 ): Promise<CreditCardCycle | null> {
   validateIsoDate(asOfDate, "asOfDate");
   const db = await getDb();
@@ -227,7 +228,7 @@ export async function updateCreditCardCycle(
     if (current.statement_date) {
       throw new LocalDbError("VALIDATION_ERROR", "Recorded credit-card billing cycles cannot be changed.");
     }
-    const today = new Date().toISOString().slice(0, 10);
+    const today = localToday();
     if (today < current.cycle_start_date || today > current.cutoff_date) {
       throw new LocalDbError("VALIDATION_ERROR", "Only the open credit-card billing cycle can be changed.");
     }
@@ -287,7 +288,7 @@ export async function updateCreditCardCycle(
 
 export async function ensureCurrentCreditCardCycles(userId: string, deviceId: string, asOfDate?: string): Promise<CreditCardCycle[]> {
   const db = await getDb();
-  const date = asOfDate ?? new Date().toISOString().slice(0, 10);
+  const date = asOfDate ?? localToday();
   validateIsoDate(date, "asOfDate");
   const rows = await db.getAllAsync<CreditCardCycleDefaults>(
     `SELECT fa.id AS account_id, cc.cutoff_day, cc.billing_cycle_days
