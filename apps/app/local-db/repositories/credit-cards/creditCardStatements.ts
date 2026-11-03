@@ -3,7 +3,6 @@ import { randomUUID } from "../../uuid";
 import type { SyncOperation } from "../../types";
 import { validateIsoDate } from "./creditCardCycleDates";
 import { getDb, now } from "../helpers/db";
-import { deviceToday } from "../../../lib/dates";
 import { localToday } from "../../../features/billers/schedule";
 
 export type CreditCardStatement = {
@@ -114,11 +113,12 @@ export async function createCreditCardStatement(
       userId,
     );
     if (!cycle) throw new LocalDbError("NOT_FOUND", "Credit card billing cycle not found.");
-    if (cycle.cutoff_date >= localToday()) {
+    // The Manila day, like the screen that offers "Add statement" and the statement form's date bound.
+    const today = localToday();
+    if (cycle.cutoff_date >= today) {
       throw new LocalDbError("VALIDATION_ERROR", "Statements can only be recorded after the billing cycle has closed.");
     }
     if (cycle.statement_date) throw new LocalDbError("VALIDATION_ERROR", "A statement has already been recorded for this billing cycle.");
-    const today = deviceToday();
     if (input.statement_date < cycle.cutoff_date || input.statement_date > today) {
       throw new LocalDbError("VALIDATION_ERROR", "Statement date must be on or after the billing-cycle cutoff and no later than today.");
     }

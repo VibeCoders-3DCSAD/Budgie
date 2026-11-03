@@ -60,4 +60,32 @@ describe("credit-card statements", () => {
       minimum_due_centavos: 10000,
     })).rejects.toThrow("Statement date must be on or after the billing-cycle cutoff");
   });
+
+  test("accepts a statement dated the Manila day on a device whose own day is still the cutoff day", async () => {
+    // 20:00 on Jan 31 at UTC-5 is 09:00 on Feb 1 in Manila. Jest's zone is fixed, so the device's day is pinned here.
+    jest.doMock("../../../../lib/dates", () => ({
+      ...jest.requireActual<typeof import("../../../../lib/dates")>("../../../../lib/dates"),
+      deviceToday: () => "2026-01-31",
+    }));
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] }).setSystemTime(new Date("2026-02-01T01:00:00.000Z"));
+    const db = {
+      getFirstAsync: jest.fn<(...args: any[]) => Promise<unknown>>()
+        .mockResolvedValueOnce({ id: "cycle-1", cutoff_date: "2026-01-31", statement_date: null })
+        .mockResolvedValueOnce({ id: "statement-1" }),
+      runAsync: jest.fn(),
+      withTransactionAsync: jest.fn(async (work: (tx: unknown) => Promise<void>) => work(db)),
+    };
+    mockInitDatabase.mockResolvedValue(db);
+
+    const { createCreditCardStatement } = await import("../creditCardStatements");
+
+    // Both date checks pass; the duplicate-statement check is the first to fail.
+    await expect(createCreditCardStatement("user-1", "device-1", {
+      cycle_id: "cycle-1",
+      statement_date: "2026-02-01",
+      due_date: "2026-02-21",
+      statement_balance_centavos: 120000,
+      minimum_due_centavos: 10000,
+    })).rejects.toThrow("A statement has already been recorded for this billing cycle.");
+  });
 });
