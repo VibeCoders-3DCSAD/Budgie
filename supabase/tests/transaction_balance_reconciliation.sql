@@ -127,4 +127,50 @@ BEGIN
 END;
 $$;
 
+-- Several writes to one account record it once, and the first deferred event reconciles it against
+-- the final ledger and clears the set, so the remaining events for those writes have nothing to do.
+SET CONSTRAINTS public.transactions_reconcile_account_balances DEFERRED;
+INSERT INTO public.transactions (id, user_id, transaction_type, transaction_date, amount_centavos, source_account_id, subcategory_id)
+SELECT gen_random_uuid(), '7b000000-0000-4000-8000-000000000001', 'expense', '2026-10-19', 1000,
+       '7b000000-0000-4000-8000-0000000000a1', '7b000000-0000-4000-8000-0000000000e1'
+  FROM generate_series(1, 5);
+UPDATE public.transactions SET amount_centavos = 2000 WHERE id = '7b000000-0000-4000-8000-0000000000f5';
+
+DO $$
+BEGIN
+  IF current_setting('odin.unreconciled_account_ids', true)::uuid[] <> ARRAY['7b000000-0000-4000-8000-0000000000a1']::uuid[] THEN
+    RAISE EXCEPTION 'six writes to one account must record it once: %', current_setting('odin.unreconciled_account_ids', true);
+  END IF;
+END;
+$$;
+
+SET CONSTRAINTS public.transactions_reconcile_account_balances IMMEDIATE;
+
+DO $$
+BEGIN
+  -- 85000, five 1000 expenses, and f5 lowered from 5000 to 2000.
+  IF (SELECT current_balance_centavos FROM public.financial_accounts WHERE id = '7b000000-0000-4000-8000-0000000000a1') <> 83000 THEN
+    RAISE EXCEPTION 'coalesced reconciliation must reach the final ledger balance: %',
+      (SELECT current_balance_centavos FROM public.financial_accounts WHERE id = '7b000000-0000-4000-8000-0000000000a1');
+  END IF;
+  IF current_setting('odin.unreconciled_account_ids', true) <> '' THEN
+    RAISE EXCEPTION 'reconciliation must clear the recorded accounts';
+  END IF;
+END;
+$$;
+
+-- A write after an early firing records its account again and is reconciled at the next firing.
+SET CONSTRAINTS public.transactions_reconcile_account_balances DEFERRED;
+UPDATE public.transactions SET deleted = true WHERE id = '7b000000-0000-4000-8000-0000000000f5';
+SET CONSTRAINTS public.transactions_reconcile_account_balances IMMEDIATE;
+
+DO $$
+BEGIN
+  IF (SELECT current_balance_centavos FROM public.financial_accounts WHERE id = '7b000000-0000-4000-8000-0000000000a1') <> 85000 THEN
+    RAISE EXCEPTION 'a write after an early reconciliation must still be reconciled: %',
+      (SELECT current_balance_centavos FROM public.financial_accounts WHERE id = '7b000000-0000-4000-8000-0000000000a1');
+  END IF;
+END;
+$$;
+
 ROLLBACK;
