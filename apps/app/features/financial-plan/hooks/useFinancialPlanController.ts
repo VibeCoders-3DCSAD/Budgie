@@ -7,7 +7,7 @@ import { listFinancialAccounts } from "../../../local-db/repositories/foundation
 import { runSync } from "../../../local-db/sync/runSync";
 import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
 import { requestFinancialPlanCommitments, requestFinancialPlanExplanations, requestFinancialPlanForecast, requestFinancialPlanRecommendation, type ManualPlanAllocation, type ReservationSkips } from "../api";
-import { hasUnderfundedReservation, parseBudgetAmount, planCommitmentBudgets, planObligations, requirementReservations, updateCommitmentBudget, type CommitmentKind } from "../helpers/commitmentBudget";
+import { hasUnderfundedReservation, NO_COMMITMENT_SKIPS, parseBudgetAmount, planCommitmentBudgets, planObligations, requirementReservations, updateCommitmentBudget, type CommitmentKind } from "../helpers/commitmentBudget";
 import type { PlanCommitmentPayments } from "../helpers/commitmentPayments";
 import { recommendPlanAmount } from "../helpers/planAmountRecommendation";
 import { applyFinancialPlanLabels, applyFinancialPlanSpending, remainingUnallocatedCentavos, toCentavos } from "../helpers/financialPlanPresentation";
@@ -78,7 +78,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
   const [availableMoneyCentavos, setAvailableMoneyCentavos] = useState(0);
   const [plannedAmount, setPlannedAmount] = useState("");
   const [manualAllocations, setManualAllocations] = useState<ManualPlanAllocation[]>([]);
-  const [reservationSkips, setReservationSkips] = useState<ReservationSkips>({ debtRepayments: false, savingsContributions: false, scheduledPayments: false });
+  const [reservationSkips, setReservationSkips] = useState<ReservationSkips>(NO_COMMITMENT_SKIPS);
   // Savings and debt edits after allocation only change the remaining money; insights describing the earlier allocation are hidden.
   const [commitmentsEdited, setCommitmentsEdited] = useState(false);
   const [acceptConfirmOpen, setAcceptConfirmOpen] = useState(false);
@@ -175,7 +175,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       const initialSelection = initializeCategories(topLevelResult, result, recommendations);
       setPlanForecast(forecast);
       setManualAllocations([]);
-      setReservationSkips({ debtRepayments: false, savingsContributions: false, scheduledPayments: false });
+      setReservationSkips(NO_COMMITMENT_SKIPS);
       setCommitmentsEdited(false);
       const available = accounts
         .filter((account) => account.status === "active" && account.kind !== "savings" && account.kind !== "credit_card")

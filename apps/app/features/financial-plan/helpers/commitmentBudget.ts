@@ -61,6 +61,9 @@ export function updateCommitmentBudget(plan: FinancialPlanRecommendation, kind: 
 
 export type CommitmentSkips = { debtRepayments: boolean; savingsContributions: boolean; scheduledPayments: boolean };
 
+// Nothing skipped: every commitment is reserved at its amount due. Frozen because it is shared as a default.
+export const NO_COMMITMENT_SKIPS: CommitmentSkips = Object.freeze({ debtRepayments: false, savingsContributions: false, scheduledPayments: false });
+
 const commitmentKinds = { debtRepayments: "debtReservations", savingsContributions: "savingsReservations", scheduledPayments: "obligations" } as const;
 
 // Types the user budgets manually start at what was already paid towards each row (nothing when unpaid); the rest start at

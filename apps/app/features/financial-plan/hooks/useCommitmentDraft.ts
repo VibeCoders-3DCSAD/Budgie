@@ -1,15 +1,13 @@
 import { useCallback, useState } from "react";
-import { manualCommitmentDraft, parseBudgetAmount, selectedCommitmentBudgets, type CommitmentBudget, type CommitmentKind, type CommitmentPreview, type CommitmentSkips } from "../helpers/commitmentBudget";
+import { manualCommitmentDraft, NO_COMMITMENT_SKIPS, parseBudgetAmount, selectedCommitmentBudgets, type CommitmentBudget, type CommitmentKind, type CommitmentPreview, type CommitmentSkips } from "../helpers/commitmentBudget";
 import { previewPaidCentavos, type PlanCommitmentPayments } from "../helpers/commitmentPayments";
-
-const NO_MANUAL_COMMITMENTS: CommitmentSkips = { debtRepayments: false, savingsContributions: false, scheduledPayments: false };
 
 // The commitments the month requires, the user's draft budget for each, and which amount fields are invalid.
 export function useCommitmentDraft() {
   const [preview, setPreview] = useState<CommitmentPreview | null>(null);
   const [draft, setDraft] = useState<CommitmentPreview | null>(null);
   // Commitment types the user budgets by hand on the review step instead of setting aside their amount due.
-  const [manual, setManual] = useState<CommitmentSkips>(NO_MANUAL_COMMITMENTS);
+  const [manual, setManual] = useState<CommitmentSkips>(NO_COMMITMENT_SKIPS);
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
   const anyManual = manual.debtRepayments || manual.savingsContributions || manual.scheduledPayments;
   const hasInvalidCommitments = Object.values(invalidFields).some(Boolean);
@@ -22,7 +20,7 @@ export function useCommitmentDraft() {
     setPreview(next);
     setDraft(next);
     setInvalidFields({});
-    setManual(NO_MANUAL_COMMITMENTS);
+    setManual(NO_COMMITMENT_SKIPS);
   }, []);
 
   const changeManual = (next: CommitmentSkips, payments: PlanCommitmentPayments | null) => {
