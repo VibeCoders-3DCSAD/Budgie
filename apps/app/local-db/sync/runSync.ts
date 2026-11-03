@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { DEVICE_NOT_REGISTERED } from "@odin/sync-config";
-import { authorizedFetch, authorizeLocalRequest, rejectServerSession, trackProtectedRequest } from "../../lib/localAccess";
+import { authorizeLocalRequest } from "../../lib/localAccess";
 import { initDatabase } from "../client";
 import { enqueueOperation } from "../helpers";
 import {
@@ -17,9 +17,9 @@ import { markSyncConflict, markSyncRejection, rebaseLegacyDebtPriorityConflict }
 import { repairCreditCardPaymentCreateRows } from "./repairCreditCardPaymentCreates";
 import { repairCreditCardDetailCreateRows } from "./repairCreditCardDetailCreates";
 import { retryAnomalyEvaluationPulls } from "./retryAnomalyEvaluationPulls";
+import { ensureDeviceRegistered, registerDevice } from "./deviceRegistration";
+import { API_BASE, fetchWithTimeout, responseErrorCode } from "./syncRequest";
 
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
-const REQUEST_TIMEOUT = 10_000;
 const MAX_PULL_PAGES_PER_SYNC = 3;
 const PULL_PAGE_DELAY_MS = 100;
 const PROGRESS_REPORT_ROWS = 25;
@@ -328,7 +328,7 @@ async function pushQueue(
 
   if (!response.ok) {
     await recordRequestFailure(db, userId, deviceId, repairedRows, `server error: ${response.status}`);
-    const deviceNotRegistered = response.status === 400 && await errorCode(response) === DEVICE_NOT_REGISTERED;
+    const deviceNotRegistered = response.status === 400 && await responseErrorCode(response) === DEVICE_NOT_REGISTERED;
     return { pushed: 0, errors: repairedRows.length, selected: rows.length, requestFailed: true, deviceNotRegistered, operationIds };
   }
 
@@ -600,15 +600,6 @@ async function repairCreditCardDetailSyncRows(
 // A failed request says nothing about its rows: the server reports each bad operation in its results,
 // and request errors (network, outage, rate limit, inactive device) are about the connection. So the
 // rows keep their attempts and only remember the error.
-async function errorCode(response: Response): Promise<unknown> {
-  try {
-    const body = await response.json();
-    return body?.code;
-  } catch {
-    return undefined;
-  }
-}
-
 async function recordRequestFailure(
   db: SQLite.SQLiteDatabase,
   userId: string,
@@ -749,50 +740,4 @@ async function saveCursors(
     pullPending ? 1 : 0,
     new Date().toISOString(),
   );
-}
-
-async function ensureDeviceRegistered(
-  db: SQLite.SQLiteDatabase,
-  userId: string,
-  deviceId: string,
-  accessToken: string,
-): Promise<void> {
-  const existing = await db.getFirstAsync<{ device_id: string }>(
-    "SELECT device_id FROM sync_state WHERE user_id = ?",
-    userId,
-  );
-  if (existing?.device_id === deviceId) return;
-  await registerDevice(deviceId, accessToken);
-}
-
-async function registerDevice(deviceId: string, accessToken: string): Promise<void> {
-  const response = await fetchWithTimeout(`${API_BASE}/odin/api/sync/register-device`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ payload: { device_id: deviceId } }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`device registration failed: ${response.status}`);
-  }
-}
-
-
-function fetchWithTimeout(
-  url: string,
-  options: RequestInit & { timeout?: number },
-): Promise<Response> {
-  const timeout = options.timeout ?? REQUEST_TIMEOUT;
-  const controller = new AbortController();
-  const release = trackProtectedRequest(controller);
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-  // authorizedFetch already retried with a refreshed token, so a 401 here is a real rejection.
-  return authorizedFetch(url, { ...options, signal: controller.signal }).then((response) => {
-    if (response.status === 401) rejectServerSession();
-    return response;
-  }).finally(() => { clearTimeout(timeoutId); release(); });
 }
