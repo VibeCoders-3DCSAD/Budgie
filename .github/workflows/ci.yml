@@ -1,0 +1,69 @@
+name: CI
+
+# Behavioural checks. Deploy API calls this workflow and deploys only when every job passes.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    name: Type checks and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Placeholders: some API modules build a Supabase client on import. Unit tests mock every call, and the
+    # integration suite (which would use these) is excluded from `pnpm --filter api test`.
+    env:
+      SUPABASE_URL: http://127.0.0.1:54321
+      SUPABASE_ANON_KEY: ci-placeholder-anon-key
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Type-check API
+        run: pnpm --filter api exec tsc -p tsconfig.json --noEmit
+      - name: Type-check app
+        run: pnpm --filter app exec tsc --noEmit
+      # Unit-only: the integration suite writes through a service-role key and refuses non-local targets.
+      - name: API tests
+        run: pnpm --filter api test
+      # The app and API suites also cover the shared packages, which have no tests of their own.
+      - name: App tests
+        run: pnpm --filter app test --runInBand --silent
+
+  database:
+    name: Clean migration replay and SQL contract tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.105.0
+      # A disposable stack on the runner: every migration is applied from an empty database.
+      - name: Start Supabase and apply migrations
+        run: supabase start
+      # Each test file wraps its fixtures in BEGIN ... ROLLBACK and raises on a failed check.
+      - name: SQL contract tests
+        run: |
+          status=0
+          for file in supabase/tests/*.sql; do
+            echo "::group::$file"
+            if ! psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -X -q -v ON_ERROR_STOP=1 -f "$file"; then
+              echo "::error file=$file::SQL contract test failed"
+              status=1
+            fi
+            echo "::endgroup::"
+          done
+          exit "$status"
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup

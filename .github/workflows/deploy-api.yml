@@ -11,6 +11,7 @@ on:
       - ".nvmrc"
       - ".node-version"
       - ".github/workflows/deploy-api.yml"
+      - ".github/workflows/ci.yml"
   workflow_dispatch:
 
 concurrency:
@@ -18,7 +19,11 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  checks:
+    uses: ./.github/workflows/ci.yml
+
   deploy:
+    needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
