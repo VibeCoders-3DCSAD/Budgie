@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { classifyFinancialCondition } from "../../lib/mlClient.js";
 import { resolveEmergencyFundBalance } from "../savings/emergencyFundBalance.js";
+import { loggableError } from "../../lib/errorLog.js";
 
 type FinancialConditionAssessment = {
   id: string;
@@ -53,20 +54,33 @@ function onboardingAssessmentInput(answers: OnboardingAnswers) {
 
 async function saveAssessment(userId: string, input: Record<string, unknown>, supabase: SupabaseClient): Promise<FinancialConditionAssessment | null> {
   const result = await classifyFinancialCondition(userId, input);
-  if (!result.ok) return null;
+  if (!result.ok) {
+    console.error("financial classification assessment failed", { user_id: userId, stage: "classify", reason: result.reason });
+    return null;
+  }
 
   const { data: assessment, error: insertError } = await supabase
     .from("financial_condition_assessments")
     .insert({ user_id: userId, rule_set_version: result.modelVersion, input_snapshot: input, output_snapshot: result.classification })
     .select("id, assessed_at, rule_set_version, input_snapshot, output_snapshot")
     .single();
-  if (insertError || !assessment) return null;
+  if (insertError || !assessment) {
+    console.error("financial classification assessment failed", { user_id: userId, stage: "save", error: insertError ? loggableError(insertError) : "no row returned" });
+    return null;
+  }
   return assessment as FinancialConditionAssessment;
 }
 
 export async function createFinancialConditionAssessment(userId: string, supabase: SupabaseClient): Promise<FinancialConditionAssessment | null> {
   const { data: input, error } = await supabase.rpc("get_financial_classification_v2_input", { p_user_id: userId });
-  if (error || !input || typeof input !== "object" || Array.isArray(input)) return null;
+  if (error) {
+    console.error("financial classification assessment failed", { user_id: userId, stage: "input", error: loggableError(error) });
+    return null;
+  }
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    console.error("financial classification assessment failed", { user_id: userId, stage: "input", error: "input is not an object" });
+    return null;
+  }
 
   const emergencyFundBalance = await resolveEmergencyFundBalance(userId, supabase);
   const classificationInput = emergencyFundBalance === null

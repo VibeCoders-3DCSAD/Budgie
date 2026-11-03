@@ -185,6 +185,7 @@ describe("POST /odin/api/auth/session", () => {
 
     mockFrom
       .mockReturnValueOnce(createMockQuery({ data: null, error: { message: "Insert failed" } }));
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
 
     const response = await request(app)
       .post("/odin/api/auth/session")
@@ -192,6 +193,8 @@ describe("POST /odin/api/auth/session", () => {
       .send({ payload: {} });
 
     expect(response.status).toBe(500);
+    expect(consoleError).toHaveBeenCalledWith("[auth/session] user bootstrap failed", expect.objectContaining({ user_id: validUserId }));
+    consoleError.mockRestore();
     expect(response.body).toMatchObject({
       message: expect.stringMatching(/bootstrap/i),
     });

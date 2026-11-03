@@ -25,6 +25,13 @@ describe("onboarding financial condition assessment", () => {
     expect(input).not.toHaveProperty("self_reported_revolving_months");
   });
 
+  it("logs the failed stage and reason without the submitted amounts", async () => {
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
+    await submittedInput({});
+    expect(consoleError).toHaveBeenCalledWith("financial classification assessment failed", { user_id: "user-1", stage: "classify", reason: "not_configured" });
+    consoleError.mockRestore();
+  });
+
   it("uses take-home income and the declared debt percentage without deducting old amounts again", async () => {
     const input = await submittedInput({ monthly_income: "40000", paying_off_debt: "true", monthly_debt_payment_percentage: "25", emergency_savings_runway: "2_months" });
     expect(input).toMatchObject({ monthly_disposable_income: 40000, required_monthly_debt_payments: 10000, liquid_emergency_savings: 60000 });

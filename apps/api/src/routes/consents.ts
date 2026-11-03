@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { loggableError } from "../lib/errorLog.js";
 import { VALID_CONSENT_KINDS, VALID_CONSENT_STATUSES } from "../lib/constants.js";
 
 const router = Router();
@@ -57,6 +58,7 @@ router.post("/", requireAuth, async (request: AuthenticatedRequest, response) =>
     .single();
 
   if (error) {
+    console.error("[consents] consent insert failed", { user_id: userId, consent_kind, status, error: loggableError(error) });
     response.status(500).json({
       error: "Internal Server Error",
       message: "Failed to record consent",

@@ -208,11 +208,12 @@ describe("POST /odin/api/consents", () => {
 
     const mockSingle = jest.fn().mockReturnValue({
       data: null,
-      error: { message: "Database error" },
+      error: { code: "23514", message: "Database error", details: "Failing row contains (...)" },
     });
     const mockSelect = jest.fn().mockReturnValue({ single: mockSingle });
     const mockInsert = jest.fn().mockReturnValue({ select: mockSelect });
     mockFrom.mockReturnValue({ insert: mockInsert });
+    const consoleError = jest.spyOn(console, "error").mockImplementation(() => undefined);
 
     const response = await request(app)
       .post("/odin/api/consents")
@@ -220,5 +221,10 @@ describe("POST /odin/api/consents", () => {
       .send({ payload: { consent_kind: "terms", status: "granted", version: "2026-06" } });
 
     expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Failed to record consent");
+    expect(consoleError).toHaveBeenCalledWith("[consents] consent insert failed", {
+      user_id: validUserId, consent_kind: "terms", status: "granted", error: { code: "23514", message: "Database error" },
+    });
+    consoleError.mockRestore();
   });
 });

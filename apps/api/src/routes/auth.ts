@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { AUTH_ERRORS } from "../lib/constants.js";
 import { isStrongPassword, normalizeEmail } from "../lib/authValidation.js";
 import { bootstrapAuthenticatedUser } from "../services/auth/userBootstrapService.js";
+import { loggableError } from "../lib/errorLog.js";
 
 const router = Router();
 
@@ -68,6 +69,7 @@ router.post("/register", async (request: Request, response: Response) => {
       return;
     }
 
+    console.error("[auth/register] sign-up failed", { error: loggableError(error) });
     response.status(500).json({
       error: "Internal Server Error",
       message: AUTH_ERRORS.registration_failed,
@@ -144,7 +146,8 @@ router.post("/login", async (request: Request, response: Response) => {
       data.user.id,
       data.session.access_token,
     );
-  } catch {
+  } catch (error) {
+    console.error("[auth/login] user bootstrap failed", { user_id: data.user.id, error: loggableError(error) });
     response.status(500).json({
       error: "Internal Server Error",
       message: AUTH_ERRORS.bootstrap_failed,
@@ -193,6 +196,7 @@ router.post("/password-reset", async (request: Request, response: Response) => {
       return;
     }
 
+    console.error("[auth/password-reset] reset email request failed", { error: loggableError(error) });
     response.status(500).json({
       error: "Internal Server Error",
       message: AUTH_ERRORS.password_reset_failed,
@@ -251,6 +255,7 @@ router.post(
     });
 
     if (error) {
+      console.error("[auth/password-update] password update failed", { user_id: request.userId ?? null, error: loggableError(error) });
       response.status(500).json({
         error: "Internal Server Error",
         message: AUTH_ERRORS.password_update_failed,
@@ -339,7 +344,8 @@ router.post("/session", async (request: Request, response: Response) => {
   let bootstrapPayload: Awaited<ReturnType<typeof bootstrapAuthenticatedUser>>;
   try {
     bootstrapPayload = await bootstrapAuthenticatedUser(userId, token);
-  } catch {
+  } catch (error) {
+    console.error("[auth/session] user bootstrap failed", { user_id: userId, error: loggableError(error) });
     response.status(500).json({
       error: "Internal Server Error",
       message: AUTH_ERRORS.bootstrap_profile_failed,

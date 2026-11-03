@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { loggableError } from "../lib/errorLog.js";
 
 const router = Router();
 
@@ -19,6 +20,7 @@ router.get("/data-export-requests", requireAuth, async (request: AuthenticatedRe
     .limit(10);
 
   if (error) {
+    console.error("[data-export] export request list failed", { user_id: userId, error: loggableError(error) });
     response.status(500).json({ error: "Internal Server Error", message: "Failed to fetch export requests" });
     return;
   }
@@ -68,6 +70,7 @@ router.post("/data-export-requests", requireAuth, async (request: AuthenticatedR
     .single<{ id: string; status: string }>();
 
   if (error || !data) {
+    console.error("[data-export] export request replacement failed", { user_id: request.userId, error: error ? loggableError(error) : "no row returned" });
     response.status(500).json({
       error: "Internal Server Error",
       message: "Failed to create data export request",

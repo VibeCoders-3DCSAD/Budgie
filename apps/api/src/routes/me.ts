@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { Response } from "express";
 import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
+import { loggableError } from "../lib/errorLog.js";
 
 const router = Router();
 
@@ -56,6 +57,7 @@ router.get("/", requireAuth, async (request: AuthenticatedRequest, response: Res
       .single();
 
     if (privacyError && privacyError.code !== "PGRST116") {
+      console.error("[me] privacy settings fetch failed", { user_id: userId, error: loggableError(privacyError) });
       response.status(500).json({
         error: "Internal Server Error",
         message: "Failed to fetch privacy settings",
@@ -80,6 +82,7 @@ router.get("/", requireAuth, async (request: AuthenticatedRequest, response: Res
       .limit(MAX_CURRENT_CONSENTS);
 
     if (consentsError) {
+      console.error("[me] current consents fetch failed", { user_id: userId, error: loggableError(consentsError) });
       response.status(500).json({
         error: "Internal Server Error",
         message: "Failed to fetch consents",

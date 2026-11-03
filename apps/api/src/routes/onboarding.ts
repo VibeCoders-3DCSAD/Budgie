@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/auth.js";
 import type { AuthenticatedRequest } from "../middleware/auth.js";
 import { ONBOARDING_ERRORS } from "../lib/constants.js";
 import { getServiceRoleClient } from "../lib/supabase.js";
+import { loggableError } from "../lib/errorLog.js";
 import { createOnboardingFinancialConditionAssessment } from "../services/classification/financialConditionAssessmentService.js";
 import { normalizeSeasonalAnswers } from "../services/onboarding/seasonalAnswers.js";
 import { onboardingSubmissionError, validateOnboardingPayload } from "../services/onboarding/onboardingValidation.js";
@@ -32,6 +33,7 @@ router.post("/onboarding/sessions", requireAuth, async (request: AuthenticatedRe
     .single();
 
   if (rpcError || !session) {
+    console.error("[onboarding] session create failed", { user_id: userId, error: rpcError ? loggableError(rpcError) : "no row returned" });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_create_failed,
@@ -65,6 +67,7 @@ router.patch("/onboarding/sessions/:id", requireAuth, async (request: Authentica
     .maybeSingle();
 
   if (fetchError) {
+    console.error("[onboarding] session fetch for update failed", { user_id: userId, session_id: sessionId, error: loggableError(fetchError) });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_fetch_failed,
@@ -121,6 +124,7 @@ router.patch("/onboarding/sessions/:id", requireAuth, async (request: Authentica
     .single();
 
   if (updateError) {
+    console.error("[onboarding] session update failed", { user_id: userId, session_id: sessionId, error: loggableError(updateError) });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_update_failed,
@@ -153,6 +157,7 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
     .maybeSingle();
 
   if (sessionError) {
+    console.error("[onboarding] session fetch for submit failed", { user_id: userId, session_id: sessionId, error: loggableError(sessionError) });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_fetch_failed,
@@ -202,7 +207,7 @@ router.post("/onboarding/sessions/:id/submit", requireAuth, async (request: Auth
       request_id: request.header("x-request-id")?.slice(0, 128) ?? null,
       user_id: userId,
       session_id: sessionId,
-      error: rpcError,
+      error: loggableError(rpcError),
     });
     response.status(500).json({
       error: "Internal Server Error",
@@ -236,6 +241,7 @@ router.get("/onboarding/sessions/current", requireAuth, async (request: Authenti
     .maybeSingle();
 
   if (inProgressError) {
+    console.error("[onboarding] in-progress session fetch failed", { user_id: userId, error: loggableError(inProgressError) });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_fetch_failed,
@@ -258,6 +264,7 @@ router.get("/onboarding/sessions/current", requireAuth, async (request: Authenti
     .maybeSingle();
 
   if (submittedError) {
+    console.error("[onboarding] submitted session fetch failed", { user_id: userId, error: loggableError(submittedError) });
     response.status(500).json({
       error: "Internal Server Error",
       message: ONBOARDING_ERRORS.session_fetch_failed,
