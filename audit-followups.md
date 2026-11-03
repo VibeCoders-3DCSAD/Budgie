@@ -8,6 +8,7 @@ Issues found in self-reviews of `audit.md` fixes. None is a regression; each is 
 | 3 | Findings 16–20 | 2026-11-03 | Account reads |
 | 4 | Finding 24 | 2026-11-03 | Dates |
 | 5 | Finding 28 | 2026-11-03 | Screen composition |
+| 6 | Finding 28 | 2026-11-03 | Screen composition |
 
 ## 1. Very large queues can exceed SQLite's bound-parameter limit
 
@@ -66,3 +67,15 @@ This is the same coupling as finding 28's `FinancialPlanScreen`. The 222-line sc
 The seven list reads take only `userId`, so they load every credit card's data even when the screen shows a single `accountId`, and the screen filters most of it afterwards. The cost of this has not been measured.
 
 **Fix:** Extract a feature-local data-loading hook (for example `useDebtManagerData`) that owns the reads, error and stale state, and a separate cycle-editor hook for the billing-cycle draft, validation and save. The screen then composes the existing components. When `accountId` is given, consider scoping the reads to that account.
+
+## 6. The Financial Plan controller still owns category selection
+
+**Severity:** WARNING — Code Quality
+
+**Files:** `apps/app/features/financial-plan/hooks/useFinancialPlanController.ts` (category state, `toggleSubcategory`, `toggleTopLevelCategory`, `saveCategoryRule`, `saveTopLevelCategoryRule`, and the category part of the load effect)
+
+Finding 28 moved the screen's work into `useFinancialPlanController` and `useCommitmentDraft`, but the controller is 458 lines. Most of the bulk is category selection, which is separate from loading, generating and saving the plan. Ten of its state values (`categories`, `topLevelCategories`, `includedIds`, `includedCategoryIds`, `recommendedIds`, `recommendedCategoryIds`, `historyIds`, `historyCategoryIds`, `seasonalRecommendations`, `expectedSpend`) belong to it. So do the two toggles and the two rule saves (about 40 lines). The load effect also spends about 20 lines working out the recommended, history and required IDs. Because they share one hook, selection behaviour can only be tested through the whole controller.
+
+It stayed in the controller because the load effect fills it in and `loadRecommendation` reads `includedIds` and `includedCategoryIds`.
+
+**Fix:** Extract a `usePlanCategorySelection` hook that owns the category state, the toggles and the rule saves. It should expose an `initialize(...)` that the controller's load effect calls with the loaded categories and recommendations, in place of the setters it calls now. The controller then reads the included IDs from it, the same way it takes the commitment draft. Keep the order of the load effect's setters and its `active` guards. Add hook tests for toggling a subcategory, which clears its parent category, toggling a category, which drops its subcategories, a non-flexible rule save adding the category to the plan, and initialization from recommendations with an ID that no longer exists.
