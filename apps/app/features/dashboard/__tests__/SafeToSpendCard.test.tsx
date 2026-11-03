@@ -20,6 +20,18 @@ const data = {
 describe("SafeToSpendCard", () => {
   beforeEach(() => jest.clearAllMocks());
 
+  it("asks for the Manila day, even when the UTC day is still the day before", async () => {
+    // 20:00 UTC on Oct 17 is already 04:00 on Oct 18 in Manila.
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] }).setSystemTime(new Date("2026-10-17T20:00:00.000Z"));
+    try {
+      mockGetSafeToSpend.mockResolvedValue(null);
+      render(<SafeToSpendCard userId="user-1" reloadKey={0} onNavigate={jest.fn()} />);
+      expect(mockGetSafeToSpend).toHaveBeenCalledWith("user-1", "2026-10-18");
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("shows what is left, a daily amount, and the budgets closest to their limit", async () => {
     mockGetSafeToSpend.mockResolvedValue(data);
     const onNavigate = jest.fn();

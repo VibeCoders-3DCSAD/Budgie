@@ -34,7 +34,3 @@ export function dateAtDay(year: number, month: number, day: number): string {
 export function formatDeviceDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
-
-export function deviceToday(): string {
-  return formatDeviceDate(new Date());
-}

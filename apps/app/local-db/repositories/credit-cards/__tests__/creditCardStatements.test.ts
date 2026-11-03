@@ -62,12 +62,8 @@ describe("credit-card statements", () => {
   });
 
   test("accepts a statement dated the Manila day on a device whose own day is still the cutoff day", async () => {
-    // 20:00 on Jan 31 at UTC-5 is 09:00 on Feb 1 in Manila. Jest's zone is fixed, so the device's day is pinned here.
-    jest.doMock("../../../../lib/dates", () => ({
-      ...jest.requireActual<typeof import("../../../../lib/dates")>("../../../../lib/dates"),
-      deviceToday: () => "2026-01-31",
-    }));
-    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] }).setSystemTime(new Date("2026-02-01T01:00:00.000Z"));
+    // 20:00 UTC on Jan 31 (15:00 at UTC-5) is already 04:00 on Feb 1 in Manila, so Feb 1 is today for the statement.
+    jest.useFakeTimers({ doNotFake: ["nextTick", "setImmediate"] }).setSystemTime(new Date("2026-01-31T20:00:00.000Z"));
     const db = {
       getFirstAsync: jest.fn<(...args: any[]) => Promise<unknown>>()
         .mockResolvedValueOnce({ id: "cycle-1", cutoff_date: "2026-01-31", statement_date: null })
