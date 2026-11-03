@@ -108,20 +108,13 @@ async function validateTransactionUpdate({ supabase, userId, recordId }: SyncCon
   const txType = current.transaction_type as string;
   if (sanitized.savings_goal_contribution !== undefined && txType !== "transfer") throw new Error("savings contribution requires a transfer");
   if (sanitized.savings_goal_withdrawals !== undefined && txType !== "expense") throw new Error("savings goal funding requires an expense");
-  const src = sanitized.source_account_id ?? undefined;
-  const dst = sanitized.destination_account_id ?? undefined;
   const sub = sanitized.subcategory_id ?? undefined;
 
+  // Supplied accounts were verified above, before the row lookup.
   if (txType === "income" || txType === "expense") {
     if (sub && typeof sub === "string") {
       await verifySubcategoryOwnership(supabase, userId, sub, txType);
     }
-  }
-  if (src && typeof src === "string") {
-    await verifyAccountOwnership(supabase, userId, src);
-  }
-  if (dst && typeof dst === "string") {
-    await verifyAccountOwnership(supabase, userId, dst);
   }
   return sanitized;
 }
