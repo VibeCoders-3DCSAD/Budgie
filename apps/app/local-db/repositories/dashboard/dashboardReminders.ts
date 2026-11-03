@@ -68,9 +68,10 @@ export async function listBlockedAutoPosts(userId: string, today: string): Promi
   });
 }
 
+// Only active credit cards have obligations, so the other accounts are never read.
 async function listUpcomingDebt(userId: string, today: string, through: string): Promise<DashboardReminder[]> {
   const [debts, debtPayments, creditCards, creditCardCycles, creditCardStatements, creditCardPayments, creditCardStrategies] = await Promise.all([
-    listDebtAccounts(userId), listAllDebtPayments(userId), listFinancialAccounts(userId), listCreditCardCycles(userId), listCreditCardStatements(userId), listCreditCardPayments(userId), listCreditCardStrategies(userId),
+    listDebtAccounts(userId), listAllDebtPayments(userId), listFinancialAccounts(userId, { kind: "credit_card", status: "active" }), listCreditCardCycles(userId), listCreditCardStatements(userId), listCreditCardPayments(userId), listCreditCardStrategies(userId),
   ]);
   const items: DashboardReminder[] = [];
   // Calculate each calendar month separately so payments from this month never cover next month's obligation.

@@ -18,7 +18,8 @@ export async function getRequiredDebtTotalForPeriod(
 ): Promise<RequiredDebtTotalForPeriod> {
   const [debts, creditCards, creditCardCycles, creditCardCycleTransactions, creditCardStatements, creditCardStrategies, creditCardPayments, debtPayments] = await Promise.all([
     listDebtAccounts(userId, "all"),
-    listFinancialAccounts(userId),
+    // Only active credit cards have obligations, so the other accounts are never read.
+    listFinancialAccounts(userId, { kind: "credit_card", status: "active" }),
     listCreditCardCycles(userId),
     listCreditCardCycleTransactions(userId),
     listCreditCardStatements(userId),

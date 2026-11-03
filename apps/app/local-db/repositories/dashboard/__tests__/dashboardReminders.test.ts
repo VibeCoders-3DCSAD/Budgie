@@ -175,6 +175,23 @@ it("shows one credit-card deadline with its unpaid amount and removes a paid sta
   expect((await getDashboardReminders("u1", "2026-10-22")).upcoming.items).toEqual([]);
 });
 
+it("leaves an archived card's unpaid statement out of upcoming debt", async () => {
+  harness.sqlite.exec(`
+    INSERT INTO financial_accounts (id, user_id, name, kind, status, created_at, updated_at) VALUES
+      ('card', 'u1', 'Visa', 'credit_card', 'active', 'now', 'now'), ('old-card', 'u1', 'Old Mastercard', 'credit_card', 'archived', 'now', 'now');
+    INSERT INTO credit_card_cycles (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, created_at, updated_at) VALUES
+      ('cycle', 'u1', 'card', '2026-09-20', '2026-10-19', '2026-10-20', 'now', 'now'),
+      ('old-cycle', 'u1', 'old-card', '2026-09-20', '2026-10-19', '2026-10-20', 'now', 'now');
+    INSERT INTO credit_card_statements (id, user_id, cycle_id, statement_date, statement_balance_centavos, minimum_due_centavos, due_date, created_at, updated_at) VALUES
+      ('statement', 'u1', 'cycle', '2026-10-20', 1000, 100, '2026-10-29', 'now', 'now'),
+      ('old-statement', 'u1', 'old-cycle', '2026-10-20', 5000, 500, '2026-10-28', 'now', 'now');
+  `);
+  const { getDashboardReminders } = await import("../dashboardReminders");
+  const result = await getDashboardReminders("u1", "2026-10-22");
+  expect(result.upcoming.unavailable).toBe(false);
+  expect(result.upcoming.items).toMatchObject([{ title: "Visa", amountCentavos: 1000, date: "2026-10-29", target: { kind: "credit_card", id: "card" } }]);
+});
+
 it("does not overdraw a shared account or report rolled-back auto-posts as successful", async () => {
   bill("a"); bill("b");
   harness.sqlite.exec("UPDATE financial_accounts SET current_balance_centavos = 1500 WHERE id = 'bank'");
