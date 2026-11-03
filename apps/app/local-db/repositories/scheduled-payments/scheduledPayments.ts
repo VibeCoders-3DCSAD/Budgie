@@ -5,7 +5,7 @@ import { randomUUID, uuidV5 } from "../../uuid";
 import { currentOccurrence, dueDatesBetween, localToday, type Occurrence, type PaymentSchedule, type ScheduledPaymentFrequency } from "../../../features/billers/schedule";
 import { ensureCurrentCreditCardCycles } from "../credit-cards/creditCardCycles";
 import { BILLER_PAYMENT_MUTATION_PREFIX, createExpenseInTransaction, deleteTransaction } from "../ledger/ledger";
-import { insertScheduledPaymentRecordInTransaction, listPaidByOccurrence } from "./scheduledPaymentRecords";
+import { insertScheduledPaymentRecordInTransaction, listPaidByOccurrence, listPaidForScheduledPayment } from "./scheduledPaymentRecords";
 import { getDb } from "../helpers/db";
 
 export type ScheduledPaymentStatus = "active" | "archived";
@@ -320,7 +320,7 @@ export async function postDueScheduledPayments(userId: string, deviceId: string,
       let remainingBalance = balances.get(payment.source_account_id)!;
       let paymentPosted = 0;
       await db.withTransactionAsync(async () => {
-        const paid = (await listPaidByOccurrence(userId, db)).get(payment.id) ?? new Map<string, number>();
+        const paid = await listPaidForScheduledPayment(userId, payment.id, db);
         for (const dueDate of dueDates) {
           const remaining = payment.amount_centavos - (paid.get(dueDate) ?? 0);
           const ids = scheduledPaymentPostIds(payment.id, dueDate);

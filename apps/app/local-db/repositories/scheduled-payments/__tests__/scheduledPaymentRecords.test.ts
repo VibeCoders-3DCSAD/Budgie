@@ -193,6 +193,22 @@ describe("marking an underpaid occurrence as paid", () => {
     expect(balance()).toBe(3_900_000);
   });
 
+  it("reads one payment's paid totals the same as the totals for every payment", async () => {
+    const { createScheduledPayment, recordScheduledPayment } = await repos();
+    const { settleScheduledPaymentOccurrence, listPaidByOccurrence, listPaidForScheduledPayment } = await import("../scheduledPaymentRecords");
+    const payment = await underpaid();
+    await settleScheduledPaymentOccurrence("user-1", "device-1", payment.id, "2026-10-01");
+    await recordScheduledPayment("user-1", "device-1", { scheduledPaymentId: payment.id, occurrenceDate: "2026-11-01", amountCentavos: 300_000, paymentDate: "2026-10-30", sourceAccountId: "acct-cash", notes: null });
+    const other = await createScheduledPayment("user-1", "device-1", { ...rent, name: "Water", amountCentavos: 50_000 });
+    await recordScheduledPayment("user-1", "device-1", { scheduledPaymentId: other.id, occurrenceDate: "2026-10-01", amountCentavos: 50_000, paymentDate: "2026-10-01", sourceAccountId: "acct-cash", notes: null });
+
+    const own = await listPaidForScheduledPayment("user-1", payment.id);
+
+    expect(own).toEqual((await listPaidByOccurrence("user-1")).get(payment.id));
+    // The settled occurrence counts as paid in full; the other biller's payment is not included.
+    expect([...own]).toEqual([["2026-10-01", 1_200_000], ["2026-11-01", 300_000]]);
+  });
+
   it("does not auto-post the remainder of a settled occurrence", async () => {
     const { setScheduledPaymentAutoPost, postDueScheduledPayments } = await repos();
     const { settleScheduledPaymentOccurrence } = await import("../scheduledPaymentRecords");

@@ -34,15 +34,7 @@ export async function listScheduledPaymentRecords(userId: string, scheduledPayme
 // Paid totals per scheduled payment, keyed by the due date each payment was recorded against.
 // An occurrence settled in full counts as paid at least its scheduled amount, so nothing treats it as owing.
 export async function listPaidByOccurrence(userId: string, db?: SQLite.SQLiteDatabase): Promise<Map<string, Map<string, number>>> {
-  const rows = await (db ?? await getDb()).getAllAsync<{ scheduled_payment_id: string; occurrence_date: string; paid: number }>(
-    `SELECT r.scheduled_payment_id, r.occurrence_date,
-            CASE WHEN MAX(r.settles_occurrence) = 1 THEN MAX(SUM(r.amount_centavos), COALESCE(p.amount_centavos, 0)) ELSE SUM(r.amount_centavos) END AS paid
-       FROM scheduled_payment_records r
-       LEFT JOIN scheduled_payments p ON p.id = r.scheduled_payment_id AND p.user_id = r.user_id
-      WHERE r.user_id = ? AND r.deleted = 0
-      GROUP BY r.scheduled_payment_id, r.occurrence_date`,
-    userId,
-  );
+  const rows = await readPaidByOccurrence(db ?? await getDb(), userId);
   const paid = new Map<string, Map<string, number>>();
   for (const row of rows) {
     const byDate = paid.get(row.scheduled_payment_id) ?? new Map<string, number>();
@@ -50,6 +42,26 @@ export async function listPaidByOccurrence(userId: string, db?: SQLite.SQLiteDat
     paid.set(row.scheduled_payment_id, byDate);
   }
   return paid;
+}
+
+// listPaidByOccurrence for one scheduled payment, without aggregating every other payment's records.
+export async function listPaidForScheduledPayment(userId: string, scheduledPaymentId: string, db?: SQLite.SQLiteDatabase): Promise<Map<string, number>> {
+  const rows = await readPaidByOccurrence(db ?? await getDb(), userId, scheduledPaymentId);
+  return new Map(rows.map((row) => [row.occurrence_date, row.paid]));
+}
+
+function readPaidByOccurrence(db: SQLite.SQLiteDatabase, userId: string, scheduledPaymentId?: string) {
+  const paymentFilter = scheduledPaymentId === undefined ? "" : "AND r.scheduled_payment_id = ?";
+  return db.getAllAsync<{ scheduled_payment_id: string; occurrence_date: string; paid: number }>(
+    `SELECT r.scheduled_payment_id, r.occurrence_date,
+            CASE WHEN MAX(r.settles_occurrence) = 1 THEN MAX(SUM(r.amount_centavos), COALESCE(p.amount_centavos, 0)) ELSE SUM(r.amount_centavos) END AS paid
+       FROM scheduled_payment_records r
+       LEFT JOIN scheduled_payments p ON p.id = r.scheduled_payment_id AND p.user_id = r.user_id
+      WHERE r.user_id = ? AND r.deleted = 0 ${paymentFilter}
+      GROUP BY r.scheduled_payment_id, r.occurrence_date`,
+    userId,
+    ...(scheduledPaymentId === undefined ? [] : [scheduledPaymentId]),
+  );
 }
 
 export async function insertScheduledPaymentRecordInTransaction(db: SQLite.SQLiteDatabase, userId: string, deviceId: string, record: Omit<ScheduledPaymentRecord, "version">): Promise<void> {
