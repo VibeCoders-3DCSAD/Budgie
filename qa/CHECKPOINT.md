@@ -132,5 +132,5 @@ Branch: `main` — 4 commits ahead of `origin/main`, working tree clean.
 
 - **config.yaml** exists at `.maestro/config.yaml`
 - **Test framework:** Maestro
-- **Target:** Android emulator, app ID `com.anonymous.odin`
+- **Target:** Android emulator, app ID `com.odin.finances`
 - **Screenshot directories:** 6 module folders exist, all empty

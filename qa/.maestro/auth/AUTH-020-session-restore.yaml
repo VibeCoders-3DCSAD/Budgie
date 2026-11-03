@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "AUTH-020: Session Restore on Relaunch"
 tags:
   - auth

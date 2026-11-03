@@ -448,6 +448,7 @@ odin/
 │   │   ├── package.json
 │   │   └── tsconfig.json
 │   └── app/
+│       ├── app/
 │       ├── components/
 │       ├── features/
 │       │   ├── governance/
@@ -457,7 +458,6 @@ odin/
 │       ├── lib/
 │       ├── local-db/
 │       ├── services/
-│       ├── App.tsx
 │       ├── app.config.ts
 │       ├── global.css
 │       ├── package.json

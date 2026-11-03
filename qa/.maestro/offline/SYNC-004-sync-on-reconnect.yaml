@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "SYNC-004: Sync on Reconnect"
 tags:
   - offline

@@ -1,12 +1,12 @@
-# Odin-QA
+# Odin QA
 
 E2E test cases, test plans, and QA documentation for the Odin Android app.
 
 ## Overview
 
-This repository contains manual test cases and Maestro automated E2E tests for the Odin Android application. The test cases cover authentication, privacy consent, settings, navigation, offline sync, and security. This repo does **not** contain application source code — that lives in the [Odin monorepo](../Odin/).
+This is the `qa/` folder of the Odin monorepo. It contains manual test cases and Maestro automated E2E tests for the Odin Android application. The test cases cover authentication, privacy consent, settings, navigation, offline sync, and security. The application source lives in [`apps/app`](../apps/app/) (and the API in [`apps/api`](../apps/api/)).
 
-## How to Use This Repo
+## How to Use This Folder
 
 ### Finding Test Cases
 
@@ -38,7 +38,7 @@ Screenshots are stored in `screenshots/` using the same prefix hierarchy (e.g., 
 
 ## Test Framework
 
-Tests are written for **Maestro** and run against the Odin Android app (`com.anonymous.odin`) on an Android emulator.
+Tests are written for **Maestro** and run against the Odin Android app (`com.odin.finances`) on an Android emulator.
 
 ### Setup
 
@@ -97,6 +97,6 @@ PRs require approval before merge. Reviewers verify:
 - Expected results are specific and testable
 - Test data is appropriate and not sensitive
 
-## Related Repos
+## Related Code
 
-- [Odin monorepo](../Odin/) — Expo app, React Native frontend, Express API, Supabase backend
+- [Odin monorepo root](../README.md) — Expo app (`apps/app`), Express API (`apps/api`), Supabase backend (`supabase/`)

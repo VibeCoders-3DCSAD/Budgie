@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "AUTH-018: Login Button Loading State"
 tags:
   - auth

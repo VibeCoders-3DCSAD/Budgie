@@ -298,12 +298,12 @@ Secondary repository for:
 - pnpm `10.26.1`
 - TypeScript `5.9.2`
 - React `19.2.0`
-- React Native `0.83.0`
-- Expo SDK `55.0.0`
+- React Native `0.83.6`
+- Expo SDK `55.0.26`
 - Express `5.1.0`
 - `@supabase/supabase-js` `2.57.4`
 - NativeWind `4.2.3`
-- Tailwind CSS `4.2.4`
+- Tailwind CSS `3.4.17`
 - React Native Paper `5.15.1`
 - `@expo/vector-icons` `15.1.1`
 
@@ -598,8 +598,8 @@ Put these concerns here:
 
 ### `odin`
 
-- frontend app entry: `odin/apps/app/App.tsx`
-- Expo bootstrap: `odin/apps/app/index.ts`
+- frontend app entry: `expo-router/entry` (the `main` field of `odin/apps/app/package.json`)
+- Expo Router routes: `odin/apps/app/app/`, root layout `odin/apps/app/app/_layout.tsx`
 - API entry: `odin/apps/api/src/index.ts`
 
 ### `odin-ml`

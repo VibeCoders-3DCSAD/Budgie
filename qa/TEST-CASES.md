@@ -8,7 +8,7 @@ metadata:
   test_framework: "Maestro"
   platform: "Android"
   device_target: "Android emulator"
-  app_id: "com.anonymous.odin"
+  app_id: "com.odin.finances"
 ---
 
 # Odin E2E Test Cases

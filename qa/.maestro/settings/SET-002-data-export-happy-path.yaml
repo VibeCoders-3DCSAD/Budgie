@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "SET-002: Data Export Happy Path"
 tags:
   - settings

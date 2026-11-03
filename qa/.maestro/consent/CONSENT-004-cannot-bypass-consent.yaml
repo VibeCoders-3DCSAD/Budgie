@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "CONSENT-004: Cannot Bypass Consent"
 tags:
   - consent

@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: "SEC-003: Session Invalidation on Logout"
 tags:
   - security

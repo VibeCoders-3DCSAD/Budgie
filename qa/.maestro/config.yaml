@@ -1,4 +1,4 @@
-appId: com.anonymous.odin
+appId: com.odin.finances
 name: Odin E2E Tests
 testOutputDir: ../screenshots
 
