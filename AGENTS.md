@@ -180,6 +180,22 @@ Detailed repository standards live in [REPOSITORY-STANDARDS.md](docs/standards/R
 - Services must not reach into auth/session globals directly; pass authenticated user context or `user_id` explicitly as parameters.
 - Permission strings must use lowercase `object:action` format consistently.
 
+### Backend Offline Sync Rules
+
+- Backend sync routes must live in `odin/apps/api/` and keep route, controller, validation, and service responsibilities separate.
+- Queue and sync APIs must accept domain operations, not saved HTTP route replays.
+- Every sync operation must include an idempotency key, authenticated `user_id`, `device_id`, entity name, record ID, operation type, payload, changed fields, and base version.
+- Resolve idempotency before conflict detection by checking the applied operation log first.
+- Apply sync batches inside database transactions and return per-operation results.
+- Use soft deletes for synced tables. Do not hard-delete synced rows from normal client-driven delete paths.
+- Reject update-vs-missing-row instead of silently upserting.
+- Enforce delete-wins before edit-vs-edit merge logic.
+- Resolve edit-vs-edit conflicts per field, not by overwriting the whole row.
+- Log losing, rejected, or overridden operations to edit history with safe diagnostic context.
+- Do not store auth credentials, passwords, access tokens, or refresh tokens in offline business tables or sync queues.
+- Registration, login, logout, forgot password, password update, data export, and account deletion remain online-only unless requirements explicitly change.
+- Logout must be blocked while the current user has pending or failed sync queue rows. Attempt sync first when online; if rows remain, keep the user logged in and show a sync-required message.
+
 ### Query and Persistence Rules
 
 - Never concatenate user input into raw SQL.
@@ -195,11 +211,21 @@ Detailed repository standards live in [REPOSITORY-STANDARDS.md](docs/standards/R
 - Match string literal casing to the actual stored database values instead of guessing.
 - Check sentinel values such as `0`, empty string, or `null` paths explicitly before ownership guards or lookups.
 
+### Development Stage Rules
+
+- Odin is pre-release and has no users; there is no production data to preserve.
+- When asked to replace something, build the replacement and delete the old implementation in the same change. Do not keep the old code, tables, columns, routes, or components alongside it.
+- Do not add backward-compatibility shims, deprecation paths, feature flags for the old behavior, or data back-fills for a replaced feature.
+
 ### Supabase Migration Rules
 
+- `pnpm exec supabase db reset --local` is allowed for the local database only, and only with explicit approval because it deletes local data. Never reset or fresh-migrate any linked or remote database.
+- When a migration that has not yet been applied to any remote or hosted database has a bug or needs an edit, overwrite that migration file instead of adding a corrective migration on top.
+- Once a migration has been applied to a remote or hosted database, do not edit it; fix forward with a new migration.
+- To reapply an overwritten migration: revert the objects it created, delete its row from `supabase_migrations.schema_migrations` by `version`, then run `pnpm exec supabase migration up --local` so only that migration replays. A local reset, with explicit approval, is an acceptable alternative when replaying the full sequence.
 - Every migration sequence must replay on a clean local database before it is considered complete.
 - A schema snapshot migration must only alter objects created by preceding migrations; make operations conditional when a later migration owns the object.
-- Use `pnpm exec supabase db push --local --dry-run` to inspect the pending local sequence. Run `pnpm exec supabase db reset` only with explicit approval because it deletes local data.
+- Use `pnpm exec supabase db push --local --dry-run` to inspect the pending local sequence.
 
 ### External I/O and Reliability Rules
 
@@ -638,8 +664,8 @@ Suggested future sections:
 - Verify relevant source before editing. Use source searches when the graph is
   missing, stale, or does not provide enough context.
 - After code changes, run `graphify update .` when the CLI and graph are available.
-- Keep generated `graphify-out/` files local. See the README's Graphify section
+- Keep generated `graphify-out/` files local. In odin, see the README's Graphify section
   for installation and the initial code-only build.
-- Codex discovers `.agents/skills/graphify/`, linked to the installed skill at
+- In odin, Codex discovers `.agents/skills/graphify/`, linked to the installed skill at
   `.codex/skills/graphify/SKILL.md` (`$graphify`);
   Claude Code uses `.claude/skills/graphify/SKILL.md` (`/graphify`).
