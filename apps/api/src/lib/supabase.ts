@@ -1,10 +1,16 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { bufferedResponse } from "./http/bufferedResponse.js";
 import { withTimeout } from "./http/withTimeout.js";
 
 const supabaseUrl = process.env.SUPABASE_URL ?? "";
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY ?? "";
 
-const fetchWithTimeout: typeof fetch = (input, init) => withTimeout(30_000, (signal) => fetch(input, { ...init, signal }));
+// The deadline covers reading the body: the SDK reads it after fetch resolves, so it is buffered here first.
+// A caller's own abort signal still cancels the request.
+export const fetchWithTimeout: typeof fetch = (input, init) => withTimeout(30_000, async (timeoutSignal) => {
+  const signal = init?.signal ? AbortSignal.any([init.signal, timeoutSignal]) : timeoutSignal;
+  return bufferedResponse(await fetch(input, { ...init, signal }));
+});
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

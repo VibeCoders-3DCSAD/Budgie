@@ -25,7 +25,7 @@ function makeDb() {
 function page(rows: number, hasMore: boolean, remaining?: number) {
   const changes = { transactions: Array.from({ length: rows }, (_, index) => ({ id: `row-${index}` })) };
   const payload = { changes, has_more: { transactions: hasMore }, cursors: {}, successful: true, ...(remaining === undefined ? {} : { remaining: { transactions: remaining } }) };
-  return { ok: true, status: 200, json: async () => ({ payload }) };
+  return Response.json({ payload }, { status: 200 });
 }
 
 describe("runSync initial sync progress", () => {
@@ -64,7 +64,7 @@ describe("runSync initial sync progress", () => {
   });
 
   it("keeps the normal page cap and skips the count when no progress is requested", async () => {
-    fetchMock.mockResolvedValue(page(500, true));
+    fetchMock.mockImplementation(async () => page(500, true));
 
     const { runSync } = await import("../runSync");
     const result = await runSync("user-1", "device-1", "token");

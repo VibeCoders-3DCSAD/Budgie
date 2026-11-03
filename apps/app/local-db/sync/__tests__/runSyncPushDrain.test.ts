@@ -52,7 +52,7 @@ describe("runSync push draining", () => {
     global.fetch = jest.fn(async (_url: unknown, init?: RequestInit) => {
       const operations = JSON.parse(String(init?.body)).payload.operations as PushOperation[];
       pushedBatches.push(operations.map((operation) => operation.operation_id));
-      return { ok: true, status: 200, json: async () => ({ payload: { results: operations.map(reply) } }) };
+      return Response.json({ payload: { results: operations.map(reply) } }, { status: 200 });
     }) as unknown as typeof fetch;
   });
 
@@ -120,7 +120,7 @@ describe("runSync push draining", () => {
 
   it("does not spend attempts when the server rejects the request itself", async () => {
     enqueue("inactive-device");
-    global.fetch = jest.fn(async () => ({ ok: false, status: 400, json: async () => ({}) })) as unknown as typeof fetch;
+    global.fetch = jest.fn(async () => Response.json({}, { status: 400 })) as unknown as typeof fetch;
 
     const { runSync } = await import("../runSync");
     for (let run = 0; run < 4; run++) await runSync("user-1", "device-1", "token", { pull: false });
@@ -136,12 +136,12 @@ describe("runSync push draining", () => {
       if (String(url).endsWith("/sync/register-device")) {
         calls.push("register");
         registered = true;
-        return { ok: true, status: 200, json: async () => ({}) };
+        return Response.json({}, { status: 200 });
       }
       calls.push("push");
-      if (!registered) return { ok: false, status: 400, json: async () => ({ code: "device_not_registered" }) };
+      if (!registered) return Response.json({ code: "device_not_registered" }, { status: 400 });
       const operations = JSON.parse(String(init?.body)).payload.operations as PushOperation[];
-      return { ok: true, status: 200, json: async () => ({ payload: { results: operations.map(reply) } }) };
+      return Response.json({ payload: { results: operations.map(reply) } }, { status: 200 });
     }) as unknown as typeof fetch;
 
     const { runSync } = await import("../runSync");
@@ -157,8 +157,8 @@ describe("runSync push draining", () => {
     const calls: string[] = [];
     global.fetch = jest.fn(async (url: unknown) => {
       calls.push(String(url).endsWith("/sync/register-device") ? "register" : "push");
-      if (String(url).endsWith("/sync/register-device")) return { ok: true, status: 200, json: async () => ({}) };
-      return { ok: false, status: 400, json: async () => ({ code: "device_not_registered" }) };
+      if (String(url).endsWith("/sync/register-device")) return Response.json({}, { status: 200 });
+      return Response.json({ code: "device_not_registered" }, { status: 400 });
     }) as unknown as typeof fetch;
 
     const { runSync } = await import("../runSync");

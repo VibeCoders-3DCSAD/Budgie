@@ -1,4 +1,5 @@
 import { authorizedFetch, rejectServerSession, trackProtectedRequest } from "../../lib/localAccess";
+import { bufferedResponse } from "../../lib/helpers/bufferedResponse";
 
 export const API_BASE = process.env.EXPO_PUBLIC_API_BASE_URL ?? "http://localhost:3001";
 const REQUEST_TIMEOUT = 10_000;
@@ -14,9 +15,10 @@ export function fetchWithTimeout(
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
   // authorizedFetch already retried with a refreshed token, so a 401 here is a real rejection.
+  // The body is read before the deadline and lock tracking end, so a stalled body is cancelled too.
   return authorizedFetch(url, { ...options, signal: controller.signal }).then((response) => {
     if (response.status === 401) rejectServerSession();
-    return response;
+    return bufferedResponse(response);
   }).finally(() => { clearTimeout(timeoutId); release(); });
 }
 
