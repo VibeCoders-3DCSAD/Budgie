@@ -53,7 +53,9 @@ function loadCommitmentPayments(userId: string, period: { start: string; end: st
   return getPlanCommitmentPayments(userId, period).catch(() => null);
 }
 
-async function loadSavedPlanView(userId: string, savedPlan: AcceptedFinancialPlan): Promise<{ plan: FinancialPlanRecommendation; spentCentavos: number; payments: PlanCommitmentPayments | null }> {
+type SavedPlanView = { plan: FinancialPlanRecommendation; spentCentavos: number; payments: PlanCommitmentPayments | null };
+
+async function loadSavedPlanView(userId: string, savedPlan: AcceptedFinancialPlan): Promise<SavedPlanView> {
   const savedRecommendation = savedPlanToRecommendation(savedPlan);
   const [labels, { allocationSpending, spentCentavos }, payments] = await Promise.all([getFinancialPlanLabels(userId, savedPlan), getFinancialPlanSpending(userId, savedPlan.id), loadCommitmentPayments(userId, savedRecommendation.period)]);
   return {
@@ -87,6 +89,14 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
   const [reloadKey, setReloadKey] = useState(0);
   const requestAbort = useRef<AbortController | null>(null);
   const observedSyncVersion = useRef(syncVersion);
+
+  // Shows a loaded saved plan; callers check their own cancellation and set the screen state.
+  const showSavedPlan = useCallback((view: SavedPlanView, planId: string) => {
+    setPlan(view.plan);
+    setPlanSpentCentavos(view.spentCentavos);
+    setCommitmentPaymentsPaid(view.payments);
+    setSavedPlanId(planId);
+  }, []);
 
   const plannedAmountCentavos = toCentavos(plannedAmount);
   let planningAmountError: string | null = null;
@@ -132,10 +142,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       if (savedPlan) {
         const view = await loadSavedPlanView(userId, savedPlan);
         if (controller.signal.aborted) return;
-        setPlan(view.plan);
-        setPlanSpentCentavos(view.spentCentavos);
-        setCommitmentPaymentsPaid(view.payments);
-        setSavedPlanId(savedPlan.id);
+        showSavedPlan(view, savedPlan.id);
         setCommitmentsEdited(false);
         setState("saved");
         return;
@@ -145,7 +152,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
     } finally {
       if (requestAbort.current === controller) requestAbort.current = null;
     }
-  }, [accessToken, deviceId, includedCategoryIds, includedIds, manualAllocations, plannedAmountCentavos, planningAmountError, reservationSkips, selectedMonth, devPlanMonth, userId, hasInvalidCommitments]);
+  }, [accessToken, deviceId, includedCategoryIds, includedIds, manualAllocations, plannedAmountCentavos, planningAmountError, reservationSkips, selectedMonth, devPlanMonth, userId, hasInvalidCommitments, showSavedPlan]);
 
   useEffect(() => {
     let active = true;
@@ -154,10 +161,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       if (savedPlan) {
         const view = await loadSavedPlanView(userId, savedPlan);
         if (!active) return;
-        setPlan(view.plan);
-        setPlanSpentCentavos(view.spentCentavos);
-        setCommitmentPaymentsPaid(view.payments);
-        setSavedPlanId(savedPlan.id);
+        showSavedPlan(view, savedPlan.id);
         setCommitmentsEdited(false);
         setState("saved");
         return;
@@ -187,7 +191,7 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       setState("error");
     });
     return () => { active = false; requestAbort.current?.abort(); };
-  }, [reloadKey, selectedMonth, userId, accessToken, devPlanMonth, resetCommitments, initializeCategories]);
+  }, [reloadKey, selectedMonth, userId, accessToken, devPlanMonth, resetCommitments, initializeCategories, showSavedPlan]);
 
   useEffect(() => {
     if (observedSyncVersion.current === syncVersion) return;
@@ -201,13 +205,10 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
       if (!savedPlan) return;
       const view = await loadSavedPlanView(userId, savedPlan);
       if (!active) return;
-      setPlan(view.plan);
-      setPlanSpentCentavos(view.spentCentavos);
-      setCommitmentPaymentsPaid(view.payments);
-      setSavedPlanId(savedPlan.id);
+      showSavedPlan(view, savedPlan.id);
     }).catch(() => {});
     return () => { active = false; };
-  }, [state, syncVersion, selectedMonth, userId]);
+  }, [state, syncVersion, selectedMonth, userId, showSavedPlan]);
 
   const updateAllocation = (index: number, change: Partial<FinancialPlanAllocation>) => {
     if (!plan || state === "infeasible" || state === "saved" || state === "stale") return;
