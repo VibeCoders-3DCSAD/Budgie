@@ -4,7 +4,7 @@ import { ArrowLeft } from "phosphor-react-native";
 import { Banner, Chip, FieldError, FieldLabel, FormCard, Note, PickerField, Switch, TextField, styles as ui, v4, v4Font } from "../../components/BudgieForm";
 import CategorySelectorPage from "../../components/CategorySelector";
 import { LocalDbError } from "../../local-db/helpers";
-import { listFinancialAccounts, type FinancialAccount } from "../../local-db/repositories/foundations/financialFoundations";
+import { listAccountOptions, type AccountOption } from "../../local-db/repositories/foundations/financialFoundations";
 import { listScheduledPaymentRecords } from "../../local-db/repositories/scheduled-payments/scheduledPaymentRecords";
 import { createScheduledPayment, getScheduledPayment, updateScheduledPayment, type ScheduledPaymentInput } from "../../local-db/repositories/scheduled-payments/scheduledPayments";
 import { listSubcategories, type Subcategory } from "../../local-db/repositories/ledger/taxonomy";
@@ -27,7 +27,7 @@ function parseDay(value: string): number | null {
 export default function BillerFormScreen({ userId, deviceId, scheduledPaymentId, onClose, onSaved }: Props) {
   const isEdit = Boolean(scheduledPaymentId);
   const [loading, setLoading] = useState(true);
-  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [lastPosted, setLastPosted] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -54,10 +54,10 @@ export default function BillerFormScreen({ userId, deviceId, scheduledPaymentId,
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listFinancialAccounts(userId), listSubcategories(userId, undefined, "expense"), scheduledPaymentId ? getScheduledPayment(userId, scheduledPaymentId) : null, scheduledPaymentId ? listScheduledPaymentRecords(userId, scheduledPaymentId) : []])
+    Promise.all([listAccountOptions(userId), listSubcategories(userId, undefined, "expense"), scheduledPaymentId ? getScheduledPayment(userId, scheduledPaymentId) : null, scheduledPaymentId ? listScheduledPaymentRecords(userId, scheduledPaymentId) : []])
       .then(([loadedAccounts, loadedSubcategories, existing, records]) => {
         if (cancelled) return;
-        setAccounts(loadedAccounts.filter((account) => account.status === "active"));
+        setAccounts(loadedAccounts);
         setSubcategories(loadedSubcategories);
         if (existing) {
           setName(existing.name); setSubcategoryId(existing.subcategoryId); setAmount(String(existing.amountCentavos / 100)); setSourceAccountId(existing.sourceAccountId);

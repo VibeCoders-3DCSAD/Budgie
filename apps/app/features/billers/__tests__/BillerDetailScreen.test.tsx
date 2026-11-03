@@ -20,7 +20,10 @@ jest.mock("../../../local-db/repositories/scheduled-payments/scheduledPaymentRec
   listScheduledPaymentRecords: (...args: unknown[]) => mockRecords(...args),
   listPaidByOccurrence: async () => new Map(),
 }));
-jest.mock("../../../local-db/repositories/foundations/financialFoundations", () => ({ listFinancialAccounts: async () => [{ id: "acct-bpi", name: "BPI Debit", status: "active", currentBalanceCentavos: 0 }] }));
+jest.mock("../../../local-db/repositories/foundations/financialFoundations", () => ({
+  listFinancialAccounts: async () => [{ id: "acct-bpi", name: "BPI Debit", status: "active", currentBalanceCentavos: 0 }],
+  listAccountOptions: async () => [{ id: "acct-bpi", name: "BPI Debit", kind: "bank", currentBalanceCentavos: 0 }],
+}));
 jest.mock("../../../local-db/repositories/ledger/taxonomy", () => ({ listSubcategories: async () => [{ id: "sub-electricity", label: "Electricity" }] }));
 jest.mock("../../../local-db/repositories/savings/savingsExpenseFunding", () => ({ getSavingsExpenseFunding: (...args: unknown[]) => mockGetSavingsExpenseFunding(...args) }));
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: jest.fn() }) }));

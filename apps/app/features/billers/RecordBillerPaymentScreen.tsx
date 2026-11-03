@@ -6,7 +6,7 @@ import { ArrowLeft } from "phosphor-react-native";
 import { Banner, Chip, FieldError, FieldLabel, FormCard, Note, PickerField, TextField, styles as ui, v4, v4Font } from "../../components/BudgieForm";
 import { LocalDbError } from "../../local-db/helpers";
 import { randomUUID } from "../../local-db/uuid";
-import { listFinancialAccounts, type FinancialAccount } from "../../local-db/repositories/foundations/financialFoundations";
+import { listAccountOptions, type AccountOption } from "../../local-db/repositories/foundations/financialFoundations";
 import { listPaidByOccurrence } from "../../local-db/repositories/scheduled-payments/scheduledPaymentRecords";
 import { getScheduledPayment, recordScheduledPayment, type ScheduledPayment } from "../../local-db/repositories/scheduled-payments/scheduledPayments";
 import { DateField } from "../../components/DateField";
@@ -21,7 +21,7 @@ export default function RecordBillerPaymentScreen({ userId, deviceId, scheduledP
   const today = localToday();
   const [payment, setPayment] = useState<ScheduledPayment | null>(null);
   const [paid, setPaid] = useState<Map<string, number>>(new Map());
-  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [occurrence, setOccurrence] = useState<string | null>(null);
   const [amount, setAmount] = useState("");
@@ -39,7 +39,7 @@ export default function RecordBillerPaymentScreen({ userId, deviceId, scheduledP
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([getScheduledPayment(userId, scheduledPaymentId), listPaidByOccurrence(userId), listFinancialAccounts(userId)])
+    Promise.all([getScheduledPayment(userId, scheduledPaymentId), listPaidByOccurrence(userId), listAccountOptions(userId)])
       .then(([loaded, paidByPayment, loadedAccounts]) => {
         if (cancelled) return;
         if (!loaded || loaded.status !== "active") { setLoadError("This obligation is no longer available for payments. Choose an active obligation instead."); return; }
@@ -47,7 +47,7 @@ export default function RecordBillerPaymentScreen({ userId, deviceId, scheduledP
         const current = currentOccurrence(loaded, loaded.amountCentavos, paidByDate, today);
         setPayment(loaded);
         setPaid(paidByDate);
-        setAccounts(loadedAccounts.filter((account) => account.status === "active"));
+        setAccounts(loadedAccounts);
         setSourceAccountId(loaded.sourceAccountId);
         setOccurrence(current?.dueDate ?? null);
         setAmount(current ? String(current.remainingCentavos / 100) : "");

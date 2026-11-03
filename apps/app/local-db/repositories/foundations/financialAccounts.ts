@@ -14,7 +14,9 @@ import {
   VALID_ACCOUNT_STATUSES,
   type CreateFinancialAccountInput,
   type FinancialAccount,
+  type FinancialAccountKind,
   type FinancialAccountRow,
+  type FinancialAccountStatus,
   type UpdateFinancialAccountInput,
 } from "./financialAccountModel";
 
@@ -22,37 +24,60 @@ import {
 // Financial Accounts
 // ---------------------------------------------------------------------------
 
-export async function listFinancialAccounts(userId: string): Promise<FinancialAccount[]> {
+// Every account column plus its credit-card, repayment and savings details.
+const ACCOUNT_WITH_DETAILS_SELECT = `
+  SELECT fa.*, cc.credit_limit_centavos AS cc_credit_limit_centavos,
+         cc.available_credit_centavos AS cc_available_credit_centavos,
+         cc.reconciled_available_credit_centavos AS cc_reconciled_available_credit_centavos,
+         cc.pre_reconciliation_available_credit_centavos AS cc_pre_reconciliation_available_credit_centavos,
+         cc.available_credit_reconciled_at AS cc_available_credit_reconciled_at,
+         cc.issuer AS cc_issuer,
+         cc.notes AS cc_notes,
+         cc.billing_cycle_days AS cc_billing_cycle_days,
+         cc.cutoff_day AS cc_cutoff_day,
+         cc.statement_day AS cc_statement_day,
+         cc.alert_threshold_percent AS cc_alert_threshold_percent,
+         cc.allows_extra_payments AS cc_allows_extra_payments,
+         preference.strategy AS cc_repayment_strategy,
+         preference.custom_amount_centavos AS cc_repayment_custom_amount_centavos,
+         preference.percentage_bps AS cc_repayment_percentage_bps,
+         sa.account_type AS sa_account_type
+    FROM financial_accounts fa
+    LEFT JOIN credit_card_details cc
+      ON cc.account_id = fa.id AND cc.user_id = fa.user_id AND cc.deleted = 0
+    LEFT JOIN credit_card_repayment_preferences preference
+      ON preference.account_id = fa.id AND preference.user_id = fa.user_id AND preference.deleted = 0
+    LEFT JOIN savings_account_details sa
+      ON sa.account_id = fa.id AND sa.user_id = fa.user_id AND sa.deleted = 0`;
+
+export type FinancialAccountFilter = { status?: FinancialAccountStatus; kind?: FinancialAccountKind };
+
+/** Accounts with all their details. Pass a filter so the database, not the caller, drops what a screen never shows. */
+export async function listFinancialAccounts(userId: string, filter: FinancialAccountFilter = {}): Promise<FinancialAccount[]> {
+  const conditions = ["fa.user_id = ?", "fa.deleted = 0"];
+  const params: SQLite.SQLiteBindValue[] = [userId];
+  if (filter.status) { conditions.push("fa.status = ?"); params.push(filter.status); }
+  if (filter.kind) { conditions.push("fa.kind = ?"); params.push(filter.kind); }
   const db = await getDb();
   const rows = await db.getAllAsync<FinancialAccountRow>(
-    `SELECT fa.*, cc.credit_limit_centavos AS cc_credit_limit_centavos,
-              cc.available_credit_centavos AS cc_available_credit_centavos,
-              cc.reconciled_available_credit_centavos AS cc_reconciled_available_credit_centavos,
-              cc.pre_reconciliation_available_credit_centavos AS cc_pre_reconciliation_available_credit_centavos,
-              cc.available_credit_reconciled_at AS cc_available_credit_reconciled_at,
-             cc.issuer AS cc_issuer,
-             cc.notes AS cc_notes,
-             cc.billing_cycle_days AS cc_billing_cycle_days,
-             cc.cutoff_day AS cc_cutoff_day,
-             cc.statement_day AS cc_statement_day,
-             cc.alert_threshold_percent AS cc_alert_threshold_percent,
-             cc.allows_extra_payments AS cc_allows_extra_payments,
-              preference.strategy AS cc_repayment_strategy,
-               preference.custom_amount_centavos AS cc_repayment_custom_amount_centavos,
-                preference.percentage_bps AS cc_repayment_percentage_bps,
-               sa.account_type AS sa_account_type
-      FROM financial_accounts fa
-      LEFT JOIN credit_card_details cc
-        ON cc.account_id = fa.id AND cc.user_id = fa.user_id AND cc.deleted = 0
-       LEFT JOIN credit_card_repayment_preferences preference
-        ON preference.account_id = fa.id AND preference.user_id = fa.user_id AND preference.deleted = 0
-       LEFT JOIN savings_account_details sa
-        ON sa.account_id = fa.id AND sa.user_id = fa.user_id AND sa.deleted = 0
-     WHERE fa.user_id = ? AND fa.deleted = 0
-     ORDER BY fa.sort_order`,
-    userId,
+    `${ACCOUNT_WITH_DETAILS_SELECT} WHERE ${conditions.join(" AND ")} ORDER BY fa.sort_order`,
+    ...params,
   );
   return rows.map(mapAccount);
+}
+
+export type AccountOption = Pick<FinancialAccount, "id" | "name" | "kind" | "currentBalanceCentavos">;
+
+/** Active accounts for a picker: only the fields a picker shows, without the detail joins. */
+export async function listAccountOptions(userId: string): Promise<AccountOption[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<{ id: string; name: string; kind: FinancialAccountKind; current_balance_centavos: number }>(
+    `SELECT id, name, kind, current_balance_centavos FROM financial_accounts
+      WHERE user_id = ? AND deleted = 0 AND status = 'active'
+      ORDER BY sort_order`,
+    userId,
+  );
+  return rows.map((row) => ({ id: row.id, name: row.name, kind: row.kind, currentBalanceCentavos: row.current_balance_centavos }));
 }
 
 export async function getFinancialAccount(
@@ -61,30 +86,7 @@ export async function getFinancialAccount(
 ): Promise<FinancialAccount | null> {
   const db = await getDb();
   const row = await db.getFirstAsync<FinancialAccountRow>(
-    `SELECT fa.*, cc.credit_limit_centavos AS cc_credit_limit_centavos,
-              cc.available_credit_centavos AS cc_available_credit_centavos,
-              cc.reconciled_available_credit_centavos AS cc_reconciled_available_credit_centavos,
-              cc.pre_reconciliation_available_credit_centavos AS cc_pre_reconciliation_available_credit_centavos,
-              cc.available_credit_reconciled_at AS cc_available_credit_reconciled_at,
-             cc.issuer AS cc_issuer,
-             cc.notes AS cc_notes,
-             cc.billing_cycle_days AS cc_billing_cycle_days,
-             cc.cutoff_day AS cc_cutoff_day,
-             cc.statement_day AS cc_statement_day,
-             cc.alert_threshold_percent AS cc_alert_threshold_percent,
-             cc.allows_extra_payments AS cc_allows_extra_payments,
-              preference.strategy AS cc_repayment_strategy,
-               preference.custom_amount_centavos AS cc_repayment_custom_amount_centavos,
-                preference.percentage_bps AS cc_repayment_percentage_bps,
-               sa.account_type AS sa_account_type
-      FROM financial_accounts fa
-      LEFT JOIN credit_card_details cc
-        ON cc.account_id = fa.id AND cc.user_id = fa.user_id AND cc.deleted = 0
-       LEFT JOIN credit_card_repayment_preferences preference
-        ON preference.account_id = fa.id AND preference.user_id = fa.user_id AND preference.deleted = 0
-       LEFT JOIN savings_account_details sa
-        ON sa.account_id = fa.id AND sa.user_id = fa.user_id AND sa.deleted = 0
-     WHERE fa.user_id = ? AND fa.id = ? AND fa.deleted = 0`,
+    `${ACCOUNT_WITH_DETAILS_SELECT} WHERE fa.user_id = ? AND fa.id = ? AND fa.deleted = 0`,
     userId,
     id,
   );

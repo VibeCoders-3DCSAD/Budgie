@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import { Bank, Check, CreditCard, Money, Wallet } from "phosphor-react-native";
 import { BottomSheet, styles as ui, tileTints, v4, v4Font } from "../../../components/BudgieForm";
-import type { FinancialAccount } from "../../../local-db/repositories/foundations/financialFoundations";
+import type { AccountOption, FinancialAccount } from "../../../local-db/repositories/foundations/financialFoundations";
 import { formatPeso } from "../presentation";
 
 function AccountIcon({ kind, color }: { kind: FinancialAccount["kind"]; color: string }) {
@@ -9,7 +9,7 @@ function AccountIcon({ kind, color }: { kind: FinancialAccount["kind"]; color: s
   return <Icon color={color} size={16} weight="bold" />;
 }
 
-export function AccountPickerSheet({ visible, accounts, selectedId, onSelect, onClose }: { visible: boolean; accounts: FinancialAccount[]; selectedId: string | null; onSelect: (accountId: string) => void; onClose: () => void }) {
+export function AccountPickerSheet({ visible, accounts, selectedId, onSelect, onClose }: { visible: boolean; accounts: AccountOption[]; selectedId: string | null; onSelect: (accountId: string) => void; onClose: () => void }) {
   return (
     <BottomSheet visible={visible} onClose={onClose} title="Pay from">
       {accounts.length === 0 ? (

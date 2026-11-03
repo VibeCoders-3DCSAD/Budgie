@@ -24,9 +24,11 @@ export {
   createFinancialAccount,
   deleteFinancialAccount,
   getFinancialAccount,
+  listAccountOptions,
   listFinancialAccounts,
   updateFinancialAccount,
 } from "./financialAccounts";
+export type { AccountOption, FinancialAccountFilter } from "./financialAccounts";
 export {
   createIncomeSource,
   deleteIncomeSource,

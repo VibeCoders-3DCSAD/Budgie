@@ -12,7 +12,7 @@ jest.mock("../../../local-db/repositories/scheduled-payments/scheduledPayments",
 }));
 jest.mock("../../../local-db/repositories/scheduled-payments/scheduledPaymentRecords", () => ({ listScheduledPaymentRecords: async () => [] }));
 jest.mock("../../../local-db/repositories/foundations/financialFoundations", () => ({
-  listFinancialAccounts: async () => [{ id: "acct-bpi", name: "BPI Savings", kind: "bank", status: "active", currentBalanceCentavos: 100_000 }],
+  listAccountOptions: async () => [{ id: "acct-bpi", name: "BPI Savings", kind: "bank", currentBalanceCentavos: 100_000 }],
 }));
 jest.mock("../../../local-db/repositories/ledger/taxonomy", () => ({
   listSubcategories: async () => [{ id: "sub-electricity", label: "Electricity", category_id: "cat-bills" }],

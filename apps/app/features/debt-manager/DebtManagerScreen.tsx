@@ -52,7 +52,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
     setLoading(true);
     setError(false);
     try {
-      const nextAccounts = (await listFinancialAccounts(userId)).filter((account) => account.kind === "credit_card" && account.status === "active");
+      const nextAccounts = await listFinancialAccounts(userId, { kind: "credit_card", status: "active" });
       setAccounts(nextAccounts);
       hasLoadedData.current = nextAccounts.length > 0;
 

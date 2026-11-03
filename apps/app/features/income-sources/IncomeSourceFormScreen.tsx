@@ -6,9 +6,9 @@ import {
   createIncomeSource,
   getIncomeSource,
   incomeScheduleError,
-  listFinancialAccounts,
+  listAccountOptions,
   updateIncomeSource,
-  type FinancialAccount,
+  type AccountOption,
   type IncomeFrequency,
 } from "../../local-db/repositories/foundations/financialFoundations";
 import { listSubcategories, type Subcategory } from "../../local-db/repositories/ledger/taxonomy";
@@ -31,7 +31,7 @@ function parseDayOfMonth(value: string): number | null {
 export default function IncomeSourceFormScreen({ userId, deviceId, incomeSourceId, onClose, onSaved }: Props) {
   const isEdit = Boolean(incomeSourceId);
   const [loading, setLoading] = useState(true);
-  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
+  const [accounts, setAccounts] = useState<AccountOption[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [name, setName] = useState("");
   const [destinationAccountId, setDestinationAccountId] = useState<string | null>(null);
@@ -52,12 +52,12 @@ export default function IncomeSourceFormScreen({ userId, deviceId, incomeSourceI
     let cancelled = false;
     (async () => {
       const [accountRows, subcategoryRows, existing] = await Promise.all([
-        listFinancialAccounts(userId),
+        listAccountOptions(userId),
         listSubcategories(userId, undefined, "income"),
         incomeSourceId ? getIncomeSource(userId, incomeSourceId) : Promise.resolve(null),
       ]);
       if (cancelled) return;
-      setAccounts(accountRows.filter((account) => account.status === "active"));
+      setAccounts(accountRows);
       setSubcategories(subcategoryRows);
       if (existing) {
         setName(existing.name);

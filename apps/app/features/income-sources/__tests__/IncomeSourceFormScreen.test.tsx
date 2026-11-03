@@ -13,9 +13,9 @@ jest.mock("../../../local-db/repositories/foundations/financialFoundations", () 
     createIncomeSource: (...args: unknown[]) => mockCreate(...args),
     updateIncomeSource: (...args: unknown[]) => mockUpdate(...args),
     getIncomeSource: (...args: unknown[]) => mockGet(...args),
-    listFinancialAccounts: async () => [
-      { id: "acct-bpi", name: "BPI Savings", kind: "savings", status: "active", currentBalanceCentavos: 4_218_000 },
-      { id: "acct-old", name: "Old Wallet", kind: "e_wallet", status: "archived", currentBalanceCentavos: 0 },
+    // listAccountOptions returns active accounts only; financialAccounts.test.ts covers that filter.
+    listAccountOptions: async () => [
+      { id: "acct-bpi", name: "BPI Savings", kind: "savings", currentBalanceCentavos: 4_218_000 },
     ],
   };
 });
@@ -103,7 +103,6 @@ describe("IncomeSourceFormScreen", () => {
     fireEvent.changeText(await view.findByLabelText("Name"), "Salary");
     fireEvent.press(view.getByLabelText("Destination account *: Select account"));
     expect(await view.findByText("BPI Savings")).toBeTruthy();
-    expect(view.queryByText("Old Wallet")).toBeNull();
     fireEvent.press(await view.findByText("BPI Savings"));
     fireEvent.press(view.getByLabelText("Income category *: Select category"));
     fireEvent.changeText(view.getByLabelText("Search categories"), "salary");
