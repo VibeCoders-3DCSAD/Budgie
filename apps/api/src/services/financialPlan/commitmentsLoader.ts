@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { financialPlanPeriod } from "./period.js";
 import { FinancialPlanUnavailableError } from "./errors.js";
+import { readAllPages } from "./historyQueries.js";
 import { DEBT_COMMITMENT_FIELDS, SAVINGS_COMMITMENT_FIELDS, debtCommitments, savingsCommitments, statementCommitments } from "./commitments.js";
 import { scheduledPaymentReservations, type ScheduledPaymentRow } from "./scheduledPaymentDates.js";
 
@@ -10,12 +11,13 @@ type ScheduledPayment = ScheduledPaymentRow & { name: string; subcategory_id: st
 const SCHEDULED_PAYMENT_COMMITMENT_FIELDS = "id, name, subcategory_id, amount_centavos, frequency, due_day_of_month, due_second_day_of_month, due_day_of_week, due_month, starts_on, ends_on";
 
 // The rows behind a period's commitments. Each result keeps its error so callers can report the failing source.
+// Every list is read in full, page by page in id order: a missing row would leave its payment unreserved.
 export async function queryCommitmentRows(supabase: SupabaseClient, userId: string, period: Period) {
   const [debts, savingsGoals, statements, scheduledPayments] = await Promise.all([
-    supabase.from("debt_accounts").select(DEBT_COMMITMENT_FIELDS).eq("user_id", userId).in("status", ["active", "paid_off"]).eq("deleted", false).limit(100),
-    supabase.from("savings_goals").select(SAVINGS_COMMITMENT_FIELDS).eq("user_id", userId).eq("status", "active").eq("deleted", false).limit(100),
-    supabase.from("credit_card_statements").select("id, minimum_due_centavos, due_date").eq("user_id", userId).eq("authoritative", true).eq("deleted", false).gte("due_date", period.start).lte("due_date", period.end).limit(100),
-    supabase.from("scheduled_payments").select(SCHEDULED_PAYMENT_COMMITMENT_FIELDS).eq("user_id", userId).eq("status", "active").eq("deleted", false).limit(200),
+    readAllPages((from, to) => supabase.from("debt_accounts").select(DEBT_COMMITMENT_FIELDS).eq("user_id", userId).in("status", ["active", "paid_off"]).eq("deleted", false).order("id").range(from, to)),
+    readAllPages((from, to) => supabase.from("savings_goals").select(SAVINGS_COMMITMENT_FIELDS).eq("user_id", userId).eq("status", "active").eq("deleted", false).order("id").range(from, to)),
+    readAllPages((from, to) => supabase.from("credit_card_statements").select("id, minimum_due_centavos, due_date").eq("user_id", userId).eq("authoritative", true).eq("deleted", false).gte("due_date", period.start).lte("due_date", period.end).order("id").range(from, to)),
+    readAllPages((from, to) => supabase.from("scheduled_payments").select(SCHEDULED_PAYMENT_COMMITMENT_FIELDS).eq("user_id", userId).eq("status", "active").eq("deleted", false).order("id").range(from, to)),
   ]);
   return { debts, savingsGoals, statements, scheduledPayments };
 }
