@@ -37,12 +37,33 @@ export function recurringIncomePostIds(templateId: string, payday: string): { tr
 }
 
 // A payday counts as posted once any occurrence exists for it (including the retired engine's random-id ones),
-// or either derived id is present, even if since deleted.
-async function alreadyPosted(db: SQLite.SQLiteDatabase, templateId: string, payday: string, ids: { transactionId: string; occurrenceId: string }): Promise<boolean> {
-  return Boolean(
-    await db.getFirstAsync("SELECT 1 FROM recurring_transaction_occurrences WHERE id = ? OR (recurring_template_id = ? AND scheduled_date = ?)", ids.occurrenceId, templateId, payday)
-    ?? await db.getFirstAsync("SELECT 1 FROM transactions WHERE id = ?", ids.transactionId),
+// or either derived id is present, even if since deleted. Two reads cover every payday of one catch-up run.
+async function postedPaydays(db: SQLite.SQLiteDatabase, templateId: string, paydays: string[]): Promise<Set<string>> {
+  const byOccurrenceId = new Map<string, string>();
+  const byTransactionId = new Map<string, string>();
+  for (const payday of paydays) {
+    const ids = recurringIncomePostIds(templateId, payday);
+    byOccurrenceId.set(ids.occurrenceId, payday);
+    byTransactionId.set(ids.transactionId, payday);
+  }
+  const marks = paydays.map(() => "?").join(", ");
+  const occurrences = await db.getAllAsync<{ id: string; recurring_template_id: string; scheduled_date: string }>(
+    `SELECT id, recurring_template_id, scheduled_date FROM recurring_transaction_occurrences
+      WHERE id IN (${marks}) OR (recurring_template_id = ? AND scheduled_date IN (${marks}))`,
+    ...byOccurrenceId.keys(), templateId, ...paydays,
   );
+  const transactions = await db.getAllAsync<{ id: string }>(`SELECT id FROM transactions WHERE id IN (${marks})`, ...byTransactionId.keys());
+  const posted = new Set<string>();
+  for (const row of occurrences) {
+    const payday = byOccurrenceId.get(row.id);
+    if (payday) posted.add(payday);
+    if (row.recurring_template_id === templateId) posted.add(row.scheduled_date);
+  }
+  for (const row of transactions) {
+    const payday = byTransactionId.get(row.id);
+    if (payday) posted.add(payday);
+  }
+  return posted;
 }
 
 export async function postDueRecurringIncome(userId: string, deviceId: string, today = localToday()): Promise<number> {
@@ -66,9 +87,10 @@ export async function postDueRecurringIncome(userId: string, deviceId: string, t
     if (!paydays.length) continue;
     try {
       await db.withTransactionAsync(async () => {
+        const alreadyPosted = await postedPaydays(db, template.id, paydays);
         for (const payday of paydays) {
+          if (alreadyPosted.has(payday)) continue;
           const ids = recurringIncomePostIds(template.id, payday);
-          if (await alreadyPosted(db, template.id, payday, ids)) continue;
           await createIncomeInTransaction(db, userId, deviceId, {
             entry_source: "recurring",
             amount_centavos: template.amount_centavos,

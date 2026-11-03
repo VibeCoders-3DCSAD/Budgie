@@ -71,6 +71,20 @@ describe("postDueRecurringIncome", () => {
     expect(await postDueRecurringIncome("user-1", "device-1", "2026-11-30")).toBe(0);
   });
 
+  it("checks every payday of a catch-up run in two reads, not two per payday", async () => {
+    const { createIncomeSource, postDueRecurringIncome } = await repos();
+    await createIncomeSource("user-1", "device-1", { ...salary, nextExpectedDate: "2026-06-01" });
+    expect(await postDueRecurringIncome("user-1", "device-1", "2026-11-30")).toBe(12);
+    const getAll = jest.spyOn(harness.db, "getAllAsync");
+    const getFirst = jest.spyOn(harness.db, "getFirstAsync");
+
+    expect(await postDueRecurringIncome("user-1", "device-1", "2026-11-30")).toBe(0);
+
+    // The income templates, then the occurrences and transactions for all 12 paydays at once.
+    expect(getAll).toHaveBeenCalledTimes(3);
+    expect(getFirst).not.toHaveBeenCalled();
+  });
+
   it("does not post a paused income source", async () => {
     const { createIncomeSource, postDueRecurringIncome } = await repos();
     await createIncomeSource("user-1", "device-1", { ...salary, isActive: false });

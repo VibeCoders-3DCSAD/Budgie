@@ -1,3 +1,4 @@
+import type { SQLiteDatabase } from "expo-sqlite";
 import { enqueueOperation, LocalDbError } from "../../helpers";
 import { randomUUID } from "../../uuid";
 import type { SyncOperation } from "../../types";
@@ -286,77 +287,105 @@ export async function updateCreditCardCycle(
   return result;
 }
 
+type CalculatedCycle = Pick<CreditCardCycle, "cycle_start_date" | "cutoff_date">;
+
+// Each card's open cycle on `date`; with overlapping cycles, the one that started last.
+async function openCyclesByAccount(db: SQLiteDatabase, userId: string, date: string): Promise<Map<string, CycleRow>> {
+  const rows = await db.getAllAsync<CycleRow>(
+    `SELECT * FROM credit_card_cycles
+      WHERE user_id = ? AND deleted = 0 AND cycle_start_date <= ? AND cutoff_date >= ?
+      ORDER BY account_id, cycle_start_date DESC`,
+    userId,
+    date,
+    date,
+  );
+  const open = new Map<string, CycleRow>();
+  for (const row of rows) if (!open.has(row.account_id)) open.set(row.account_id, row);
+  return open;
+}
+
+// The cycles that bring a card from its last closed cutoff up to the one open on `date`.
+function missingCycles(card: CreditCardCycleDefaults, lastClosedCutoff: string | undefined, date: string): CalculatedCycle[] {
+  if (!lastClosedCutoff) return [calculateCurrentCreditCardCycle(card, date)];
+  const cycles: CalculatedCycle[] = [];
+  let cutoff = lastClosedCutoff;
+  while (cutoff < date) {
+    const next = calculateSuccessorCreditCardCycle(cutoff, card.cutoff_day);
+    if (next.cutoff_date <= cutoff) throw new LocalDbError("INTERNAL_ERROR", "credit-card cycle generation did not advance");
+    cycles.push(next);
+    cutoff = next.cutoff_date;
+  }
+  return cycles;
+}
+
+async function insertGeneratedCycle(db: SQLiteDatabase, userId: string, deviceId: string, accountId: string, cycle: CalculatedCycle): Promise<void> {
+  const id = randomUUID();
+  const ts = now();
+  await db.runAsync(
+    `INSERT INTO credit_card_cycles
+       (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, version, deleted, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, NULL, 1, 0, ?, ?)`,
+    id,
+    userId,
+    accountId,
+    cycle.cycle_start_date,
+    cycle.cutoff_date,
+    ts,
+    ts,
+  );
+  const payload = cyclePayload({ account_id: accountId, ...cycle });
+  await enqueueOperation(db, {
+    userId,
+    deviceId,
+    entity: "credit_card_cycles",
+    recordId: id,
+    operationType: "create",
+    baseVersion: null,
+    changedFields: Object.keys(payload),
+    payload,
+    failureMessage: "This credit-card billing cycle could not be saved.",
+  });
+}
+
+// Reads every card's open and last closed cycle in two queries, works out the missing months in memory, then
+// inserts them, so a card list costs a fixed number of reads rather than several per card and missing month.
 export async function ensureCurrentCreditCardCycles(userId: string, deviceId: string, asOfDate?: string): Promise<CreditCardCycle[]> {
   const db = await getDb();
   const date = asOfDate ?? localToday();
   validateIsoDate(date, "asOfDate");
-  const rows = await db.getAllAsync<CreditCardCycleDefaults>(
+  const cards = await db.getAllAsync<CreditCardCycleDefaults>(
     `SELECT fa.id AS account_id, cc.cutoff_day, cc.billing_cycle_days
      FROM financial_accounts fa
      JOIN credit_card_details cc ON cc.account_id = fa.id AND cc.user_id = fa.user_id AND cc.deleted = 0
      WHERE fa.user_id = ? AND fa.kind = 'credit_card' AND fa.status = 'active' AND fa.deleted = 0`,
     userId,
   );
-  const ensured: CreditCardCycle[] = [];
+  if (cards.length === 0) return [];
+  let open = new Map<string, CycleRow>();
 
   await db.withTransactionAsync(async () => {
-    for (const defaults of rows) {
-      while (true) {
-        const existingCurrent = await db.getFirstAsync<CycleRow>(
-          `SELECT * FROM credit_card_cycles
-            WHERE user_id = ? AND account_id = ? AND deleted = 0
-              AND cycle_start_date <= ? AND cutoff_date >= ?
-            ORDER BY cycle_start_date DESC LIMIT 1`,
-          userId,
-          defaults.account_id,
-          date,
-          date,
-        );
-        if (existingCurrent) {
-          ensured.push(mapCycle(existingCurrent));
-          break;
-        }
-        const latestCycle = await db.getFirstAsync<CycleRow>(
-          `SELECT * FROM credit_card_cycles
-            WHERE user_id = ? AND account_id = ? AND deleted = 0 AND cutoff_date < ?
-            ORDER BY cutoff_date DESC LIMIT 1`,
-          userId,
-          defaults.account_id,
-          date,
-        );
-        const calculated = latestCycle
-          ? calculateSuccessorCreditCardCycle(latestCycle.cutoff_date, defaults.cutoff_day)
-          : calculateCurrentCreditCardCycle(defaults, date);
-        const id = randomUUID();
-        const ts = now();
-        const insertResult = await db.runAsync(
-          `INSERT OR IGNORE INTO credit_card_cycles
-             (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, version, deleted, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, NULL, 1, 0, ?, ?)`,
-          id,
-          userId,
-          defaults.account_id,
-          calculated.cycle_start_date,
-          calculated.cutoff_date,
-          ts,
-          ts,
-        );
-        if (insertResult.changes > 0) {
-          await enqueueOperation(db, {
-            userId,
-            deviceId,
-            entity: "credit_card_cycles",
-            recordId: id,
-            operationType: "create",
-            baseVersion: null,
-            changedFields: Object.keys(cyclePayload({ account_id: defaults.account_id, ...calculated })),
-            payload: cyclePayload({ account_id: defaults.account_id, ...calculated }),
-            failureMessage: "This credit-card billing cycle could not be saved.",
-          });
-        }
+    open = await openCyclesByAccount(db, userId, date);
+    const missing = cards.filter((card) => !open.has(card.account_id));
+    if (missing.length === 0) return;
+    const closed = await db.getAllAsync<{ account_id: string; cutoff_date: string }>(
+      `SELECT account_id, MAX(cutoff_date) AS cutoff_date FROM credit_card_cycles
+        WHERE user_id = ? AND deleted = 0 AND cutoff_date < ?
+        GROUP BY account_id`,
+      userId,
+      date,
+    );
+    const lastClosedCutoff = new Map(closed.map((row) => [row.account_id, row.cutoff_date]));
+    for (const card of missing) {
+      for (const cycle of missingCycles(card, lastClosedCutoff.get(card.account_id), date)) {
+        await insertGeneratedCycle(db, userId, deviceId, card.account_id, cycle);
       }
     }
+    open = await openCyclesByAccount(db, userId, date);
   });
 
-  return ensured;
+  return cards.map((card) => {
+    const row = open.get(card.account_id);
+    if (!row) throw new LocalDbError("INTERNAL_ERROR", "failed to open the current credit-card cycle");
+    return mapCycle(row);
+  });
 }
