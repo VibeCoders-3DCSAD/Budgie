@@ -5,7 +5,7 @@ import { buildSavingsReminders } from "../../../features/dashboard/helpers/savin
 import type { DashboardReminder, DashboardReminderSection, DashboardReminders } from "../../../features/dashboard/types";
 import { listDebtAccounts } from "../debts/debtAccounts";
 import { listAllDebtPayments } from "../debts/debtPayments";
-import { listFinancialAccounts } from "../foundations/financialFoundations";
+import { listAccountOptions, listFinancialAccounts } from "../foundations/financialFoundations";
 import { listCreditCardCycles } from "../credit-cards/creditCardCycles";
 import { listCreditCardStatements } from "../credit-cards/creditCardStatements";
 import { listCreditCardPayments } from "../credit-cards/creditCardPayments";
@@ -48,7 +48,7 @@ export async function listBlockedAutoPosts(userId: string, today: string): Promi
   const db = await initDatabase();
   const [schedules, accounts, paid, records, transactions] = await Promise.all([
     listScheduledPayments(userId),
-    db.getAllAsync<{ id: string; name: string; current_balance_centavos: number; kind: string }>("SELECT id, name, current_balance_centavos, kind FROM financial_accounts WHERE user_id = ? AND deleted = 0 AND status = 'active'", userId),
+    listAccountOptions(userId),
     listPaidByOccurrence(userId),
     db.getAllAsync<{ id: string }>("SELECT id FROM scheduled_payment_records WHERE user_id = ? AND source = 'auto'", userId),
     db.getAllAsync<{ id: string }>("SELECT id FROM transactions WHERE user_id = ? AND client_mutation_id LIKE 'scheduled-payment:%'", userId),
@@ -62,7 +62,7 @@ export async function listBlockedAutoPosts(userId: string, today: string): Promi
     return dueDatesBetween(schedule, schedule.autoPostFrom, today).flatMap((date) => {
       const ids = scheduledPaymentPostIds(schedule.id, date);
       const amountCentavos = Math.max(0, schedule.amountCentavos - (paid.get(schedule.id)?.get(date) ?? 0));
-      if (!amountCentavos || amountCentavos <= account.current_balance_centavos || recordIds.has(ids.recordId) || transactionIds.has(ids.transactionId)) return [];
+      if (!amountCentavos || amountCentavos <= account.currentBalanceCentavos || recordIds.has(ids.recordId) || transactionIds.has(ids.transactionId)) return [];
       return [{ id: `biller:${schedule.id}:${date}`, title: schedule.name, detail: `Auto-post failed · ${account.name} has insufficient funds`, amountCentavos, date, target: { kind: "biller" as const, id: schedule.id } }];
     });
   });
