@@ -7,7 +7,7 @@ import {
   pullChanges,
   countRemainingChanges,
   registerDevice,
-  isDeviceActive,
+  getDeviceStatus,
 } from "../services/sync/syncService.js";
 import { hasOperationId, isCursorMap, isDeviceId, isPushOperation, MAX_PUSH_OPERATIONS } from "../services/sync/syncRequestValidation.js";
 import { DEVICE_NOT_REGISTERED, SYNC_REJECTION_REASONS } from "@odin/sync-config";
@@ -52,12 +52,14 @@ router.post(
         return;
       }
 
-      const active = await isDeviceActive(supabase, userId, device_id);
-      if (!active) {
-        console.warn("[sync/push] device inactive", { userId, device_id });
+      const deviceStatus = await getDeviceStatus(supabase, userId, device_id);
+      if (deviceStatus !== "active") {
+        console.warn("[sync/push] device not active", { userId, device_id, deviceStatus });
+        // Only a device with no registration is told to register. A deactivated device must not be
+        // able to reactivate itself by registering again.
         response.status(400).json({
           error: "Bad Request",
-          code: DEVICE_NOT_REGISTERED,
+          ...(deviceStatus === "missing" ? { code: DEVICE_NOT_REGISTERED } : {}),
           message: "Device is not registered or has been deactivated",
         });
         return;

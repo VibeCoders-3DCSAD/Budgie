@@ -279,17 +279,23 @@ function assertDeviceId(deviceId: string): void {
   if (!deviceId || deviceId.length > 128 || !/^[a-zA-Z0-9._:-]+$/.test(deviceId)) throw new Error("invalid device id");
 }
 
-export async function isDeviceActive(
+export type DeviceStatus = "active" | "inactive" | "missing";
+
+// Whether the user has registered this device and it is still active. Throws when the lookup fails, so a
+// database error is never read as a missing device.
+export async function getDeviceStatus(
   supabase: SupabaseClient,
   userId: string,
   deviceId: string,
-): Promise<boolean> {
-  const { data } = await supabase
+): Promise<DeviceStatus> {
+  const { data, error } = await supabase
     .from("user_devices")
     .select("is_active")
     .eq("user_id", userId)
     .eq("device_id", deviceId)
     .maybeSingle();
 
-  return data?.is_active === true;
+  if (error) throw new Error(`device lookup failed: ${error.message}`);
+  if (!data) return "missing";
+  return data.is_active === true ? "active" : "inactive";
 }

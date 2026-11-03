@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { registerDevice } from "../../../services/sync/syncService.js";
+import { getDeviceStatus, registerDevice } from "../../../services/sync/syncService.js";
 
 type Result = { data: unknown; error: { message: string } | null };
 
@@ -42,5 +42,24 @@ describe("registerDevice", () => {
 
     await expect(registerDevice(client, "user-1", "bad id!")).rejects.toThrow("invalid device id");
     expect(from).not.toHaveBeenCalled();
+  });
+});
+
+describe("getDeviceStatus", () => {
+  function lookupReturning(result: Result) {
+    const query = { select: jest.fn(() => query), eq: jest.fn(() => query), maybeSingle: jest.fn(async () => result) };
+    return { from: jest.fn(() => query) } as unknown as SupabaseClient;
+  }
+
+  it.each([
+    [{ is_active: true }, "active"],
+    [{ is_active: false }, "inactive"],
+    [null, "missing"],
+  ])("reads %j as %s", async (row, status) => {
+    await expect(getDeviceStatus(lookupReturning({ data: row, error: null }), "user-1", "device-1")).resolves.toBe(status);
+  });
+
+  it("throws instead of reporting a missing device when the lookup fails", async () => {
+    await expect(getDeviceStatus(lookupReturning({ data: null, error: { message: "timeout" } }), "user-1", "device-1")).rejects.toThrow("device lookup failed");
   });
 });

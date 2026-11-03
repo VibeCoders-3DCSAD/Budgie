@@ -12,17 +12,17 @@ jest.mock("../../lib/supabase.js", () => {
 
 jest.mock("../../services/sync/syncService.js", () => ({
   ...(jest.requireActual("../../services/sync/syncService.js") as object),
-  isDeviceActive: jest.fn(),
+  getDeviceStatus: jest.fn(),
   pushOperations: jest.fn(),
 }));
 
 import app from "../../app.js";
 import { supabase } from "../../lib/supabase.js";
-import { isDeviceActive, pushOperations } from "../../services/sync/syncService.js";
+import { getDeviceStatus, pushOperations } from "../../services/sync/syncService.js";
 import { authHeader, validUserId } from "../helpers/fixtures.js";
 
 const mockGetUser = supabase.auth.getUser as jest.Mock;
-const mockIsDeviceActive = isDeviceActive as unknown as jest.Mock;
+const mockGetDeviceStatus = getDeviceStatus as unknown as jest.Mock;
 const mockPushOperations = pushOperations as unknown as jest.Mock;
 
 function operation(id: string, overrides: Record<string, unknown> = {}) {
@@ -48,7 +48,7 @@ function push(operations: unknown[]) {
 describe("POST /odin/api/sync/push", () => {
   beforeEach(() => {
     mockGetUser.mockResolvedValue({ data: { user: { id: validUserId } }, error: null });
-    mockIsDeviceActive.mockReset().mockResolvedValue(true as never);
+    mockGetDeviceStatus.mockReset().mockResolvedValue("active" as never);
     mockPushOperations.mockReset().mockImplementation(async (...args: unknown[]) => {
       const operations = args[3] as Array<{ operation_id: string }>;
       return operations.map((item) => ({ operation_id: item.operation_id, status: "applied" }));
@@ -71,12 +71,22 @@ describe("POST /odin/api/sync/push", () => {
   });
 
   it("tells the client its device is not registered so it can register again", async () => {
-    mockIsDeviceActive.mockResolvedValue(false as never);
+    mockGetDeviceStatus.mockResolvedValue("missing" as never);
 
     const response = await push([operation("good-1")]);
 
     expect(response.status).toBe(400);
     expect(response.body.code).toBe("device_not_registered");
+    expect(mockPushOperations).not.toHaveBeenCalled();
+  });
+
+  it("does not invite a deactivated device to register again", async () => {
+    mockGetDeviceStatus.mockResolvedValue("inactive" as never);
+
+    const response = await push([operation("good-1")]);
+
+    expect(response.status).toBe(400);
+    expect(response.body.code).toBeUndefined();
     expect(mockPushOperations).not.toHaveBeenCalled();
   });
 
