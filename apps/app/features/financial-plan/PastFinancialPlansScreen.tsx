@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { getPhilippineToday } from "../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../lib/dates";
 import { listCompletedFinancialPlans } from "../../local-db/repositories/financial-plans/financialPlans";
 import { formatPeso, formatPlanMonthLabel } from "./helpers/financialPlanPresentation";
 import type { CompletedFinancialPlanSummary } from "./past-plans/pastPlanTypes";
@@ -18,7 +18,7 @@ export default function PastFinancialPlansScreen({ userId, onOpenPlan }: PastFin
     let active = true;
     setPlans(null);
     setError(null);
-    listCompletedFinancialPlans(userId, getPhilippineToday())
+    listCompletedFinancialPlans(userId, manilaToday())
       .then((result) => { if (active) setPlans(result); })
       .catch(() => { if (active) setError("Your past plans could not be loaded."); });
     return () => { active = false; };

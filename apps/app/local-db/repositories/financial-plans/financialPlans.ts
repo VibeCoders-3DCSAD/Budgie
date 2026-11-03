@@ -6,7 +6,7 @@ import type { FinancialPlanLabels } from "../../../features/financial-plan/helpe
 import type { CompletedFinancialPlanSummary } from "../../../features/financial-plan/past-plans/pastPlanTypes";
 import type { FinancialPlanSurplusRecommendation } from "../../../features/financial-plan/types";
 import { getPlanSpendingReview } from "./financialPlanSpendingReview";
-import { getPhilippineToday } from "../../../features/debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { planSpendableFundsCentavos } from "../../../features/financial-plan/helpers/planSpendableFunds";
 import { getDb, now } from "../helpers/db";
 
@@ -101,7 +101,7 @@ function assertDate(value: string, field: string): void {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== value) throw new LocalDbError("VALIDATION_ERROR", `${field} must be a valid YYYY-MM-DD date`);
 }
 
-function currentCalendarMonth(referenceDate = getPhilippineToday()): { start: string; end: string } {
+function currentCalendarMonth(referenceDate = manilaToday()): { start: string; end: string } {
   const [year, month] = referenceDate.split("-").map(Number) as [number, number];
   return { start: `${referenceDate.slice(0, 7)}-01`, end: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10) };
 }

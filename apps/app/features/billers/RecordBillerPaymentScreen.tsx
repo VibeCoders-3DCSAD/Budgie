@@ -12,13 +12,14 @@ import { getScheduledPayment, recordScheduledPayment, type ScheduledPayment } fr
 import { DateField } from "../../components/DateField";
 import { AccountPickerSheet } from "./components/BillerSheets";
 import { formatDueDate, formatPeso } from "./presentation";
-import { currentOccurrence, localToday, occurrenceChoices } from "./schedule";
+import { currentOccurrence, occurrenceChoices } from "./schedule";
+import { manilaToday } from "../../lib/dates";
 
 type Props = { userId: string; deviceId: string; scheduledPaymentId: string; onClose: () => void; onRecorded: (message: string) => void };
 type Field = "amount" | "paymentDate" | "account" | "occurrence";
 
 export default function RecordBillerPaymentScreen({ userId, deviceId, scheduledPaymentId, onClose, onRecorded }: Props) {
-  const today = localToday();
+  const today = manilaToday();
   const [payment, setPayment] = useState<ScheduledPayment | null>(null);
   const [paid, setPaid] = useState<Map<string, number>>(new Map());
   const [accounts, setAccounts] = useState<AccountOption[]>([]);

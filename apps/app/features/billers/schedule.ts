@@ -34,14 +34,6 @@ function toDate(time: number): string {
   return new Date(time).toISOString().slice(0, 10);
 }
 
-// Due dates follow the Asia/Manila calendar day on every device, the same day the server's auto-post job uses.
-// The Philippines has no daylight saving time, so a fixed +08:00 offset is exact.
-const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
-
-export function localToday(now = new Date()): string {
-  return new Date(now.getTime() + MANILA_OFFSET_MS).toISOString().slice(0, 10);
-}
-
 export function addDays(date: string, days: number): string {
   return toDate(toTime(date) + days * DAY_MS);
 }

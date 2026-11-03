@@ -5,7 +5,7 @@ import KebabMenu, { type KebabAction } from "../../../components/KebabMenu";
 import type { SavingsGoal } from "../../../local-db/repositories/savings/savingsGoals";
 import { SAVINGS_GOAL_PRIORITY_LABELS, SAVINGS_GOAL_TYPE_LABELS } from "../constants";
 import { getMinimumContributionPerOccurrence, type ScheduledSavingsGoal } from "../helpers/contributionSchedule";
-import { localToday } from "../../billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import type { SavingsActivity } from "../types";
 import { SavingsForecastSection } from "../forecast/components/SavingsForecastSection";
 import { formatPeso } from "../../../lib/format/money";
@@ -37,7 +37,7 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
   const [showAllActivity, setShowAllActivity] = useState(false);
   const active = goal.status === "active";
   const reached = goal.isAchieved || goal.currentAmountCentavos >= goal.targetAmountCentavos;
-  const minimum = getMinimumContributionPerOccurrence(goal as ScheduledSavingsGoal, localToday());
+  const minimum = getMinimumContributionPerOccurrence(goal as ScheduledSavingsGoal, manilaToday());
   const visibleActivity = showAllActivity ? activities : activities.slice(0, RECENT_ACTIVITY_LIMIT);
   const menuActions: KebabAction[] = active
     ? [

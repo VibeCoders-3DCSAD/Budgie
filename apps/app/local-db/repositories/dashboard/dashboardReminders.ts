@@ -1,5 +1,6 @@
 import { initDatabase } from "../../client";
-import { addDays, dueDatesBetween, localToday, type PaymentSchedule } from "../../../features/billers/schedule";
+import { addDays, dueDatesBetween, type PaymentSchedule } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { buildUpcomingDebtPayments } from "../../../features/debt-manager/helpers/upcomingDebtPayments";
 import { buildSavingsReminders } from "../../../features/dashboard/helpers/savingsReminders";
 import type { DashboardReminder, DashboardReminderSection, DashboardReminders } from "../../../features/dashboard/types";
@@ -105,7 +106,7 @@ async function section(sources: Promise<DashboardReminder[]>[]): Promise<Dashboa
   return { items: results.flatMap((result) => result.status === "fulfilled" ? result.value : []).sort((a, b) => a.date.localeCompare(b.date) || a.id.localeCompare(b.id)), unavailable: results.some((result) => result.status === "rejected") };
 }
 
-export async function getDashboardReminders(userId: string, today = localToday()): Promise<DashboardReminders> {
+export async function getDashboardReminders(userId: string, today = manilaToday()): Promise<DashboardReminders> {
   const through = addDays(today, 7);
   const [attention, upcoming] = await Promise.all([
     section([listBlockedAutoPosts(userId, today), listAttentionObservations(userId)]),

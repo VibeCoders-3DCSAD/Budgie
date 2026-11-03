@@ -2,7 +2,8 @@ import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import BillerDetailScreen from "../BillerDetailScreen";
 import RecordBillerPaymentScreen from "../RecordBillerPaymentScreen";
-import { addDays, localToday, previousDueDate } from "../schedule";
+import { addDays, previousDueDate } from "../schedule";
+import { manilaToday } from "../../../lib/dates";
 
 const mockGet = jest.fn();
 const mockRecords = jest.fn();
@@ -28,7 +29,7 @@ jest.mock("../../../local-db/repositories/ledger/taxonomy", () => ({ listSubcate
 jest.mock("../../../local-db/repositories/savings/savingsExpenseFunding", () => ({ getSavingsExpenseFunding: (...args: unknown[]) => mockGetSavingsExpenseFunding(...args) }));
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: jest.fn() }) }));
 
-const today = localToday();
+const today = manilaToday();
 const meralco = {
   id: "meralco", name: "Meralco", subcategoryId: "sub-electricity", sourceAccountId: "acct-bpi", amountCentavos: 248_000, frequency: "monthly",
   dueDayOfMonth: 5, dueSecondDayOfMonth: null, dueDayOfWeek: null, dueMonth: null, startsOn: addDays(today, -400), endsOn: null, autoPost: false,

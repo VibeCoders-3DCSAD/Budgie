@@ -32,8 +32,8 @@ Implement section 18.8 of `docs/requirements-engineering/features/12-intelligent
 
 ## Decisions
 
-- **D0. Plan period = current calendar month (decided).** A plan always covers the first through the last day of the month containing "today" in Asia/Manila time, including when it is created mid-month (§18.1). The server already uses Manila time, and the app should use `getPhilippineToday()`, so the device and server always agree on which month is current.
-- **D1. Completed period:** `period_end < getPhilippineToday()`. The current-month plan is never listed as "past".
+- **D0. Plan period = current calendar month (decided).** A plan always covers the first through the last day of the month containing "today" in Asia/Manila time, including when it is created mid-month (§18.1). The server already uses Manila time, and the app should use `manilaToday()`, so the device and server always agree on which month is current.
+- **D1. Completed period:** `period_end < manilaToday()`. The current-month plan is never listed as "past".
 - **D2. Actual spending:** (bill payments, i.e. transactions from an obligation's recurring template, are also excluded because bills are reserved separately from category allocations) posted, non-deleted `expense` transactions in `[period_start, period_end]` for the user. Exclude transactions linked to a live `debt_payments.transaction_id` or `credit_card_payments.transaction_id`, and exclude savings-goal transfers. Debt and savings actuals are reported in their own sections.
 - **D3. Category matching:** a category allocation matches transactions whose category, or the parent of their subcategory, equals the allocation's category. A subcategory allocation matches only that subcategory. Because a plan selects either a broad category or its subcategories, never both, nothing is double counted.
 - **D4. Unplanned spending (decided):** spending in categories with no allocation is shown as a separate "Unplanned" line. It counts toward total actual spending, and therefore toward "actual spending exceeded the plan", but not toward any per-allocation variance.
@@ -55,7 +55,7 @@ main → fp-period/current-month → fp-history/repo-list → fp-history/actuals
 
 ### PR 0: `fp-period/current-month`: plans cover the current month (~150 lines)
 - **App:**
-  - Replace `nextCalendarMonth()` with `currentCalendarMonth()` in `financialPlans.ts`, computed from `getPhilippineToday()`.
+  - Replace `nextCalendarMonth()` with `currentCalendarMonth()` in `financialPlans.ts`, computed from `manilaToday()`.
   - Rename `getNextFinancialPlanPeriod` to `getCurrentFinancialPlanPeriod`, and update its callers in `savingsEnvelopeAllocationQueries.ts` and `DebtManagerOverview.tsx`.
   - Change the `validate()` error message to "Financial Plans can only cover the current calendar month".
   - Update the screen subtitle in `MobileShell.tsx:199` ("Plan next month's money").
@@ -122,7 +122,7 @@ main → fp-period/current-month → fp-history/repo-list → fp-history/actuals
 - Tests: renders all sections, "not recorded" copy (never "missed"), removed-label suffix, offline render from local data only.
 
 ### PR 6: `fp-history/current-period-fix`: stop completed plans blocking the main screen (~60 lines)
-- `FinancialPlanScreen` loads the accepted plan for `getCurrentFinancialPlanPeriod(getPhilippineToday())` with `getAcceptedFinancialPlanForPeriod`, instead of `getLatestFinancialPlan`. When no plan exists for the current month, it shows the selection flow, with a link to past plans if any exist.
+- `FinancialPlanScreen` loads the accepted plan for `getCurrentFinancialPlanPeriod(manilaToday())` with `getAcceptedFinancialPlanForPeriod`, instead of `getLatestFinancialPlan`. When no plan exists for the current month, it shows the selection flow, with a link to past plans if any exist.
 - Tests: a completed previous-month plan no longer appears as `saved`, the new period can be planned, and the current-period plan still loads.
 - Kept last so that history is reachable before the main screen stops showing old plans.
 

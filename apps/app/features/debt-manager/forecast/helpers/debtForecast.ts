@@ -1,6 +1,5 @@
 import type { DebtAccount, DebtPaymentSchedule, DebtRepaymentForecast, PaymentFrequency } from "../../../../local-db/repositories/debts/debtAccounts";
-import { getPhilippineToday } from "./debtTrendRange";
-import { addDays, addMonths, dateAtDay } from "../../../../lib/dates";
+import { addDays, addMonths, dateAtDay, manilaToday } from "../../../../lib/dates";
 
 export const PAYMENT_INTERVAL_DAYS: Partial<Record<PaymentFrequency, number>> = {
   daily: 1,
@@ -115,7 +114,7 @@ export function getProjectedContributionForDate(debt: Omit<Pick<DebtAccount, "mi
 
 export function buildDebtBalanceForecast(
   debt: ForecastDebt,
-  asOf = getPhilippineToday(),
+  asOf = manilaToday(),
   recordedPayments: ScheduledDebtPayment[] = [],
   projectedContributionCentavos = getProjectedContributionCentavos(debt, recordedPayments),
 ): DebtBalanceForecastPoint[] {
@@ -161,7 +160,7 @@ export function buildDebtBalanceForecast(
   return points;
 }
 
-export function buildDebtForecast(debt: ForecastDebt, asOf = getPhilippineToday(), recordedPayments: ScheduledDebtPayment[] = [], projectedContributionCentavos?: number): DebtForecast {
+export function buildDebtForecast(debt: ForecastDebt, asOf = manilaToday(), recordedPayments: ScheduledDebtPayment[] = [], projectedContributionCentavos?: number): DebtForecast {
   const points = buildDebtBalanceForecast(debt, asOf, recordedPayments, projectedContributionCentavos);
   const projectedPayoffDate = points.at(-1)?.balanceCentavos === 0 ? points.at(-1)?.date ?? null : null;
   const scheduled = Boolean(debt.nextDueDate && hasPaymentSchedule(debt.paymentFrequency, debt.paymentSchedule) && debt.minimumPaymentCentavos > 0);
@@ -180,7 +179,7 @@ export function buildDebtForecast(debt: ForecastDebt, asOf = getPhilippineToday(
 export function getDebtPaymentProgress(
   debt: Omit<Pick<DebtAccount, "currentBalanceCentavos" | "minimumPaymentCentavos" | "nextDueDate" | "paymentFrequency" | "paymentSchedule" | "status">, "paymentSchedule"> & { paymentSchedule?: DebtPaymentSchedule },
   payments: ScheduledDebtPayment[],
-  asOf = getPhilippineToday(),
+  asOf = manilaToday(),
 ): DebtAccount["progress"] {
   if (debt.status === "paid_off" || debt.currentBalanceCentavos === 0) return "finished";
   if (!debt.nextDueDate || !hasPaymentSchedule(debt.paymentFrequency, debt.paymentSchedule) || debt.minimumPaymentCentavos <= 0) return "no_payments";

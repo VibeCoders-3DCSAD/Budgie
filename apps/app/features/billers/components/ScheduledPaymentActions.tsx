@@ -2,7 +2,8 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { BottomSheet, FieldLabel, Note, Switch, styles as ui, v4, v4Font } from "../../../components/BudgieForm";
 import type { ScheduledPaymentSummary } from "../../../local-db/repositories/scheduled-payments/scheduledPayments";
 import { formatDueDate, formatPeso } from "../presentation";
-import { localToday, nextDueDate } from "../schedule";
+import { nextDueDate } from "../schedule";
+import { manilaToday } from "../../../lib/dates";
 
 function MenuRow({ label, onPress, danger = false, divider }: { label: string; onPress: () => void; danger?: boolean; divider: boolean }) {
   return (
@@ -45,7 +46,7 @@ export function DeleteConfirmDialog({ name, message = "This biller or remittance
 }
 
 export function AutoPostSheet({ payment, accountName, busy, onToggle, onClose }: { payment: ScheduledPaymentSummary | null; accountName: string; busy: boolean; onToggle: () => void; onClose: () => void }) {
-  const nextPost = payment ? nextDueDate(payment, localToday()) : null;
+  const nextPost = payment ? nextDueDate(payment, manilaToday()) : null;
   return (
     <BottomSheet visible={payment !== null} onClose={onClose} title={payment?.name}>
       {payment ? (

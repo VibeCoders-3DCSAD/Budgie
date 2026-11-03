@@ -8,7 +8,7 @@ jest.mock("../../../local-db/repositories/financial-plans/financialPlans", () =>
   listCompletedFinancialPlans: (...args: unknown[]) => mockListCompletedFinancialPlans(...args),
 }));
 
-jest.mock("../../debt-manager/forecast/helpers/debtTrendRange", () => ({ getPhilippineToday: () => "2026-11-15" }));
+jest.mock("../../../lib/dates", () => ({ ...jest.requireActual("../../../lib/dates"), manilaToday: () => "2026-11-15" }));
 
 const plans = [
   { id: "plan-oct", periodStart: "2026-10-01", periodEnd: "2026-10-31", availableFundsCentavos: 100_000, shortfallCentavos: null, plannedTotalCentavos: 90_000 },

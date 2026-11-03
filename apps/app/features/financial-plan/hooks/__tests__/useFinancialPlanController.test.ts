@@ -41,7 +41,7 @@ jest.mock("../../../../local-db/sync/runSync", () => ({
   runSync: (...args: unknown[]) => mockRunSync(...args),
 }));
 
-jest.mock("../../../debt-manager/forecast/helpers/debtTrendRange", () => ({ getPhilippineToday: () => "2026-10-15" }));
+jest.mock("../../../../lib/dates", () => ({ ...jest.requireActual("../../../../lib/dates"), manilaToday: () => "2026-10-15" }));
 
 jest.mock("../../api", () => ({
   requestFinancialPlanCommitments: () => Promise.resolve({ period: { start: "2026-10-01", end: "2026-10-31" }, debtReservations: [], savingsReservations: [] }),

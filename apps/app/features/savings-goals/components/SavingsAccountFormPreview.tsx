@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Text, View } from "react-native";
 import { Banner, FormCard, Note, Segment, styles, v4, v4Font } from "../../../components/BudgieForm";
-import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { SavingsAction, SavingsInput, SavingsReviewRow } from "./SavingsFormControls";
 import { SavingsContributionFields, SavingsInterestFields, SavingsTargetFields } from "./SavingsTypeFields";
 import { contributionDescription, formatDraftMoney, formatDraftRate, newSavingsFormDraft, SAVINGS_FORM_TYPES, validateSavingsFormDraft, type SavingsFormDraft, type SavingsFormErrors, type SavingsFormType, type SavingsSharedDraft } from "../helpers/savingsAccountFormDraft";
@@ -25,7 +25,7 @@ export default function SavingsAccountFormPreview({ onCancel }: { onCancel: () =
     setErrors((previous) => Object.fromEntries(Object.entries(previous).filter(([key]) => !(key in patch))));
   }
   function review() {
-    const nextErrors = validateSavingsFormDraft(type, shared, draft, getPhilippineToday());
+    const nextErrors = validateSavingsFormDraft(type, shared, draft, manilaToday());
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) setReviewing(true);
   }

@@ -5,7 +5,7 @@ import { listPlanRecommendations } from "../../../local-db/repositories/forecast
 import { listCategories, listSubcategories } from "../../../local-db/repositories/ledger/taxonomy";
 import { listFinancialAccounts } from "../../../local-db/repositories/foundations/financialFoundations";
 import { runSync } from "../../../local-db/sync/runSync";
-import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { requestFinancialPlanCommitments, requestFinancialPlanExplanations, requestFinancialPlanForecast, requestFinancialPlanRecommendation, type ManualPlanAllocation, type ReservationSkips } from "../api";
 import { hasUnderfundedReservation, NO_COMMITMENT_SKIPS, parseBudgetAmount, planCommitmentBudgets, planObligations, requirementReservations, updateCommitmentBudget, type CommitmentKind } from "../helpers/commitmentBudget";
 import type { PlanCommitmentPayments } from "../helpers/commitmentPayments";
@@ -28,7 +28,7 @@ type Options = {
 };
 
 function getCurrentPeriodPlan(userId: string, planMonth?: string): Promise<AcceptedFinancialPlan | null> {
-  const period = getCurrentFinancialPlanPeriod(planMonth ? `${planMonth}-01` : getPhilippineToday());
+  const period = getCurrentFinancialPlanPeriod(planMonth ? `${planMonth}-01` : manilaToday());
   return getAcceptedFinancialPlanForPeriod(userId, period.start, period.end);
 }
 
@@ -84,8 +84,8 @@ export function useFinancialPlanController({ userId, deviceId, accessToken, sync
   const [acceptConfirmOpen, setAcceptConfirmOpen] = useState(false);
   const [savedPlanId, setSavedPlanId] = useState<string | null>(null);
   const [devPlanMonth, setDevPlanMonth] = useState<string | undefined>();
-  const selectedMonth = __DEV__ && devPlanMonth ? devPlanMonth : getPhilippineToday().slice(0, 7);
-  const isDevPreview = __DEV__ && selectedMonth !== getPhilippineToday().slice(0, 7);
+  const selectedMonth = __DEV__ && devPlanMonth ? devPlanMonth : manilaToday().slice(0, 7);
+  const isDevPreview = __DEV__ && selectedMonth !== manilaToday().slice(0, 7);
   const [reloadKey, setReloadKey] = useState(0);
   const requestAbort = useRef<AbortController | null>(null);
   const observedSyncVersion = useRef(syncVersion);

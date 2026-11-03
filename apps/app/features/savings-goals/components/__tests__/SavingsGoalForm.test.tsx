@@ -20,7 +20,7 @@ jest.mock("../../../../local-db/repositories/savings/savingsGoals", () => ({
   createSavingsGoal: (...args: unknown[]) => mockCreate(...args),
   getEmergencyFundBaseline: jest.fn().mockResolvedValue(0),
 }));
-jest.mock("../../../debt-manager/forecast/helpers/debtTrendRange", () => ({ getPhilippineToday: () => "2026-10-18" }));
+jest.mock("../../../../lib/dates", () => ({ ...jest.requireActual("../../../../lib/dates"), manilaToday: () => "2026-10-18" }));
 
 const goal: SavingsGoal = {
   id: "goal-1", name: "Travel", goalType: "custom", goalCategory: "custom",

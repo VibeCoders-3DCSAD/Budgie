@@ -1,5 +1,4 @@
-import { addDays } from "../../../lib/dates";
-import { localToday } from "../../../features/billers/schedule";
+import { addDays, manilaToday } from "../../../lib/dates";
 type DateParts = { year: number; month: number; day: number };
 
 function parseIsoDate(value: string, field: string): DateParts {
@@ -54,7 +53,7 @@ function normalizeDay(value: number | string, field: string): number {
 
 export function calculateCurrentCreditCardCycle(
   defaults: CreditCardCycleDateDefaults,
-  asOfDate = localToday(),
+  asOfDate = manilaToday(),
 ) {
   const cutoffDay = normalizeDay(defaults.cutoff_day, "cutoff_day");
   const { year, month } = parseIsoDate(asOfDate, "asOfDate");

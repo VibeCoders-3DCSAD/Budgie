@@ -4,7 +4,7 @@ import { CaretDown, CaretUp } from "phosphor-react-native";
 import { getSavingsAllocationStrategy, saveSavingsAllocationStrategy, type SavingsAllocationStrategy } from "../../../local-db/repositories/savings/savingsAllocationPreferences";
 import { getCurrentSavingsEnvelopeAllocation } from "../queries/savingsEnvelopeAllocationQueries";
 import type { SavingsAllocationProposal, SavingsCycleAllocation, SavingsCycleContribution } from "../helpers/savingsEnvelopeAllocation";
-import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { formatPeso } from "../../../lib/format/money";
 
 const P = { card: "#F1F0EB", ink: "#1B1C1A", muted: "#6B7A6F", brand: "#013220", line: "#EAEAE6", error: "#D9001F", white: "#FFFFFF", soft: "#E8F3EC" } as const;
@@ -28,7 +28,7 @@ export default function SavingsAllocationReview({ userId, deviceId, syncVersion 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [choosingStrategy, setChoosingStrategy] = useState(false);
-  const today = getPhilippineToday();
+  const today = manilaToday();
 
   async function load() {
     setLoading(true);

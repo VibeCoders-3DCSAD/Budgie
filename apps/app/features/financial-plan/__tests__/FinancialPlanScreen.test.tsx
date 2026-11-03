@@ -50,7 +50,7 @@ jest.mock("../../../local-db/sync/runSync", () => ({
   runSync: (...args: unknown[]) => mockRunSync(...args),
 }));
 
-jest.mock("../../debt-manager/forecast/helpers/debtTrendRange", () => ({ getPhilippineToday: () => "2026-10-15" }));
+jest.mock("../../../lib/dates", () => ({ ...jest.requireActual("../../../lib/dates"), manilaToday: () => "2026-10-15" }));
 
 const mockRequestFinancialPlanExplanations = jest.fn();
 jest.mock("../api", () => ({

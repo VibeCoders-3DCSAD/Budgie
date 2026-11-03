@@ -6,7 +6,7 @@ import { SCHEDULED_PAYMENTS_CATEGORY } from "./scheduledForecast";
 import { CalendarBlank, CaretDown, CaretUp, Check } from "phosphor-react-native";
 import { v4, v4Font } from "../../components/BudgieForm";
 import { ForecastCategoryPicker } from "./ForecastCategoryPicker";
-import { localToday } from "../billers/schedule";
+import { manilaToday } from "../../lib/dates";
 import { LEGACY_SEASON_LABELS, SEASON_PRESETS, normalizeCustomEvents, type SeasonalPreferences } from "@odin/spending-insights/seasons";
 import { formatPeso } from "../../lib/format/money";
 
@@ -102,7 +102,7 @@ const MONTHLY_FORECAST_MONTHS = 6;
 export function monthlyForecast(forecast: QuarterlyForecastPayload, now = new Date()): NonNullable<QuarterlyForecastPayload["months"]> | null {
   if (forecast.baselineMethod !== "same_period_last_year" && forecast.baselineMethod !== "median_monthly") return null;
   // Months follow the Asia/Manila calendar.
-  const first = localToday(now).slice(0, 7);
+  const first = manilaToday(now).slice(0, 7);
   const last = new Date(Date.UTC(Number(first.slice(0, 4)), Number(first.slice(5, 7)) - 1 + MONTHLY_FORECAST_MONTHS - 1, 1)).toISOString().slice(0, 7);
   const months = (forecast.months ?? []).filter((month) => month.month >= first && month.month <= last);
   return months.length ? months : null;
@@ -406,7 +406,7 @@ export function QuarterlyForecastCharts({ forecast, history = [], monthHistory =
   const scale: ForecastScale = months ? "monthly" : "quarterly";
   const labels = months ? MONTH_LABELS : QUARTER_LABELS;
   const unit = months ? "months" : "quarters";
-  const thisMonth = localToday(now).slice(0, 7);
+  const thisMonth = manilaToday(now).slice(0, 7);
   const thisQuarter = quarterOf(thisMonth);
   // The current month or quarter is charted as a forecast; its spending so far goes to Forecast vs Actual.
   const thisPeriod = months

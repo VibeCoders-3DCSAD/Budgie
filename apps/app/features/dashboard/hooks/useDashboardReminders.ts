@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AppState } from "react-native";
 import { getDashboardReminders } from "../../../local-db/repositories/dashboard/dashboardReminders";
-import { localToday } from "../../billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import type { DashboardReminders } from "../types";
 
 export function useDashboardReminders(userId: string, reloadKey: string) {
@@ -19,9 +19,9 @@ export function useDashboardReminders(userId: string, reloadKey: string) {
   }, [userId]);
   useEffect(() => {
     void refresh();
-    let day = localToday();
-    const listener = AppState.addEventListener("change", (state) => { if (state === "active") { day = localToday(); void refresh(); } });
-    const timer = setInterval(() => { const next = localToday(); if (next !== day) { day = next; void refresh(); } }, 60_000);
+    let day = manilaToday();
+    const listener = AppState.addEventListener("change", (state) => { if (state === "active") { day = manilaToday(); void refresh(); } });
+    const timer = setInterval(() => { const next = manilaToday(); if (next !== day) { day = next; void refresh(); } }, 60_000);
     return () => { ++request.current; listener.remove(); clearInterval(timer); };
   }, [refresh, reloadKey]);
   return { data: state.userId === userId ? state.data : null, loading: state.userId !== userId || state.loading, refresh };

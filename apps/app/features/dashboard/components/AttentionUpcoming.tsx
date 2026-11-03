@@ -1,7 +1,7 @@
 import React from "react";
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from "react-native";
 import { dashboardColors as P, dashboardStyles } from "../dashboardAppearance";
-import { localToday } from "../../billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { formatPeso } from "../dashboardFormatting";
 import { useDashboardReminders } from "../hooks/useDashboardReminders";
 import type { DashboardItemTarget, DashboardReminderSection } from "../types";
@@ -16,7 +16,7 @@ export function AttentionUpcoming({ userId, reloadKey, onOpen }: Props) {
   </View>;
 }
 
-export function ReminderSection({ title, section, loading, empty, onRetry, onOpen, upcoming = false, today = localToday() }: {
+export function ReminderSection({ title, section, loading, empty, onRetry, onOpen, upcoming = false, today = manilaToday() }: {
   title: string; section?: DashboardReminderSection; loading: boolean; empty: string; onRetry: () => void; onOpen: Props["onOpen"]; upcoming?: boolean; today?: string;
 }) {
   return <View>

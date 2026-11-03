@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { getEmergencyFundBaseline } from "../../../local-db/repositories/savings/savingsGoals";
-import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { formatPeso } from "../../../lib/format/money";
 
 type Props = { userId: string; onApply: (amountCentavos: number) => void };
@@ -12,7 +12,7 @@ export default function EmergencyFundTargetSuggestion({ userId, onApply }: Props
 
   useEffect(() => {
     let active = true;
-    getEmergencyFundBaseline(userId, new Date(`${getPhilippineToday()}T00:00:00Z`)).then(
+    getEmergencyFundBaseline(userId, new Date(`${manilaToday()}T00:00:00Z`)).then(
       (monthlyCentavos) => { if (active) setResult({ userId, monthlyCentavos }); },
       () => { if (active) setResult({ userId, monthlyCentavos: null }); },
     );

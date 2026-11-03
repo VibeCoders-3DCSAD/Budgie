@@ -12,7 +12,7 @@ import {
 import { listCategories, listSubcategories } from "../../local-db/repositories/ledger/taxonomy";
 import { AutoPostSheet, DeleteConfirmDialog, RowMenuSheet } from "./components/ScheduledPaymentActions";
 import { dueThisMonthCentavos, formatPeso, isDueSoon, rowSubtitle } from "./presentation";
-import { localToday } from "./schedule";
+import { manilaToday } from "../../lib/dates";
 
 type Filter = "all" | "due_soon" | "auto_post" | "archived";
 type Props = { userId: string; deviceId: string; syncVersion: number; onAdd: () => void; onEdit: (id: string) => void; onOpen: (id: string) => void; onSyncRequested: () => void };
@@ -47,7 +47,7 @@ export default function BillersScreen({ userId, deviceId, syncVersion, onAdd, on
   const [autoPostFor, setAutoPostFor] = useState<ScheduledPaymentSummary | null>(null);
   const [deleting, setDeleting] = useState<ScheduledPaymentSummary | null>(null);
   const [busy, setBusy] = useState(false);
-  const today = localToday();
+  const today = manilaToday();
   // The shell passes a new callback on every render; reading it through a ref keeps load stable.
   const requestSync = useRef(onSyncRequested);
   requestSync.current = onSyncRequested;

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { View } from "react-native";
 import { Banner, FormCard, Note } from "../../../../components/BudgieForm";
-import { filterDebtTrendPoints, getPhilippineToday, type DebtTrendRange } from "../helpers/debtTrendRange";
+import { filterDebtTrendPoints, type DebtTrendRange } from "../helpers/debtTrendRange";
+import { manilaToday } from "../../../../lib/dates";
 import { DebtForecastChart, type ForecastChartPoint } from "./DebtForecastChart";
 import { DebtForecastTable } from "./DebtForecastTable";
 import { ChartLegend, RangeChips, formatMilestoneDate } from "../../components/debtUi";
@@ -27,7 +28,7 @@ function monthlyBalancePoints(points: GlobalDebtPoint[], today: string): Forecas
 export default function GlobalDebtTrend({ points }: { points: GlobalDebtPoint[] }) {
   const [width, setWidth] = useState(0);
   const [range, setRange] = useState<DebtTrendRange>("year");
-  const today = getPhilippineToday();
+  const today = manilaToday();
   const payoffDate = points.find((point) => point.date >= today && point.debtCentavos <= 0)?.date;
   const visiblePoints = filterDebtTrendPoints(points, range, payoffDate);
   const balancePoints = monthlyBalancePoints(visiblePoints, today);

@@ -7,7 +7,7 @@ import { useConnectivityStore } from "../../../services/connectivity";
 import { getQuarterlyForecastContent } from "../../dashboard/dashboardSnapshotContent";
 import { getPreferences } from "../../governance/api";
 import { requestForecastInterpretation } from "../api";
-import { localToday } from "../../billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { forecastInterpretation } from "../QuarterlyForecastCharts";
 import { fetchSpendingForecast } from "../fetchSpendingForecast";
 import type { QuarterlyForecastPayload } from "../types";
@@ -64,7 +64,7 @@ export function useQuarterlySpendingForecast(userId: string, accessToken: string
         const { payload } = result;
         await upsertSnapshot(userId, "forecast_quarterly", payload);
         // A failed history save must not hide the fresh forecast.
-        await saveForecastSnapshot(userId, localToday().slice(0, 7), payload).catch(() => {});
+        await saveForecastSnapshot(userId, manilaToday().slice(0, 7), payload).catch(() => {});
         if (signal.aborted) return;
         setForecast(payload);
         setStale(false);

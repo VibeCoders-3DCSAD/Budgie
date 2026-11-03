@@ -8,7 +8,7 @@ import type { CreditCardInstallment } from "../../../../local-db/repositories/cr
 import type { FinancialAccount } from "../../../../local-db/repositories/foundations/financialFoundations";
 import { calculateCreditCardPaymentStatus, creditBalanceCentavos, deleteStatementPayment, type CreditCardPayment, type StatementPaymentContext } from "../../../../local-db/repositories/credit-cards/creditCardPayments";
 import { requestCreditCardSettlement, type CreditCardSettlement } from "../../../../local-db/repositories/credit-cards/creditCardSettlements";
-import { localToday } from "../../../billers/schedule";
+import { manilaToday } from "../../../../lib/dates";
 import CreditCardStatementForm from "./CreditCardStatementForm";
 import { Button, Divider, InfoRow, LinkButton, List, ListRow, Pill, Pills, SectionHeader, formatPeso, formatShortDate, type Tone } from "../../components/debtUi";
 
@@ -93,7 +93,7 @@ const CYCLES_PER_PAGE = 3;
 
 // The card's billing cycles, newest first, with the current one on top.
 export function CreditCardCycleList(props: CycleListProps) {
-  const { account, cycles, transactions, statements, payments, today = localToday() } = props;
+  const { account, cycles, transactions, statements, payments, today = manilaToday() } = props;
   const [visibleCount, setVisibleCount] = useState(CYCLES_PER_PAGE);
   const accountCycles = cycles.filter((cycle) => cycle.account_id === account.id);
   const currentId = (accountCycles.find((cycle) => cycle.cycle_start_date <= today && cycle.cutoff_date >= today) ?? (accountCycles.length === 1 ? accountCycles[0] : undefined))?.id;
@@ -108,7 +108,7 @@ export function CreditCardCycleList(props: CycleListProps) {
   </View>;
 }
 
-export function CreditCardInstallmentList({ userId, deviceId, installments, settlements, onSaved, today = localToday() }: InstallmentListProps) {
+export function CreditCardInstallmentList({ userId, deviceId, installments, settlements, onSaved, today = manilaToday() }: InstallmentListProps) {
   const [editing, setEditing] = useState<CreditCardInstallment | null>(null); const [amount, setAmount] = useState(""); const [principal, setPrincipal] = useState(""); const [fee, setFee] = useState(""); const [date, setDate] = useState(today); const [picker, setPicker] = useState(false); const [error, setError] = useState<string | null>(null);
   async function settle() { if (!editing) return; const settlementAmount = parse(amount); const remainingPrincipal = parse(principal); const settlementFee = fee ? parse(fee) : 0; if (!settlementAmount || remainingPrincipal === null || settlementFee === null) { setError("Some early-settlement details are not valid."); return; } try { await requestCreditCardSettlement(userId, deviceId, { installmentId: editing.id, settlementDate: date, remainingPrincipalCentavos: remainingPrincipal, settlementAmountCentavos: settlementAmount, preterminationFeeCentavos: settlementFee }); await onSaved(); setEditing(null); } catch { setError("Your early settlement could not be recorded."); } }
   if (installments.length === 0) return null;

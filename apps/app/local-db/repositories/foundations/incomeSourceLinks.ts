@@ -1,6 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { LocalDbError } from "../../helpers";
-import { localToday } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import type { IncomeFrequency } from "./incomeSourceModel";
 
 // Income-source checks and the recurring template that posts each payday.
@@ -60,7 +60,7 @@ export async function syncIncomeSourceRecurringTemplate(
     second_day_of_month: source.paydaySecondDayOfMonth ?? undefined,
     day_of_week: source.paydayDayOfWeek ?? undefined,
     // Saving starts the schedule over from today (Asia/Manila), so an edit never back-posts missed paydays.
-    starts_on: source.nextExpectedDate ?? localToday(),
+    starts_on: source.nextExpectedDate ?? manilaToday(),
     subcategory_id: source.subcategoryId,
     destination_account_id: source.destinationAccountId,
     notes: source.notes ?? undefined,

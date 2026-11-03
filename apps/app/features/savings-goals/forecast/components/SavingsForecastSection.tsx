@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import type { SavingsAccountDetails } from "../../../../local-db/repositories/savings/savingsAccountDetails";
 import { DebtForecastChart } from "../../../debt-manager/forecast/components/DebtForecastChart";
-import { filterDebtTrendPoints, getPhilippineToday, type DebtTrendRange } from "../../../debt-manager/forecast/helpers/debtTrendRange";
+import { filterDebtTrendPoints, type DebtTrendRange } from "../../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../../lib/dates";
 import type { SavingsActivity } from "../../types";
 import { SavingsForecastTable } from "./SavingsForecastTable";
 import { buildSavingsForecast, type SavingsForecastStatus } from "../helpers/savingsForecast";
@@ -32,7 +33,7 @@ type Props = {
 export function SavingsForecastSection(props: Props) {
   const [width, setWidth] = useState(0);
   const [range, setRange] = useState<DebtTrendRange>("year");
-  const today = getPhilippineToday();
+  const today = manilaToday();
   const forecast = buildSavingsForecast({ ...props, asOf: today });
   const visiblePoints = filterDebtTrendPoints(forecast.points, range, forecast.projectedTargetDate ?? undefined);
   const chartPoints = visiblePoints.map((point, index) => ({ id: `${point.date}-${point.event}-${index}`, date: point.date, balanceCentavos: point.balanceCentavos, isForecast: point.isForecast }));

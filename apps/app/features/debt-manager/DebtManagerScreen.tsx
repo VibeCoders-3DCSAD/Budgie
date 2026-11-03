@@ -10,7 +10,7 @@ import CreditCardListScreen from "./CreditCardListScreen";
 import CreditCardForecastSection from "./credit-cards/components/CreditCardForecastSection";
 import CreditCardRepaymentStrategy from "./credit-cards/components/CreditCardRepaymentStrategy";
 import CreditCardAvailableCreditReconciliation from "./credit-cards/components/CreditCardAvailableCreditReconciliation";
-import { getPhilippineToday } from "./forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../lib/dates";
 import { useCreditCardForecast } from "./credit-cards/hooks/useCreditCardForecast";
 import { useCycleEditor } from "./hooks/useCycleEditor";
 import { useDebtManagerData } from "./hooks/useDebtManagerData";
@@ -26,7 +26,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
 
   useEffect(() => { setPreviewStrategy(null); }, [accountId]);
 
-  const today = getPhilippineToday();
+  const today = manilaToday();
   const selectedAccount = accountId ? accounts.find((account) => account.id === accountId) : undefined;
   const strategy = accountId ? strategies.find((item) => item.accountId === accountId) : undefined;
   const forecastStrategy = accountId

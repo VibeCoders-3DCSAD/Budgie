@@ -4,7 +4,7 @@ import { Briefcase, Car, PencilSimple, Stack, Storefront, User, type IconProps }
 import { Banner, FieldError, FormCard, MonthEndNote, Note, SectionLabel, Switch, TextField, styles as ui, v4, v4Font } from "../../../../components/BudgieForm";
 import { DateField } from "../../../../components/DateField";
 import { upcomingDueDate } from "../../forecast/helpers/debtForecast";
-import { getPhilippineToday } from "../../forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../../lib/dates";
 import {
   createDebtAccount,
   updateDebtAccount,
@@ -136,7 +136,7 @@ export default function NonCreditDebtForm({ userId, deviceId, debt, onCancel, on
   const [payment, setPayment] = useState(debt ? String(debt.minimumPaymentCentavos / 100) : "");
   const [allowsExtraPayments, setAllowsExtraPayments] = useState(debt?.allowsExtraPayments ?? false);
   // Interest is anchored to the start date; new debts start on the day they are added.
-  const [startDate] = useState(() => debt?.typeSpecific.startDate || getPhilippineToday());
+  const [startDate] = useState(() => debt?.typeSpecific.startDate || manilaToday());
   const [nextDueDate, setNextDueDate] = useState(debt?.nextDueDate ?? "");
   const [targetPayoffDate, setTargetPayoffDate] = useState(debt?.targetPayoffDate ?? "");
   const [maturityDate, setMaturityDate] = useState(debt?.maturityDate ?? "");
@@ -176,7 +176,7 @@ export default function NonCreditDebtForm({ userId, deviceId, debt, onCancel, on
   async function save() {
     const semiMonthlyDays: [number, number] = [Number(semiMonthlyFirstDay), Number(semiMonthlySecondDay)];
     const enteredDays = scheduleEdited && ENTERED_DAY_FREQUENCIES.includes(frequency);
-    const dueDate = enteredDays ? upcomingDueDate(frequency, { dayOfWeek, dayOfMonth: Number(dueDay), semiMonthlyDays }, getPhilippineToday()) ?? "" : nextDueDate;
+    const dueDate = enteredDays ? upcomingDueDate(frequency, { dayOfWeek, dayOfMonth: Number(dueDay), semiMonthlyDays }, manilaToday()) ?? "" : nextDueDate;
     // A quarterly or yearly debt keeps the day of its picked date (a stored day survives an untouched edit), so Jan 31 falls on Apr 30 and then Jul 31.
     const pickedDay = dueDate && (nextDueDate !== debt?.nextDueDate || !debt?.paymentSchedule.dayOfMonth) ? Number(dueDate.slice(8, 10)) : debt?.paymentSchedule.dayOfMonth;
     const dayOfMonth = frequency === "monthly" ? Number(dueDay) : frequency === "quarterly" || frequency === "yearly" ? pickedDay : undefined;

@@ -4,7 +4,8 @@ import { Banner, FormCard, Note, v4 } from "../../../../components/BudgieForm";
 import type { CreditCardForecastPoint, CreditCardScheduleStatus } from "../helpers/creditCardForecast";
 import { DebtForecastChart } from "../../forecast/components/DebtForecastChart";
 import { DebtForecastTable } from "../../forecast/components/DebtForecastTable";
-import { filterDebtTrendPoints, getPhilippineToday, type DebtTrendRange } from "../../forecast/helpers/debtTrendRange";
+import { filterDebtTrendPoints, type DebtTrendRange } from "../../forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../../lib/dates";
 import { ChartLegend, Pill, RangeChips, formatMilestoneDate } from "../../components/debtUi";
 
 const CHART_HEIGHT = 220;
@@ -39,7 +40,7 @@ export default function CreditCardForecastSection({ forecast, isLoading, creditL
     </FormCard></View>;
   }
   const { points, status } = forecast;
-  const today = getPhilippineToday();
+  const today = manilaToday();
   if (rangeCache.current?.points !== points || rangeCache.current.today !== today) {
     rangeCache.current = {
       points,

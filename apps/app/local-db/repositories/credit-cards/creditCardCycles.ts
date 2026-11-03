@@ -3,7 +3,7 @@ import { enqueueOperation, LocalDbError } from "../../helpers";
 import { randomUUID } from "../../uuid";
 import type { SyncOperation } from "../../types";
 import { getDb, now } from "../helpers/db";
-import { localToday } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import {
   calculateCurrentCreditCardCycle,
   calculateSuccessorCreditCardCycle,
@@ -119,7 +119,7 @@ export async function listCreditCardCycles(userId: string, accountId?: string): 
 export async function getCurrentCreditCardCycle(
   userId: string,
   accountId: string,
-  asOfDate = localToday(),
+  asOfDate = manilaToday(),
 ): Promise<CreditCardCycle | null> {
   validateIsoDate(asOfDate, "asOfDate");
   const db = await getDb();
@@ -240,7 +240,7 @@ export async function updateCreditCardCycle(
     if (current.statement_date) {
       throw new LocalDbError("VALIDATION_ERROR", "Recorded credit-card billing cycles cannot be changed.");
     }
-    const today = localToday();
+    const today = manilaToday();
     if (today < current.cycle_start_date || today > current.cutoff_date) {
       throw new LocalDbError("VALIDATION_ERROR", "Only the open credit-card billing cycle can be changed.");
     }
@@ -333,7 +333,7 @@ function missingCycles(card: CreditCardCycleDefaults, lastClosedCutoff: string |
 // inserts them, so a card list costs a fixed number of reads rather than several per card and missing month.
 export async function ensureCurrentCreditCardCycles(userId: string, deviceId: string, asOfDate?: string): Promise<CreditCardCycle[]> {
   const db = await getDb();
-  const date = asOfDate ?? localToday();
+  const date = asOfDate ?? manilaToday();
   validateIsoDate(date, "asOfDate");
   const cards = await db.getAllAsync<CreditCardCycleDefaults>(
     `SELECT fa.id AS account_id, cc.cutoff_day, cc.billing_cycle_days

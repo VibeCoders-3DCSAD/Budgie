@@ -2,7 +2,8 @@ import type { SavingsExpenseWithdrawal } from "../savings/savingsExpenseFunding"
 import * as SQLite from "expo-sqlite";
 import { enqueueOperation, LocalDbError } from "../../helpers";
 import { randomUUID, uuidV5 } from "../../uuid";
-import { currentOccurrence, dueDatesBetween, localToday, type Occurrence, type PaymentSchedule, type ScheduledPaymentFrequency } from "../../../features/billers/schedule";
+import { currentOccurrence, dueDatesBetween, type Occurrence, type PaymentSchedule, type ScheduledPaymentFrequency } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { ensureCurrentCreditCardCycles } from "../credit-cards/creditCardCycles";
 import { BILLER_PAYMENT_MUTATION_PREFIX, createExpenseInTransaction, deleteTransaction } from "../ledger/ledger";
 import { insertScheduledPaymentRecordInTransaction, listPaidByOccurrence, listPaidForScheduledPayment } from "./scheduledPaymentRecords";
@@ -127,7 +128,7 @@ export async function getScheduledPayment(userId: string, id: string): Promise<S
   return row ? map(row) : null;
 }
 
-export async function createScheduledPayment(userId: string, deviceId: string, rawInput: ScheduledPaymentInput, today = localToday()): Promise<ScheduledPayment> {
+export async function createScheduledPayment(userId: string, deviceId: string, rawInput: ScheduledPaymentInput, today = manilaToday()): Promise<ScheduledPayment> {
   const input = normalize(rawInput);
   validate(input);
   const db = await getDb();
@@ -159,7 +160,7 @@ async function applyUpdate(db: SQLite.SQLiteDatabase, userId: string, deviceId: 
   await enqueueOperation(db, { userId, deviceId, entity: "scheduled_payments", recordId: existing.id, operationType: "update", baseVersion: existing.version, changedFields: fields, payload: changes, failureMessage: `The biller or remittance "${existing.name}" could not be updated.` });
 }
 
-export async function updateScheduledPayment(userId: string, deviceId: string, id: string, rawInput: ScheduledPaymentInput, today = localToday()): Promise<ScheduledPayment> {
+export async function updateScheduledPayment(userId: string, deviceId: string, id: string, rawInput: ScheduledPaymentInput, today = manilaToday()): Promise<ScheduledPayment> {
   const input = normalize(rawInput);
   validate(input);
   const db = await getDb();
@@ -183,7 +184,7 @@ export async function updateScheduledPayment(userId: string, deviceId: string, i
   return (await getScheduledPayment(userId, id))!;
 }
 
-export async function setScheduledPaymentAutoPost(userId: string, deviceId: string, id: string, autoPost: boolean, today = localToday()): Promise<ScheduledPayment> {
+export async function setScheduledPaymentAutoPost(userId: string, deviceId: string, id: string, autoPost: boolean, today = manilaToday()): Promise<ScheduledPayment> {
   const existing = await getScheduledPayment(userId, id);
   if (!existing) throw new LocalDbError("NOT_FOUND", "This biller or remittance no longer exists.");
   if (autoPost && existing.frequency === "once") throw new LocalDbError("VALIDATION_ERROR", "Auto-post needs a repeat. Pick a frequency to turn it on.");
@@ -218,7 +219,7 @@ export async function deleteScheduledPayment(userId: string, deviceId: string, i
 
 export type ScheduledPaymentSummary = ScheduledPayment & { current: Occurrence | null };
 
-export async function listScheduledPaymentSummaries(userId: string, status: ScheduledPaymentStatus = "active", today = localToday()): Promise<ScheduledPaymentSummary[]> {
+export async function listScheduledPaymentSummaries(userId: string, status: ScheduledPaymentStatus = "active", today = manilaToday()): Promise<ScheduledPaymentSummary[]> {
   const [payments, paid] = await Promise.all([listScheduledPayments(userId, status), listPaidByOccurrence(userId)]);
   return payments.map((payment) => ({ ...payment, current: currentOccurrence(payment, payment.amountCentavos, paid.get(payment.id) ?? new Map(), today) }));
 }
@@ -302,7 +303,7 @@ export function scheduledPaymentPostIds(scheduledPaymentId: string, dueDate: str
 }
 
 // Offline fallback for the server's auto-post job: posts each auto-post occurrence due by today that is still unpaid.
-export async function postDueScheduledPayments(userId: string, deviceId: string, today = localToday()): Promise<number> {
+export async function postDueScheduledPayments(userId: string, deviceId: string, today = manilaToday()): Promise<number> {
   const db = await getDb();
   const payments = await db.getAllAsync<Row & { source_balance_centavos: number }>(
     `SELECT p.*, a.current_balance_centavos AS source_balance_centavos FROM scheduled_payments p

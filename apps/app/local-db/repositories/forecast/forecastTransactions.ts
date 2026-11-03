@@ -1,7 +1,7 @@
 import type { ForecastTransaction } from "../../../features/forecast/types";
 import { listRecurringPayments, listSavedAnswers, listUnusualSpendings } from "../alerts/unusualSpending";
 import { SCHEDULED_PAYMENTS_CATEGORY } from "../../../features/forecast/scheduledForecast";
-import { localToday } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { historyWindow, isFullYear, seasonalMonthSpend } from "@odin/spending-insights/seasonalMonth";
 import { recurringMonthSpend, resolveRecurringPayments, type RecurringPayment, type ResolvedRecurringPayment } from "@odin/spending-insights/recurringMonths";
 import { getDb } from "../helpers/db";
@@ -40,7 +40,7 @@ type ListForecastTransactionsOptions = {
 
 // Forecast months follow the Asia/Manila calendar, so a month starts at midnight Philippine time on every device.
 function manilaMonth(now = new Date()): { year: number; monthIndex: number } {
-  const today = localToday(now);
+  const today = manilaToday(now);
   return { year: Number(today.slice(0, 4)), monthIndex: Number(today.slice(5, 7)) - 1 };
 }
 
@@ -133,7 +133,7 @@ export async function listPlanRecommendations(userId: string, planMonth: string,
   const recentSpending = recent.filter((row) => !row.scheduled);
   const historySubcategoryIds = [...new Set(recentSpending.flatMap((row) => row.subcategory_id ? [row.subcategory_id] : []))];
   const historyCategoryIds = [...new Set(recentSpending.flatMap((row) => row.category_id ? [row.category_id] : []))];
-  const today = localToday(now);
+  const today = manilaToday(now);
   const window = historyWindow(clean.map((row) => row.transaction_date.slice(0, 7)), today.slice(0, 7));
   const expectedSpend = expectedPlanSpend(spending, unusual.recurringIds, recurringFor, window, planMonth, recent);
   if (!isFullYear(window)) {

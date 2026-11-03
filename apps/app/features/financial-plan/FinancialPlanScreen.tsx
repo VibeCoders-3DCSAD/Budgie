@@ -1,6 +1,6 @@
 import { Sparkle } from "phosphor-react-native";
 import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from "react-native";
-import { getPhilippineToday } from "../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../lib/dates";
 import { planObligations, requirementReservations } from "./helpers/commitmentBudget";
 import { planSpendingInsights } from "./helpers/planSpendingInsights";
 import { planCommitmentStatusInsights } from "./helpers/planCommitmentStatusInsights";
@@ -89,7 +89,7 @@ export default function FinancialPlanScreen({ userId, deviceId, accessToken, syn
   const insights = state === "saved"
     ? planSpentCentavos === null || remainingUnallocated === null
       ? ["Your plan is saved. Spending insights are temporarily unavailable."]
-      : planSpendingInsights({ allocations: recommendation.allocations, spentCentavos: planSpentCentavos, period: plan.period, today: getPhilippineToday(), funds: { remainingCentavos: remainingUnallocated, commitmentsCentavos } })
+      : planSpendingInsights({ allocations: recommendation.allocations, spentCentavos: planSpentCentavos, period: plan.period, today: manilaToday(), funds: { remainingCentavos: remainingUnallocated, commitmentsCentavos } })
     : plan.explanations;
   const categoriesCentavos = sumAmounts(recommendation.allocations.map((allocation) => ({ amountCentavos: allocation.allocatedAmountCentavos })));
   const canRecalculate = state === "ready" || state === "infeasible";

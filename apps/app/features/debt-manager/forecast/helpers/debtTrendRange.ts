@@ -1,7 +1,9 @@
+import { manilaToday } from "../../../../lib/dates";
+
 export type DebtTrendRange = "month" | "year" | "payoff" | "all";
 
 export function currentDebtTrendWindow(range: DebtTrendRange, payoffDate?: string, today = new Date()): { start: string; end: string } {
-  const philippineToday = getPhilippineToday(today);
+  const philippineToday = manilaToday(today);
   const [year, month, day] = philippineToday.split("-").map(Number) as [number, number, number];
   if (range === "payoff") return { start: philippineToday, end: payoffDate ?? philippineToday };
   if (range === "year") {
@@ -16,11 +18,6 @@ export function currentDebtTrendWindow(range: DebtTrendRange, payoffDate?: strin
 
 export function toIso(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-
-export function getPhilippineToday(today = new Date()): string {
-  const philippineTime = new Date(today.getTime() + 8 * 60 * 60 * 1000);
-  return `${philippineTime.getUTCFullYear()}-${String(philippineTime.getUTCMonth() + 1).padStart(2, "0")}-${String(philippineTime.getUTCDate()).padStart(2, "0")}`;
 }
 
 export function filterDebtTrendPoints<T extends { date: string }>(points: T[], range: DebtTrendRange, payoffDate?: string): T[] {

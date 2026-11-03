@@ -1,7 +1,8 @@
 import React from "react";
 import { fireEvent, render, waitFor } from "@testing-library/react-native";
 import BillersScreen from "../BillersScreen";
-import { localToday, addDays } from "../schedule";
+import { addDays } from "../schedule";
+import { manilaToday } from "../../../lib/dates";
 
 const mockSummaries = jest.fn();
 const mockRecord = jest.fn();
@@ -21,7 +22,7 @@ jest.mock("../../../local-db/repositories/ledger/taxonomy", () => ({
 }));
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
 
-const today = localToday();
+const today = manilaToday();
 const base = { dueDayOfMonth: 1, dueSecondDayOfMonth: null, dueDayOfWeek: null, dueMonth: null, startsOn: "2026-01-01", endsOn: null, autoPostFrom: null, isFamilySupport: false, isDependentSupport: false, protectedByDefault: true, notes: null, status: "active", version: 1, sourceAccountId: "acct-bpi" };
 const rent = { ...base, id: "rent", name: "Rent", subcategoryId: "sub-rent", amountCentavos: 1_200_000, frequency: "monthly", autoPost: true, current: { dueDate: addDays(today, 10), status: "upcoming", scheduledCentavos: 1_200_000, paidCentavos: 0, remainingCentavos: 1_200_000 } };
 const sss = { ...base, id: "sss", name: "SSS contribution", subcategoryId: "sub-sss", amountCentavos: 135_000, frequency: "monthly", autoPost: false, current: { dueDate: addDays(today, 3), status: "partially_paid", scheduledCentavos: 135_000, paidCentavos: 35_000, remainingCentavos: 100_000 } };

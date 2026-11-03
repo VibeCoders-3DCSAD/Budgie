@@ -30,7 +30,15 @@ export function dateAtDay(year: number, month: number, day: number): string {
   return new Date(Date.UTC(year, month, Math.min(day, lastDay))).toISOString().slice(0, 10);
 }
 
-// The date's day on the device's own calendar. Not the Asia/Manila day billers/schedule.ts localToday uses.
+// Today on the Asia/Manila calendar on every device, the same day the server's auto-post job uses.
+// The Philippines has no daylight saving time, so a fixed +08:00 offset is exact.
+const MANILA_OFFSET_MS = 8 * 60 * 60 * 1000;
+
+export function manilaToday(now = new Date()): string {
+  return new Date(now.getTime() + MANILA_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+// The date's day on the device's own calendar. Not the Asia/Manila day manilaToday uses.
 export function formatDeviceDate(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }

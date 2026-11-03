@@ -4,7 +4,7 @@ import { getSafeToSpend, type SafeToSpend } from "../../../local-db/repositories
 import { formatPeso } from "../dashboardFormatting";
 
 import { dashboardColors as P, dashboardStyles } from "../dashboardAppearance";
-import { localToday } from "../../billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 
 type Props = {
   userId: string;
@@ -31,7 +31,7 @@ export function SafeToSpendCard({ userId, reloadKey, onNavigate }: Props) {
 
   useEffect(() => {
     let current = true;
-    void getSafeToSpend(userId, localToday())
+    void getSafeToSpend(userId, manilaToday())
       .then((data) => { if (current) setState({ status: "ready", data }); })
       .catch(() => { if (current) setState({ status: "error" }); });
     return () => { current = false; };

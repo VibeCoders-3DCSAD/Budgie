@@ -1,7 +1,8 @@
 import * as SQLite from "expo-sqlite";
 import { enqueueOperation } from "../../helpers";
 import { uuidV5 } from "../../uuid";
-import { dueDatesBetween, localToday, type ScheduledPaymentFrequency } from "../../../features/billers/schedule";
+import { dueDatesBetween, type ScheduledPaymentFrequency } from "../../../features/billers/schedule";
+import { manilaToday } from "../../../lib/dates";
 import { createIncomeInTransaction } from "../ledger/ledger";
 import { getDb } from "../helpers/db";
 
@@ -66,7 +67,7 @@ async function postedPaydays(db: SQLite.SQLiteDatabase, templateId: string, payd
   return posted;
 }
 
-export async function postDueRecurringIncome(userId: string, deviceId: string, today = localToday()): Promise<number> {
+export async function postDueRecurringIncome(userId: string, deviceId: string, today = manilaToday()): Promise<number> {
   const db = await getDb();
   const templates = await db.getAllAsync<DueTemplate>(
     `SELECT t.id, s.name, t.amount_centavos, t.subcategory_id, t.destination_account_id, t.frequency, t.day_of_month,

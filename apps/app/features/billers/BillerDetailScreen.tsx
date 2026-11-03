@@ -9,7 +9,8 @@ import { deleteScheduledPayment, deleteScheduledPaymentRecord, getScheduledPayme
 import { listSubcategories } from "../../local-db/repositories/ledger/taxonomy";
 import { DeleteConfirmDialog } from "./components/ScheduledPaymentActions";
 import { formatDueDate, formatPeso, repeatsLabel } from "./presentation";
-import { addDays, currentOccurrence, dueDatesBetween, localToday, type OccurrenceStatus } from "./schedule";
+import { addDays, currentOccurrence, dueDatesBetween, type OccurrenceStatus } from "./schedule";
+import { manilaToday } from "../../lib/dates";
 
 const HISTORY_PAGE_SIZE = 5;
 
@@ -28,7 +29,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 
 export default function BillerDetailScreen({ userId, deviceId, scheduledPaymentId, syncVersion, onEdit, onRecordPayment, onDeleted, onSyncRequested }: Props) {
   const { showToast } = useToast();
-  const today = localToday();
+  const today = manilaToday();
   const [payment, setPayment] = useState<ScheduledPayment | null | undefined>(undefined);
   const [records, setRecords] = useState<ScheduledPaymentRecord[]>([]);
   const [accountName, setAccountName] = useState("—");

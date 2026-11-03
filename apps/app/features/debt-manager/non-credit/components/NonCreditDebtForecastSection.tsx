@@ -7,7 +7,8 @@ import { buildDebtForecast, type DebtForecastStatus } from "../../forecast/helpe
 import { DebtForecastChart } from "../../forecast/components/DebtForecastChart";
 import { DebtForecastTable } from "../../forecast/components/DebtForecastTable";
 import { groupMissedPaymentPoints } from "../../forecast/helpers/debtForecastPresentation";
-import { filterDebtTrendPoints, getPhilippineToday, type DebtTrendRange } from "../../forecast/helpers/debtTrendRange";
+import { filterDebtTrendPoints, type DebtTrendRange } from "../../forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../../lib/dates";
 import { ChartLegend, InfoRow, Pill, RangeChips, formatMilestoneDate, formatPeso, type Tone } from "../../components/debtUi";
 
 const CHART_HEIGHT = 220;
@@ -37,7 +38,7 @@ export default function NonCreditDebtForecastSection({ debt, payments, projected
   const [range, setRange] = useState<DebtTrendRange>("year");
   const forecast = buildDebtForecast(debt, undefined, payments.map((payment) => ({ paymentDate: payment.payment_date, amountCentavos: payment.amount_centavos })), projectedContributionCentavos);
   const { points } = forecast;
-  const today = getPhilippineToday();
+  const today = manilaToday();
   const payoffDate = debt.status === "paid_off" ? debt.paidOffAt?.slice(0, 10) : forecast.projectedPayoffDate ?? undefined;
   const visiblePoints = filterDebtTrendPoints(points, range, payoffDate);
   const missedPaymentGroups = groupMissedPaymentPoints(visiblePoints);

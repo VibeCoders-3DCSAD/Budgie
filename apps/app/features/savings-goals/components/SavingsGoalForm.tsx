@@ -5,7 +5,7 @@ import { LocalDbError } from "../../../local-db/helpers";
 import { createSavingsGoal, updateSavingsGoal, type SavingsGoal } from "../../../local-db/repositories/savings/savingsGoals";
 import RecurringScheduleFields, { type RecurringScheduleFrequency, type RecurringScheduleValue } from "../../../components/RecurringScheduleFields";
 import { MonthEndNote } from "../../../components/BudgieForm";
-import { getPhilippineToday } from "../../debt-manager/forecast/helpers/debtTrendRange";
+import { manilaToday } from "../../../lib/dates";
 import { deriveGoalContributionDate, GOAL_CONTRIBUTION_FREQUENCIES, type GoalContributionFrequency } from "../helpers/contributionSchedule";
 import { recommendGoalContribution } from "../helpers/contributionRecommendation";
 import EmergencyFundTargetSuggestion from "./EmergencyFundTargetSuggestion";
@@ -70,7 +70,7 @@ export default function SavingsGoalForm({ userId, deviceId, goal, initialLinkedA
     try {
       // Preserve an existing schedule's history when its timing has not changed.
       const legacyFrequency = contributionFrequency !== null && !CONTRIBUTION_OPTIONS.some((option) => option.value === contributionFrequency);
-      const derivedDate = legacyFrequency ? goal?.nextContributionDate ?? null : deriveGoalContributionDate(timing, getPhilippineToday());
+      const derivedDate = legacyFrequency ? goal?.nextContributionDate ?? null : deriveGoalContributionDate(timing, manilaToday());
       nextContributionDate = contributionFrequency === null ? null : unchangedTiming && goal.nextContributionDate ? goal.nextContributionDate : derivedDate;
       if (nextContributionDate && nextContributionDate > targetDate) {
         setMessage("The selected contribution schedule has no date on or before the target date."); return;
@@ -110,7 +110,7 @@ export default function SavingsGoalForm({ userId, deviceId, goal, initialLinkedA
     customIntervalDays: customIntervalDays.trim() ? Number(customIntervalDays) : null,
     nextContributionDate: goal?.nextContributionDate ?? null,
     contributionMonth,
-  }, toCentavos(target), toCentavos(starting) + (goal ? goal.currentAmountCentavos - goal.startingAmountCentavos : 0), targetDate, getPhilippineToday());
+  }, toCentavos(target), toCentavos(starting) + (goal ? goal.currentAmountCentavos - goal.startingAmountCentavos : 0), targetDate, manilaToday());
   const scheduleValue: RecurringScheduleValue = { frequency: contributionFrequency ?? "monthly", intervalCount: "1", dayOfMonth: contributionDay, secondDayOfMonth: contributionSecondDay, dayOfWeek: contributionDayOfWeek, monthOfYear: contributionMonth };
   return <View style={{ gap: 14 }}>
     <View><Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 20, fontWeight: "800" }}>{goal ? "Edit savings goal" : "Add savings goal"}</Text><Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12, marginTop: 3 }}>Set a target and track the amount you have already saved.</Text></View>

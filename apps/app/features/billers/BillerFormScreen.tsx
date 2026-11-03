@@ -11,7 +11,8 @@ import { listSubcategories, type Subcategory } from "../../local-db/repositories
 import { DateField } from "../../components/DateField";
 import { AccountPickerSheet } from "./components/BillerSheets";
 import { FREQUENCY_LABELS, FREQUENCY_OPTIONS, MONTHS, WEEKDAYS, formatDueDate } from "./presentation";
-import { localToday, nextDueDate, type ScheduledPaymentFrequency } from "./schedule";
+import { nextDueDate, type ScheduledPaymentFrequency } from "./schedule";
+import { manilaToday } from "../../lib/dates";
 import { parseLenientCentavos } from "../../lib/format/money";
 
 type Props = { userId: string; deviceId: string; scheduledPaymentId?: string; onClose: () => void; onSaved: (message: string) => void };
@@ -39,7 +40,7 @@ export default function BillerFormScreen({ userId, deviceId, scheduledPaymentId,
   const [dayOfMonth, setDayOfMonth] = useState("");
   const [secondDayOfMonth, setSecondDayOfMonth] = useState("");
   const [month, setMonth] = useState<number | null>(null);
-  const [startsOn, setStartsOn] = useState(localToday());
+  const [startsOn, setStartsOn] = useState(manilaToday());
   const [endsOn, setEndsOn] = useState<string | null>(null);
   const [autoPost, setAutoPost] = useState(false);
   // No longer shown on the form; kept so editing preserves what older payments saved.
@@ -79,7 +80,7 @@ export default function BillerFormScreen({ userId, deviceId, scheduledPaymentId,
   }), [name, subcategoryId, sourceAccountId, amount, frequency, dayOfWeek, dayOfMonth, secondDayOfMonth, month, startsOn, endsOn, autoPost, isFamilySupport, isDependentSupport, protectedByDefault, notes]);
 
   const nextPost = useMemo(() => {
-    try { return nextDueDate(input, localToday()); } catch { return null; }
+    try { return nextDueDate(input, manilaToday()); } catch { return null; }
   }, [input]);
 
   function validate(): Partial<Record<Field, string>> {
