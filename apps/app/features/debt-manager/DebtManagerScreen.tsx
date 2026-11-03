@@ -1,94 +1,29 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { ActivityIndicator, Platform, Text, View } from "react-native";
-import { Banner, FormCard, Note, PickerField, styles as ui, v4, v4Font } from "../../components/BudgieForm";
-import { ensureCurrentCreditCardCycles, createCreditCardCycle, listCreditCardCycles, listCreditCardCycleTransactions, updateCreditCardCycle, type CreditCardCycle, type CreditCardCycleTransaction } from "../../local-db/repositories/credit-cards/creditCardCycles";
-import { calculateCurrentCreditCardCycle } from "../../local-db/repositories/credit-cards/creditCardCycleDates";
-import {
-  listFinancialAccounts,
-  type FinancialAccount,
-} from "../../local-db/repositories/foundations/financialFoundations";
-import { LocalDbError } from "../../local-db/helpers";
-import { listCreditCardStatements, type CreditCardStatement } from "../../local-db/repositories/credit-cards/creditCardStatements";
-import { listCreditCardInstallments, type CreditCardInstallment } from "../../local-db/repositories/credit-cards/creditCardInstallments";
-import { listCreditCardPayments, type CreditCardPayment, type StatementPaymentContext } from "../../local-db/repositories/credit-cards/creditCardPayments";
+import React, { useEffect, useState } from "react";
+import { ActivityIndicator, Text, View } from "react-native";
+import { Banner, FormCard, Note, styles as ui, v4, v4Font } from "../../components/BudgieForm";
+import type { CreditCardPayment, StatementPaymentContext } from "../../local-db/repositories/credit-cards/creditCardPayments";
+import type { CreditCardCycle } from "../../local-db/repositories/credit-cards/creditCardCycles";
+import type { CreditCardStrategy } from "../../local-db/repositories/credit-cards/creditCardRepaymentPlans";
 import { CreditCardCycleList, CreditCardInstallmentList } from "./credit-cards/components/CreditCardCollections";
+import CreditCardCycleEditor from "./credit-cards/components/CreditCardCycleEditor";
 import CreditCardListScreen from "./CreditCardListScreen";
 import CreditCardForecastSection from "./credit-cards/components/CreditCardForecastSection";
-import { listCreditCardStrategies, type CreditCardStrategy } from "../../local-db/repositories/credit-cards/creditCardRepaymentPlans";
-import { listCreditCardSettlements, type CreditCardSettlement } from "../../local-db/repositories/credit-cards/creditCardSettlements";
 import CreditCardRepaymentStrategy from "./credit-cards/components/CreditCardRepaymentStrategy";
 import CreditCardAvailableCreditReconciliation from "./credit-cards/components/CreditCardAvailableCreditReconciliation";
 import { getPhilippineToday } from "./forecast/helpers/debtTrendRange";
 import { useCreditCardForecast } from "./credit-cards/hooks/useCreditCardForecast";
+import { useCycleEditor } from "./hooks/useCycleEditor";
+import { useDebtManagerData } from "./hooks/useDebtManagerData";
 import { Button, CARD_TINT, CardIcon, InfoRow, LinkButton, ProgressBar, SectionHeader, formatPeso } from "./components/debtUi";
 
 type Props = { userId: string; deviceId: string; accountId?: string; onBack?: () => void; onOpenCard?: (accountId: string) => void; onPayStatement?: (context: StatementPaymentContext) => void; onEditPayment?: (payment: CreditCardPayment) => void };
 
 export default function DebtManagerScreen({ userId, deviceId, accountId, onBack, onOpenCard, onPayStatement, onEditPayment }: Props) {
-  const [accounts, setAccounts] = useState<FinancialAccount[]>([]);
-  const [cycles, setCycles] = useState<CreditCardCycle[]>([]);
-  const [cycleTransactions, setCycleTransactions] = useState<CreditCardCycleTransaction[]>([]);
-  const [statements, setStatements] = useState<CreditCardStatement[]>([]);
-  const [installments, setInstallments] = useState<CreditCardInstallment[]>([]);
-  const [payments, setPayments] = useState<CreditCardPayment[]>([]);
-  const [strategies, setStrategies] = useState<CreditCardStrategy[]>([]);
+  const { accounts, cycles, cycleTransactions, statements, installments, payments, strategies, settlements, loading, error, stale, load } = useDebtManagerData(userId, deviceId);
+  const cycleEditor = useCycleEditor(userId, deviceId, load);
   const [previewStrategy, setPreviewStrategy] = useState<CreditCardStrategy | null>(null);
-  const [settlements, setSettlements] = useState<CreditCardSettlement[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
-  const [stale, setStale] = useState(false);
-  const [editingCycle, setEditingCycle] = useState<{ account: FinancialAccount; cycle: CreditCardCycle | null } | null>(null);
-  const [cycleStart, setCycleStart] = useState("");
-  const [cycleCutoff, setCycleCutoff] = useState("");
-  const [cycleError, setCycleError] = useState<string | null>(null);
-  const [cycleSaving, setCycleSaving] = useState(false);
-  const [cycleNotice, setCycleNotice] = useState<string | null>(null);
-  const [cyclePicker, setCyclePicker] = useState<"start" | "cutoff" | null>(null);
   const [statementCycle, setStatementCycle] = useState<CreditCardCycle | null>(null);
-  const hasLoadedData = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(false);
-    try {
-      const nextAccounts = await listFinancialAccounts(userId, { kind: "credit_card", status: "active" });
-      setAccounts(nextAccounts);
-      hasLoadedData.current = nextAccounts.length > 0;
-
-      let cycleLoadFailed = false;
-      try {
-        await ensureCurrentCreditCardCycles(userId, deviceId);
-      } catch (cycleError) {
-        cycleLoadFailed = true;
-        console.error("[debt-manager] billing cycle load failed", {
-          userId,
-          error: cycleError instanceof Error ? cycleError.message : "unknown error",
-        });
-      }
-       const nextCycles = await listCreditCardCycles(userId);
-       setCycles(nextCycles);
-       setCycleTransactions(await listCreditCardCycleTransactions(userId));
-       setStatements(await listCreditCardStatements(userId));
-       setInstallments(await listCreditCardInstallments(userId));
-        setPayments(await listCreditCardPayments(userId));
-          setStrategies(await listCreditCardStrategies(userId));
-         setSettlements(await listCreditCardSettlements(userId));
-      setError(cycleLoadFailed);
-      setStale(cycleLoadFailed && hasLoadedData.current);
-    } catch (loadError) {
-      console.error("[debt-manager] account load failed", {
-        userId,
-        reason: loadError instanceof Error ? loadError.message : "unknown error",
-      });
-      setError(true);
-      setStale(hasLoadedData.current);
-    } finally {
-      setLoading(false);
-    }
-  }, [deviceId, userId]);
-
-  useEffect(() => { load().catch(() => {}); }, [load]);
   useEffect(() => { setPreviewStrategy(null); }, [accountId]);
 
   const today = getPhilippineToday();
@@ -112,37 +47,6 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
     availableCreditReconciledAt: selectedAccount.creditCardDetails?.availableCreditReconciledAt,
     asOfDate: today,
   } : null);
-
-  function openCycleEditor(account: FinancialAccount, cycle: CreditCardCycle | null) {
-    const defaults = cycle ?? (account.creditCardDetails ? calculateCurrentCreditCardCycle({ account_id: account.id, cutoff_day: account.creditCardDetails.cutoffDay }) : null);
-    setEditingCycle({ account, cycle });
-    setCycleStart(defaults?.cycle_start_date ?? "");
-    setCycleCutoff(defaults?.cutoff_date ?? "");
-    setCycleError(null);
-    setCycleNotice(null);
-  }
-
-  async function saveCycle() {
-    if (!editingCycle || !/^\d{4}-\d{2}-\d{2}$/.test(cycleStart) || !/^\d{4}-\d{2}-\d{2}$/.test(cycleCutoff) || cycleStart > cycleCutoff) {
-      setCycleError("Some credit-card details are not valid. Check the highlighted fields and try again.");
-      return;
-    }
-    setCycleSaving(true);
-    setCycleNotice("Your credit-card changes are being saved. Please wait before trying again.");
-    try {
-      if (editingCycle.cycle) await updateCreditCardCycle(userId, deviceId, editingCycle.cycle.id, { cycle_start_date: cycleStart, cutoff_date: cycleCutoff });
-      else await createCreditCardCycle(userId, deviceId, { account_id: editingCycle.account.id, cycle_start_date: cycleStart, cutoff_date: cycleCutoff });
-      setEditingCycle(null);
-      await load();
-      setCycleNotice("Your credit-card changes were saved. Review the billing-cycle details before continuing.");
-    } catch (error) {
-      setCycleError(
-        error instanceof LocalDbError
-          ? error.message
-          : "Your credit-card changes could not be completed. Review the details and try again.",
-      );
-    } finally { setCycleSaving(false); }
-  }
 
   if (loading && accounts.length === 0) {
     return <View style={{ alignItems: "center", gap: 12, paddingVertical: 30 }}><ActivityIndicator color={v4.brand} /><Note>{"Your credit-card information is loading. Wait a moment for the details to appear."}</Note></View>;
@@ -184,19 +88,8 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
       </FormCard>
       {stale ? <Banner tone="warn">Credit-card information may be out of date. Refresh or reconcile it with the latest issuer records.</Banner> : null}
       {error && !stale ? <Banner tone="error">Your credit-card information could not be loaded or saved. Check your connection and try again.</Banner> : null}
-      {cycleNotice ? <Banner tone="info">{cycleNotice}</Banner> : null}
-      {editingCycle ? (
-        <FormCard title={editingCycle.cycle ? "Override billing cycle" : "Add billing cycle"}>
-          <PickerField label="Cycle start" accessibilityLabel="Billing-cycle start date" value={cycleStart || "Select billing-cycle start date"} placeholder={!cycleStart} onPress={() => setCyclePicker("start")} />
-          <PickerField label="Cut-off" accessibilityLabel="Cut-off date" value={cycleCutoff || "Select cut-off date"} placeholder={!cycleCutoff} onPress={() => setCyclePicker("cutoff")} error={Boolean(cycleError)} />
-          {cyclePicker ? <DateTimePicker value={new Date(`${(cyclePicker === "start" ? cycleStart : cycleCutoff) || today}T12:00:00`)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={(event, date) => { if (event.type === "set" && date) { const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`; if (cyclePicker === "start") setCycleStart(value); else setCycleCutoff(value); setCycleError(null); } if (Platform.OS !== "ios") setCyclePicker(null); }} /> : null}
-          {cycleError ? <Banner tone="error">{cycleError}</Banner> : null}
-          <View style={{ flexDirection: "row", gap: 10 }}>
-            <Button flex variant="ghost" label="Cancel" onPress={() => setEditingCycle(null)} />
-            <Button flex label={cycleSaving ? "Saving..." : "Save cycle"} disabled={cycleSaving} onPress={() => { saveCycle().catch(() => {}); }} />
-          </View>
-        </FormCard>
-      ) : null}
+      {cycleEditor.notice ? <Banner tone="info">{cycleEditor.notice}</Banner> : null}
+      <CreditCardCycleEditor editor={cycleEditor} today={today} />
       <CreditCardCycleList
         key={`${userId}:${selectedAccount.id}`}
         userId={userId}
@@ -207,7 +100,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
         statements={statements}
         payments={payments}
         statementCycle={statementCycle}
-        onManageCycle={openCycleEditor}
+        onManageCycle={cycleEditor.open}
         onAddStatement={setStatementCycle}
         onCancelStatement={() => setStatementCycle(null)}
         onStatementSaved={load}
