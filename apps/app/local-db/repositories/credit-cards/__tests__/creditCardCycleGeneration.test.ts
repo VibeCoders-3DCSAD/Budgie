@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 import { createSqliteHarness } from "../../__tests__/sqliteHarness";
-import { ensureCurrentCreditCardCycles } from "../creditCardCycles";
+import { createCreditCardCycle, ensureCurrentCreditCardCycles } from "../creditCardCycles";
 
 let harness: ReturnType<typeof createSqliteHarness>;
 let mockDb: ReturnType<typeof createSqliteHarness>["db"];
@@ -91,5 +91,17 @@ describe("credit-card cycle generation", () => {
     expect(getAll).toHaveBeenCalledTimes(2);
     expect(getFirst).not.toHaveBeenCalled();
     expect(run).not.toHaveBeenCalled();
+  });
+
+  test("creates a manual cycle through the same insert and sync operation", async () => {
+    addCard("card-1", 15);
+
+    const { cycle, operation } = await createCreditCardCycle("user-1", "device-1", { account_id: "card-1", cycle_start_date: "2026-09-16", cutoff_date: "2026-10-15" });
+
+    expect(cycle).toMatchObject({ account_id: "card-1", cycle_start_date: "2026-09-16", cutoff_date: "2026-10-15", statement_date: null, version: 1, deleted: false });
+    expect(operation).toMatchObject({ record_id: cycle.id });
+    expect(harness.queued("credit_card_cycles")).toMatchObject([{ record_id: cycle.id, operation_type: "create", payload: { account_id: "card-1", cycle_start_date: "2026-09-16", cutoff_date: "2026-10-15" } }]);
+    await expect(createCreditCardCycle("user-1", "device-1", { account_id: "missing", cycle_start_date: "2026-09-16", cutoff_date: "2026-10-15" })).rejects.toMatchObject({ code: "NOT_FOUND" });
+    expect(cycles("card-1")).toHaveLength(1);
   });
 });

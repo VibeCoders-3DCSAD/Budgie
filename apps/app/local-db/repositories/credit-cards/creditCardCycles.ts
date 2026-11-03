@@ -57,6 +57,42 @@ function cyclePayload(cycle: Pick<CreditCardCycle, "account_id" | "cycle_start_d
   };
 }
 
+// Inserts an open cycle and queues its create for sync.
+async function insertCycle(
+  db: SQLiteDatabase,
+  userId: string,
+  deviceId: string,
+  cycle: Pick<CreditCardCycle, "account_id" | "cycle_start_date" | "cutoff_date">,
+): Promise<{ id: string; operation: SyncOperation }> {
+  const id = randomUUID();
+  const ts = now();
+  await db.runAsync(
+    `INSERT INTO credit_card_cycles
+       (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, version, deleted, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, NULL, 1, 0, ?, ?)`,
+    id,
+    userId,
+    cycle.account_id,
+    cycle.cycle_start_date,
+    cycle.cutoff_date,
+    ts,
+    ts,
+  );
+  const payload = cyclePayload(cycle);
+  const operation = await enqueueOperation(db, {
+    userId,
+    deviceId,
+    entity: "credit_card_cycles",
+    recordId: id,
+    operationType: "create",
+    baseVersion: null,
+    changedFields: Object.keys(payload),
+    payload,
+    failureMessage: "This credit-card billing cycle could not be saved.",
+  });
+  return { id, operation };
+}
+
 export async function listCreditCardCycles(userId: string, accountId?: string): Promise<CreditCardCycle[]> {
   const db = await getDb();
   const rows = accountId
@@ -164,8 +200,6 @@ export async function createCreditCardCycle(
 ): Promise<{ cycle: CreditCardCycle; operation: SyncOperation }> {
   validateCreditCardCycleDates(input);
   const db = await getDb();
-  const id = randomUUID();
-  const ts = now();
   let result!: { cycle: CreditCardCycle; operation: SyncOperation };
 
   await db.withTransactionAsync(async () => {
@@ -176,30 +210,7 @@ export async function createCreditCardCycle(
     );
     if (!account) throw new LocalDbError("NOT_FOUND", "Credit card account not found");
 
-    await db.runAsync(
-      `INSERT INTO credit_card_cycles
-        (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, version, deleted, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, 1, 0, ?, ?)`,
-      id,
-      userId,
-      input.account_id,
-      input.cycle_start_date,
-      input.cutoff_date,
-       null,
-      ts,
-      ts,
-    );
-    const operation = await enqueueOperation(db, {
-      userId,
-      deviceId,
-      entity: "credit_card_cycles",
-      recordId: id,
-      operationType: "create",
-      baseVersion: null,
-      changedFields: Object.keys(cyclePayload(input)),
-      payload: cyclePayload(input),
-      failureMessage: "This credit-card billing cycle could not be saved.",
-    });
+    const { id, operation } = await insertCycle(db, userId, deviceId, input);
     const row = await db.getFirstAsync<CycleRow>("SELECT * FROM credit_card_cycles WHERE id = ? AND user_id = ?", id, userId);
     if (!row) throw new LocalDbError("INTERNAL_ERROR", "failed to read created credit-card cycle");
     result = { cycle: mapCycle(row), operation };
@@ -318,35 +329,6 @@ function missingCycles(card: CreditCardCycleDefaults, lastClosedCutoff: string |
   return cycles;
 }
 
-async function insertGeneratedCycle(db: SQLiteDatabase, userId: string, deviceId: string, accountId: string, cycle: CalculatedCycle): Promise<void> {
-  const id = randomUUID();
-  const ts = now();
-  await db.runAsync(
-    `INSERT INTO credit_card_cycles
-       (id, user_id, account_id, cycle_start_date, cutoff_date, statement_date, version, deleted, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, NULL, 1, 0, ?, ?)`,
-    id,
-    userId,
-    accountId,
-    cycle.cycle_start_date,
-    cycle.cutoff_date,
-    ts,
-    ts,
-  );
-  const payload = cyclePayload({ account_id: accountId, ...cycle });
-  await enqueueOperation(db, {
-    userId,
-    deviceId,
-    entity: "credit_card_cycles",
-    recordId: id,
-    operationType: "create",
-    baseVersion: null,
-    changedFields: Object.keys(payload),
-    payload,
-    failureMessage: "This credit-card billing cycle could not be saved.",
-  });
-}
-
 // Reads every card's open and last closed cycle in two queries, works out the missing months in memory, then
 // inserts them, so a card list costs a fixed number of reads rather than several per card and missing month.
 export async function ensureCurrentCreditCardCycles(userId: string, deviceId: string, asOfDate?: string): Promise<CreditCardCycle[]> {
@@ -377,7 +359,7 @@ export async function ensureCurrentCreditCardCycles(userId: string, deviceId: st
     const lastClosedCutoff = new Map(closed.map((row) => [row.account_id, row.cutoff_date]));
     for (const card of missing) {
       for (const cycle of missingCycles(card, lastClosedCutoff.get(card.account_id), date)) {
-        await insertGeneratedCycle(db, userId, deviceId, card.account_id, cycle);
+        await insertCycle(db, userId, deviceId, { account_id: card.account_id, ...cycle });
       }
     }
     open = await openCyclesByAccount(db, userId, date);

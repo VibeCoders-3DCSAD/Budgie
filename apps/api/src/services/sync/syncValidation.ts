@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { isCalendarDate } from "../../lib/date/calendarDate.js";
 import { SERVER_COLUMNS } from "./constants/entities.js";
 
 export type Payload = Record<string, unknown>;
@@ -51,7 +52,7 @@ export function requireDateString(payload: Payload, field: string): void {
   if (typeof payload[field] !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(payload[field] as string)) {
     throw new Error(`${field} must be a valid YYYY-MM-DD date`);
   }
-  if (Number.isNaN(parseDateString(payload[field] as string).getTime())) {
+  if (!isCalendarDate(payload[field])) {
     throw new Error(`${field} must be a valid calendar date`);
   }
 }
@@ -61,12 +62,6 @@ export function requireIsoTimestamp(payload: Payload, field: string): void {
   if (typeof value !== "string" || Number.isNaN(Date.parse(value)) || !/^\d{4}-\d{2}-\d{2}T/.test(value)) {
     throw new Error(`${field} must be an ISO-8601 timestamp`);
   }
-}
-
-function parseDateString(value: string): Date {
-  const date = new Date(`${value}T00:00:00.000Z`);
-  if (date.toISOString().slice(0, 10) !== value) return new Date(NaN);
-  return date;
 }
 
 export function optionalString(payload: Payload, field: string): void {
