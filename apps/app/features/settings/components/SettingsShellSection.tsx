@@ -14,23 +14,30 @@ function syncLabel(syncing: boolean, queueCount: number) {
   return "Synced";
 }
 
-// The Manage (categories) and Sync rows Settings shows above its danger zone.
+function ManageRow({ label, icon, divider = false, onPress }: { label: string; icon: "tag-outline" | "book-open-variant"; divider?: boolean; onPress: () => void }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      onPress={onPress}
+      style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 15, paddingVertical: 14, borderTopWidth: divider ? 1 : 0, borderTopColor: palette.line }}
+    >
+      <MaterialCommunityIcons color={palette.ink2} name={icon} size={18} />
+      <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: palette.ink }}>{label}</Text>
+      <MaterialCommunityIcons color={palette.mut} name="chevron-right" size={20} />
+    </Pressable>
+  );
+}
+
+// The Manage (categories, definition of terms) and Sync rows Settings shows above its danger zone.
 export function SettingsShellSection() {
   const { syncing, queueCount, syncMessage, handleSync } = useSync();
   return (
     <View>
       <Text style={sectionLabel}>Manage</Text>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Categories"
-          onPress={() => router.push(ROUTES.categories)}
-          style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 15, paddingVertical: 14 }}
-        >
-          <MaterialCommunityIcons color={palette.ink2} name="tag-outline" size={18} />
-          <Text style={{ flex: 1, fontSize: 13.5, fontWeight: "600", color: palette.ink }}>Categories</Text>
-          <MaterialCommunityIcons color={palette.mut} name="chevron-right" size={20} />
-        </Pressable>
+        <ManageRow label="Categories" icon="tag-outline" onPress={() => router.push(ROUTES.categories)} />
+        <ManageRow label="Definition of terms" icon="book-open-variant" divider onPress={() => router.push(ROUTES.glossary)} />
       </View>
       <Text style={sectionLabel}>Sync</Text>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>

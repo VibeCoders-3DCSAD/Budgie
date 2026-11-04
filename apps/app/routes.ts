@@ -39,6 +39,8 @@ export const ROUTES = {
   planPastPlan: "/plan/budgets/history/[id]",
   settings: "/settings",
   categories: "/settings/categories",
+  // Link to one term with { pathname, params: { term } }; components/TermInfo does this.
+  glossary: "/settings/glossary",
   financialReports: "/financial-reports",
   spendingAlerts: "/spending-alerts",
 } as const satisfies RouteMap;
