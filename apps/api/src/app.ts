@@ -14,13 +14,15 @@ import syncRoutes from "./routes/sync.js";
 import recurringRoutes from "./routes/recurring.js";
 import forecastRoutes from "./routes/forecast.js";
 import financialPlanRoutes from "./routes/financial-plans.js";
+import { authenticateBeforeBody } from "./middleware/authenticateBeforeBody.js";
+import type { AuthenticatedRequest } from "./middleware/auth.js";
 
 const app = express();
 app.disable("etag");
 
 app.use(cors({ origin: true, credentials: true }));
-app.use(express.json({ limit: "1mb" }));
 
+// Logged first so requests rejected by auth or the body limit still appear in the access log.
 app.use((request: Request, response: Response, next: NextFunction) => {
   const start = Date.now();
   response.on("finish", () => {
@@ -30,6 +32,10 @@ app.use((request: Request, response: Response, next: NextFunction) => {
   });
   next();
 });
+
+// Auth runs before the body parser, so a request without a valid session is rejected before its body is read.
+app.use(authenticateBeforeBody);
+app.use(express.json({ limit: "1mb" }));
 
 app.get("/health", (_request: Request, response: Response) => {
   response.status(200).json({
@@ -72,10 +78,11 @@ app.use((error: Error, request: Request, response: Response, _next: NextFunction
   const parseError = error as HttpError;
 
   if (parseError.type === "entity.too.large") {
-    // express.json runs before auth, so no user is known yet; body-parser sets `length` and `limit` in bytes.
+    // Auth runs before the body parser, so the user is known except on public routes; body-parser sets `length` and `limit` in bytes.
     console.warn("Request body too large", {
       method: request.method,
       path: request.originalUrl,
+      userId: (request as AuthenticatedRequest).userId ?? null,
       contentLength: request.headers["content-length"],
       length: parseError.length,
       limit: parseError.limit,

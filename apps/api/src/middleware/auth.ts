@@ -27,11 +27,21 @@ export async function hasUserSession(request: Request): Promise<boolean> {
   return Boolean(data?.user);
 }
 
+// Requests whose token requireAuth has verified. Private to this module, so setting request.userId
+// anywhere else can never skip the check; a WeakSet lets finished requests be garbage-collected.
+const verifiedRequests = new WeakSet<Request>();
+
 export async function requireAuth(
   request: AuthenticatedRequest,
   response: Response,
   next: NextFunction,
 ): Promise<void> {
+  // authenticateBeforeBody already verified this request's token; skip a second Supabase call.
+  if (verifiedRequests.has(request)) {
+    next();
+    return;
+  }
+
   const token = bearerToken(request);
 
   if (!token) {
@@ -56,5 +66,6 @@ export async function requireAuth(
   request.user = data.user;
   request.accessToken = token;
   request.supabase = createAuthenticatedSupabaseClient(token);
+  verifiedRequests.add(request);
   next();
 }
