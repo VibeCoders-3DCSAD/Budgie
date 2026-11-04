@@ -7,8 +7,20 @@ import type { Sleep } from "./retry";
 
 export type PreparedExport = { fileName: string; csv: string; rowCount: number };
 
+// Where a running export is: the dataset being read (by position in the file), the batch within it, and the
+// records read so far. `datasetCount` is 0 until the server has listed the datasets.
+export type ExportProgress = {
+  stage: "starting" | "reading" | "retrying" | "building";
+  dataset: string | null;
+  datasetIndex: number;
+  datasetCount: number;
+  batch: number;
+  rowCount: number;
+};
+
 type RunOptions = {
   isCancelled?: () => boolean;
+  onProgress?: (progress: ExportProgress) => void;
   sleepFor?: Sleep;
   now?: () => Date;
 };
@@ -40,19 +52,24 @@ async function fetchDataset(
   accessToken: string,
   requestId: string,
   dataset: string,
-  { retry, pace, isCancelled }: {
+  { retry, pace, isCancelled, onBatch }: {
     retry: <T>(task: () => Promise<T>) => Promise<T>;
     pace: () => Promise<void>;
     isCancelled: () => boolean;
+    onBatch: (batch: number, rowsRead: number) => void;
   },
 ): Promise<Record<string, unknown>[]> {
   const rows: Record<string, unknown>[] = [];
   let cursor: string | null = null;
+  let batchNumber = 0;
   do {
     if (isCancelled()) throw new ExportCancelledError();
+    batchNumber += 1;
     const after: string | null = cursor;
     const batch = await retry(async () => {
       await pace();
+      // Reported on every attempt, so a retried batch shows as reading again once the wait is over.
+      onBatch(batchNumber, rows.length);
       const { response, body } = await getDataExportBatch(accessToken, requestId, dataset, after);
       ensureOk(response);
       if (!body.payload || !Array.isArray(body.payload.rows)) throw new ExportHttpError(502, null);
@@ -67,20 +84,32 @@ async function fetchDataset(
 // Starts an export, reads every dataset in paced batches with retries, and builds the CSV. The request is
 // marked completed once the file is built, or failed when any step gives up; both updates are best effort.
 export async function runDataExport(accessToken: string, options: RunOptions = {}): Promise<PreparedExport> {
-  const { isCancelled = () => false, sleepFor = sleep, now = () => new Date() } = options;
-  const retry = <T,>(task: () => Promise<T>) => withRetry(task, { sleepFor, isCancelled });
+  const { isCancelled = () => false, onProgress = () => undefined, sleepFor = sleep, now = () => new Date() } = options;
+  let latest: ExportProgress = { stage: "starting", dataset: null, datasetIndex: 0, datasetCount: 0, batch: 0, rowCount: 0 };
+  const report = (progress: ExportProgress) => {
+    latest = progress;
+    onProgress(progress);
+  };
+  // A retry keeps where the export got to and only changes the stage.
+  const onRetry = () => onProgress({ ...latest, stage: "retrying" });
+  const retry = <T,>(task: () => Promise<T>) => withRetry(task, { sleepFor, isCancelled, onRetry });
   const pace = createPacer(EXPORT_BATCH_INTERVAL_MS, Date.now, sleepFor);
 
+  report(latest);
   const { requestId, datasets } = await startExport(accessToken, retry);
+  const datasetCount = datasets.length;
   try {
     const sections: ExportSection[] = [];
     let rowCount = 0;
-    for (const dataset of datasets) {
-      const rows = await fetchDataset(accessToken, requestId, dataset, { retry, pace, isCancelled });
+    for (const [datasetIndex, dataset] of datasets.entries()) {
+      const onBatch = (batch: number, rowsRead: number) =>
+        report({ stage: "reading", dataset, datasetIndex, datasetCount, batch, rowCount: rowCount + rowsRead });
+      const rows = await fetchDataset(accessToken, requestId, dataset, { retry, pace, isCancelled, onBatch });
       rowCount += rows.length;
       sections.push({ dataset, rows });
     }
 
+    report({ stage: "building", dataset: null, datasetIndex: datasetCount, datasetCount, batch: 0, rowCount });
     const exportedAt = now();
     const csv = buildExportCsv(sections, exportedAt);
     // The file is complete either way; a request left open is replaced by the next export.

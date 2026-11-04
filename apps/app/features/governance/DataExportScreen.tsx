@@ -6,6 +6,7 @@ import { useConnectivityStore } from "../../services/connectivity";
 import { useToast } from "../../components/Toast";
 import { InnerPage } from "../shell/components/InnerPage";
 import { goBackOr } from "../shell/helpers/shellNavigation";
+import { ExportProgressCard } from "./components/ExportProgressCard";
 import { ActionButton, GroupLabel, ListCard, ListRow, PageStack, StatusCard, WarnBanner } from "./components/governanceUi";
 import { useDataExport } from "./dataExport/useDataExport";
 import type { DataExportState } from "./dataExport/useDataExport";
@@ -27,9 +28,11 @@ function primaryLabel(state: DataExportState): string {
   return state.saved ? SAVE_AGAIN_LABEL : SAVE_LABEL;
 }
 
-// The design's "export requested" card once there is a result; before that (default, submitting, offline)
-// the page shows what the export holds.
+// Progress while the export is prepared and saved, the design's "export requested" card once there is a result;
+// before that (default, offline) the page shows what the export holds.
 function ExportStatus({ state }: { state: DataExportState }) {
+  if (state.kind === "preparing") return <ExportProgressCard step={state} />;
+  if (state.kind === "ready" && state.saving) return <ExportProgressCard step={{ kind: "saving" }} />;
   if (state.kind === "failed") {
     return <StatusCard tone="err" title="Export failed">Your data export could not be prepared. Try the export again.</StatusCard>;
   }

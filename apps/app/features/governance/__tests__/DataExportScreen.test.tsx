@@ -61,15 +61,24 @@ it("shows the failure and lets the user try again", async () => {
   expect(view.getByText("Export saved")).toBeTruthy();
 });
 
-it("keeps the data summary on screen while the export is being prepared", async () => {
+it("shows progress and the current step while the export is being prepared", async () => {
   let finish: (value: typeof prepared) => void = () => {};
-  mockRunDataExport.mockReturnValue(new Promise((resolve) => { finish = resolve; }));
+  let report: (progress: unknown) => void = () => {};
+  mockRunDataExport.mockImplementation((_token: string, options: { onProgress: typeof report }) => {
+    report = options.onProgress;
+    return new Promise((resolve) => { finish = resolve; });
+  });
   mockSaveExportFile.mockResolvedValue({ saved: true });
   const view = render(<DataExportScreen />);
 
   await act(async () => { fireEvent.press(view.getByLabelText("Export my data")); });
+  expect(view.getByText("Your data export is starting. Keep this screen open.")).toBeTruthy();
 
-  expect(view.getByText("Your data")).toBeTruthy();
+  await act(async () => { report({ stage: "reading", dataset: "transactions", datasetIndex: 5, datasetCount: 14, batch: 2, rowCount: 700 }); });
+
+  expect(view.getByText("Reading your transactions (6 of 14). Keep this screen open.")).toBeTruthy();
+  expect(view.getByText("Batch 2 · 700 records so far")).toBeTruthy();
+  expect(view.getByLabelText("Export progress").props.accessibilityValue).toMatchObject({ now: 36 });
   expect(view.getByLabelText("Export my data").props.accessibilityState).toMatchObject({ busy: true });
   await act(async () => { finish(prepared); });
 });

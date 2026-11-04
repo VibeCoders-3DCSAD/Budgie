@@ -86,3 +86,39 @@ describe("runDataExport", () => {
     await expect(runDataExport("token", { sleepFor: noWait })).resolves.toMatchObject({ rowCount: 0 });
   });
 });
+
+describe("runDataExport progress", () => {
+  it("reports each dataset and batch in order, then building", async () => {
+    mockBatch.mockImplementation(async (_token: string, _id: string, dataset: string, after: string | null) => {
+      if (dataset === "accounts") return reply(200, { payload: { dataset, rows: [{ id: "a1" }], next_cursor: null } });
+      if (after === null) return reply(200, { payload: { dataset, rows: [{ id: "t1" }], next_cursor: "t1" } });
+      return reply(200, { payload: { dataset, rows: [{ id: "t2" }], next_cursor: null } });
+    });
+    const stages: string[] = [];
+
+    await runDataExport("token", {
+      sleepFor: noWait,
+      now: exportedAt,
+      onProgress: (p) => stages.push(`${p.stage}:${p.dataset ?? "-"}:${p.datasetIndex}/${p.datasetCount}:b${p.batch}:r${p.rowCount}`),
+    });
+
+    expect(stages).toEqual([
+      "starting:-:0/0:b0:r0",
+      "reading:accounts:0/2:b1:r0",
+      "reading:transactions:1/2:b1:r1",
+      "reading:transactions:1/2:b2:r2",
+      "building:-:2/2:b0:r3",
+    ]);
+  });
+
+  it("reports a retry without losing its place, then reads the same batch again", async () => {
+    mockBatch
+      .mockResolvedValueOnce(reply(429, {}, { "Retry-After": "1" }))
+      .mockResolvedValue(reply(200, { payload: { dataset: "x", rows: [], next_cursor: null } }));
+    const stages: string[] = [];
+
+    await runDataExport("token", { sleepFor: noWait, now: exportedAt, onProgress: (p) => stages.push(`${p.stage}:${p.dataset ?? "-"}:b${p.batch}`) });
+
+    expect(stages.slice(0, 4)).toEqual(["starting:-:b0", "reading:accounts:b1", "retrying:accounts:b1", "reading:accounts:b1"]);
+  });
+});

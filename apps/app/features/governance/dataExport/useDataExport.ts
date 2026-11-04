@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { runDataExport } from "./runDataExport";
-import type { PreparedExport } from "./runDataExport";
+import type { ExportProgress, PreparedExport } from "./runDataExport";
 import { saveExportFile } from "./saveExportFile";
 
 export type DataExportState =
   | { kind: "idle" }
-  | { kind: "preparing" }
+  | { kind: "preparing"; progress: ExportProgress | null }
   | { kind: "ready"; prepared: PreparedExport; saving: boolean; saved: boolean }
   | { kind: "failed" };
 
@@ -33,10 +33,13 @@ export function useDataExport(accessToken: string) {
   }, []);
 
   const start = useCallback(async () => {
-    setState({ kind: "preparing" });
+    setState({ kind: "preparing", progress: null });
+    const onProgress = (progress: ExportProgress) => {
+      if (mounted.current) setState({ kind: "preparing", progress });
+    };
     let prepared: PreparedExport;
     try {
-      prepared = await runDataExport(accessToken, { isCancelled: () => !mounted.current });
+      prepared = await runDataExport(accessToken, { isCancelled: () => !mounted.current, onProgress });
     } catch {
       if (mounted.current) setState({ kind: "failed" });
       return;

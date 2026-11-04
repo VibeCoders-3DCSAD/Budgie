@@ -38,13 +38,19 @@ export function retryDelayMs(attempt: number, error: unknown, random: () => numb
 
 export async function withRetry<T>(
   task: () => Promise<T>,
-  { sleepFor = sleep, isCancelled = () => false }: { sleepFor?: Sleep; isCancelled?: () => boolean } = {},
+  { sleepFor = sleep, isCancelled = () => false, onRetry = () => undefined }: {
+    sleepFor?: Sleep;
+    isCancelled?: () => boolean;
+    // Called before each wait, so the caller can say the export is pausing.
+    onRetry?: () => void;
+  } = {},
 ): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await task();
     } catch (error) {
       if (attempt >= MAX_ATTEMPTS || !isRetryable(error) || isCancelled()) throw error;
+      onRetry();
       await sleepFor(retryDelayMs(attempt, error));
     }
   }
