@@ -14,7 +14,7 @@ function syncLabel(syncing: boolean, queueCount: number) {
   return "Synced";
 }
 
-function ManageRow({ label, icon, divider = false, onPress }: { label: string; icon: "tag-outline" | "book-open-variant"; divider?: boolean; onPress: () => void }) {
+function ManageRow({ label, icon, divider = false, onPress }: { label: string; icon: "tag-outline" | "book-open-variant" | "file-document-outline"; divider?: boolean; onPress: () => void }) {
   return (
     <Pressable
       accessibilityRole="button"
@@ -29,7 +29,7 @@ function ManageRow({ label, icon, divider = false, onPress }: { label: string; i
   );
 }
 
-// The Manage (categories, definition of terms) and Sync rows Settings shows above its danger zone.
+// The Manage (categories, definition of terms, terms & conditions) and Sync rows Settings shows above its danger zone.
 export function SettingsShellSection() {
   const { syncing, queueCount, syncMessage, handleSync } = useSync();
   return (
@@ -38,6 +38,7 @@ export function SettingsShellSection() {
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
         <ManageRow label="Categories" icon="tag-outline" onPress={() => router.push(ROUTES.categories)} />
         <ManageRow label="Definition of terms" icon="book-open-variant" divider onPress={() => router.push(ROUTES.glossary)} />
+        <ManageRow label="Terms & Conditions" icon="file-document-outline" divider onPress={() => router.push(ROUTES.terms)} />
       </View>
       <Text style={sectionLabel}>Sync</Text>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>

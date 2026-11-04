@@ -41,6 +41,7 @@ export const ROUTES = {
   categories: "/settings/categories",
   // Link to one term with { pathname, params: { term } }; components/TermInfo does this.
   glossary: "/settings/glossary",
+  terms: "/settings/terms",
   financialReports: "/financial-reports",
   spendingAlerts: "/spending-alerts",
 } as const satisfies RouteMap;
