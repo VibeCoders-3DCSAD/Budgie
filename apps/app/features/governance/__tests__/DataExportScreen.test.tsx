@@ -41,6 +41,7 @@ it("keeps the prepared file when the picker is closed, so it can be saved later"
 
   await act(async () => { fireEvent.press(view.getByLabelText("Export my data")); });
   expect(view.getByText("Export ready")).toBeTruthy();
+  expect(view.getByText("Your financial data export is ready. Save it before leaving this screen, or it must be prepared again.")).toBeTruthy();
 
   await act(async () => { fireEvent.press(view.getByLabelText("Save file")); });
 

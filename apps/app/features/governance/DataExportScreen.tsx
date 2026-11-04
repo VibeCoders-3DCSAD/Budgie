@@ -40,7 +40,7 @@ function ExportStatus({ state }: { state: DataExportState }) {
     return <StatusCard tone="ok" title="Export saved">{`${state.prepared.fileName} · ${state.prepared.rowCount.toLocaleString("en-PH")} records`}</StatusCard>;
   }
   if (state.kind === "ready") {
-    return <StatusCard tone="ok" title="Export ready">Your financial data export is ready. Download it before leaving this screen.</StatusCard>;
+    return <StatusCard tone="ok" title="Export ready">Your financial data export is ready. Save it before leaving this screen, or it must be prepared again.</StatusCard>;
   }
   return (
     <ListCard>
