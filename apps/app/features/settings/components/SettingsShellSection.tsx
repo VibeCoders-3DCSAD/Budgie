@@ -29,7 +29,7 @@ function ManageRow({ label, icon, divider = false, onPress }: { label: string; i
   );
 }
 
-// The Manage (categories, definition of terms, terms & conditions) and Sync rows Settings shows above its danger zone.
+// The Manage (categories, definition of terms), Sync, and Help and About (terms & conditions) rows Settings shows above its danger zone.
 export function SettingsShellSection() {
   const { syncing, queueCount, syncMessage, handleSync } = useSync();
   return (
@@ -38,10 +38,9 @@ export function SettingsShellSection() {
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
         <ManageRow label="Categories" icon="tag-outline" onPress={() => router.push(ROUTES.categories)} />
         <ManageRow label="Definition of terms" icon="book-open-variant" divider onPress={() => router.push(ROUTES.glossary)} />
-        <ManageRow label="Terms & Conditions" icon="file-document-outline" divider onPress={() => router.push(ROUTES.terms)} />
       </View>
       <Text style={sectionLabel}>Sync</Text>
-      <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>
+      <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={queueCount > 0 ? "Sync unsynced changes" : "Synced"}
@@ -62,6 +61,10 @@ export function SettingsShellSection() {
           </View>
           <MaterialCommunityIcons color={palette.mut} name="chevron-right" size={20} />
         </Pressable>
+      </View>
+      <Text style={sectionLabel}>Help and About</Text>
+      <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>
+        <ManageRow label="Terms & Conditions" icon="file-document-outline" onPress={() => router.push(ROUTES.terms)} />
       </View>
     </View>
   );
