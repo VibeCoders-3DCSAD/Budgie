@@ -22,6 +22,7 @@ empty states.
 | 12 | [Intelligent Financial Planning](12-intelligent-financial-planning.md) | Allows users to generate, adjust, and accept a monthly plan from available account balances, spending forecasts, savings and debt profile classification, financial obligations, and savings goals. Includes savings, debt, and bill budgets by default, with manual budgeting options, category allocations, and offline accepted-plan review. |
 | 13 | [Financial Reports](13-financial-reports.md) | Allows users to review cash outflow, accepted-plan budgets versus actual spending, savings progress, and debt summaries. Includes last month's forecast versus actual spending, monthly and quarterly spending outlooks, and unusual-spending observations with one-time, frequent, or yearly answers. |
 | 14 | [User Settings](14-user-settings.md) | Allows users to manage their profile, preferences, notifications, security, and application configurations, including changing their password and logging out of their account. |
+| 15 | [Definition of Terms](15-definition-of-terms.md) | Allows users to look up plain-language English and Filipino definitions of the finance words the app uses, search them by name, definition, or Filipino keyword, and open a definition directly from an (i) button beside a finance label. Opened from Settings. |
 
 Account Registration and Login have separate specifications.
 
@@ -33,6 +34,10 @@ Budgeting will not be a standalone module. Intelligent Financial Planning owns
 active monthly spending allocations and their health. Legacy budget records
 remain syncable historical data only and are not shown as an active planning
 workflow.
+
+Definition of Terms supports all product modules. Finance labels in the
+Dashboard, Debt Management, credit card forms, Intelligent Financial Planning,
+and spending forecasts link to their definitions.
 
 Offline access and synchronization support all product modules. User Onboarding
 explains offline capability and sync status; User Settings covers sync controls
