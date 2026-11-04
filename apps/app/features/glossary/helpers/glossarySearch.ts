@@ -9,12 +9,16 @@ function namesMatch(entry: GlossaryEntry, query: string) {
   return (entry.keywords ?? []).some((keyword) => normalize(keyword).includes(query));
 }
 
-// Name and keyword matches come first, then terms that only mention the query in their definition.
+function definitionMatches(entry: GlossaryEntry, query: string) {
+  return normalize(entry.definition.english).includes(query) || normalize(entry.definition.tagalog).includes(query);
+}
+
+// Name and keyword matches come first, then terms that only mention the query in their English or Tagalog definition.
 export function searchGlossary<T extends GlossaryEntry>(entries: readonly T[], query: string): T[] {
   const needle = normalize(query);
   if (!needle) return [...entries];
   const byName = entries.filter((entry) => namesMatch(entry, needle));
-  const byDefinition = entries.filter((entry) => !byName.includes(entry) && normalize(entry.definition).includes(needle));
+  const byDefinition = entries.filter((entry) => !byName.includes(entry) && definitionMatches(entry, needle));
   return [...byName, ...byDefinition];
 }
 

@@ -2,9 +2,9 @@ import { glossaryTermName, parseGlossaryTermId, searchGlossary } from "../helper
 import { GLOSSARY_TERMS } from "../terms";
 
 const ENTRIES = [
-  { id: "a", term: "Cut-off date", definition: "Last day of a billing cycle.", keywords: ["cutoff"] },
-  { id: "b", term: "Billing cycle", definition: "About a month of purchases." },
-  { id: "c", term: "Statement (SOA)", definition: "Bill made at the cut-off.", keywords: ["statement of account"] },
+  { id: "a", term: "Cut-off date", definition: { english: "Last day of a billing cycle.", tagalog: "Huling araw ng billing cycle." }, keywords: ["cutoff"] },
+  { id: "b", term: "Billing cycle", definition: { english: "About a month of purchases.", tagalog: "Mga isang buwan ng binili." } },
+  { id: "c", term: "Statement (SOA)", definition: { english: "Bill made at the cut-off.", tagalog: "Bill na ginawa sa cut-off." }, keywords: ["statement of account"] },
 ];
 
 describe("searchGlossary", () => {
@@ -19,6 +19,10 @@ describe("searchGlossary", () => {
 
   it("finds a term by a search-only keyword", () => {
     expect(searchGlossary(ENTRIES, "statement of").map((entry) => entry.id)).toEqual(["c"]);
+  });
+
+  it("finds a term by its Tagalog definition", () => {
+    expect(searchGlossary(ENTRIES, "binili").map((entry) => entry.id)).toEqual(["b"]);
   });
 
   it("returns nothing when no term matches", () => {
@@ -39,6 +43,13 @@ describe("GLOSSARY_TERMS", () => {
   it("uses each id once", () => {
     const ids = GLOSSARY_TERMS.map((entry) => entry.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("defines every term in English and Tagalog", () => {
+    for (const entry of GLOSSARY_TERMS) {
+      expect(entry.definition.english.trim()).not.toBe("");
+      expect(entry.definition.tagalog.trim()).not.toBe("");
+    }
   });
 
   it("names a term by id", () => {
