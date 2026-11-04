@@ -14,11 +14,13 @@ type Props = {
   // Where Back goes when the page was opened without history; defaults to Home.
   fallbackHref?: Href;
   onScrollBeginDrag?: () => void;
+  // Stays fixed under the back header while the content scrolls (the glossary search bar).
+  header?: ReactNode;
   children: ReactNode;
 };
 
 // Frame for pages outside the tabs: back header and scrolling content, no tab bar.
-export function InnerPage({ title, fallbackHref = ROUTES.dashboard, onScrollBeginDrag, children }: Props) {
+export function InnerPage({ title, fallbackHref = ROUTES.dashboard, onScrollBeginDrag, header, children }: Props) {
   const interceptRef = useRef<(() => boolean) | null>(null);
   const setBackIntercept = useCallback((intercept: (() => boolean) | null) => { interceptRef.current = intercept; }, []);
   const goBack = useCallback(() => {
@@ -42,6 +44,7 @@ export function InnerPage({ title, fallbackHref = ROUTES.dashboard, onScrollBegi
   return (
     <SafeAreaView style={{ backgroundColor: shellPalette.shell }} className="flex-1">
       <InnerHeader title={title} onBack={goBack} />
+      {header}
       <PageScroll scrollKey={String(visit)} tabBarShown={false} onScrollBeginDrag={onScrollBeginDrag} back={{ setBackIntercept, goBack }}>
         {children}
       </PageScroll>
