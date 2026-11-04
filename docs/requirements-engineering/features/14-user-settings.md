@@ -96,7 +96,9 @@
 - When starting a new export is rate-limited, stop on the first refusal without
   retrying and show how many minutes to wait, from the server's requested wait
   rounded up
-- Do not retry a request when the server asks for a wait longer than 30 seconds
+- Wait no longer than 60 seconds, the batch limit's one-minute window, before
+  retrying a rate-limited batch read; a batch still refused after five attempts
+  ends the export as failed, not as the export limit
 - Retry dropped connections and server errors after a short wait, keeping the
   progress already made
 - Manage data-retention preferences when available
@@ -229,7 +231,13 @@
 
 #### Confirmation Messages
 
-- Account deletion confirmation: `Deleting your account removes your account and associated financial data. Cancel to keep your account or confirm deletion to continue.`
+- Account deletion warning: `This can't be undone`, then `Deleting your account permanently removes:`
+  followed by `All transactions & history`, `Budgets, goals & debt plans`, and
+  `Your personalization settings`
+- Export before deleting: `Export your data first` with `Get a CSV file of your data before you delete.`
+  and an `Export` action that opens Export data
+- Account deletion acknowledgement: `I understand this permanently deletes my account and all data.`
+  The user must tick it before `Delete my account` is enabled; `Cancel` keeps the account
 
 #### Recovery Messages
 
