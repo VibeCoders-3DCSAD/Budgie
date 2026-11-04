@@ -86,7 +86,7 @@ describe("SyncProvider", () => {
     await waitFor(() => expect(screen.getByText("Unsynced changes")).toBeTruthy());
     expect(screen.getByText("Update Food Failed")).toBeTruthy();
     expect(screen.getByText("Rejected")).toBeTruthy();
-    expect(screen.getByText("This change is too large to sync. Edit it to be shorter or discard it.")).toBeTruthy();
+    expect(screen.getByText("This change is too big and can't be synced with the server. Discard this to continue.")).toBeTruthy();
     expect(screen.getByLabelText("Discard failed changes")).toBeTruthy();
     expect(runSync).toHaveBeenCalledTimes(1);
     screen.unmount();

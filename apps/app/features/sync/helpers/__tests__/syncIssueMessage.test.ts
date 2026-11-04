@@ -3,7 +3,7 @@ import { syncIssueMessage } from "../syncIssueMessage";
 describe("syncIssueMessage", () => {
   it("explains a change that is too large to sync", () => {
     expect(syncIssueMessage({ failure_message: "This change could not be synced.", last_error: "payload_too_large" }))
-      .toBe("This change is too large to sync. Edit it to be shorter or discard it.");
+      .toBe("This change is too big and can't be synced with the server. Discard this to continue.");
   });
 
   it("keeps the queued message for any other reason", () => {
