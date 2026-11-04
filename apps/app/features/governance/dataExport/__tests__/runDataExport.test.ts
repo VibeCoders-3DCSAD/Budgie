@@ -111,7 +111,7 @@ describe("runDataExport progress", () => {
     ]);
   });
 
-  it("reports a retry without losing its place, then reads the same batch again", async () => {
+  it("reports a rate-limited pause without losing its place, then reads the same batch again", async () => {
     mockBatch
       .mockResolvedValueOnce(reply(429, {}, { "Retry-After": "1" }))
       .mockResolvedValue(reply(200, { payload: { dataset: "x", rows: [], next_cursor: null } }));
@@ -119,6 +119,33 @@ describe("runDataExport progress", () => {
 
     await runDataExport("token", { sleepFor: noWait, now: exportedAt, onProgress: (p) => stages.push(`${p.stage}:${p.dataset ?? "-"}:b${p.batch}`) });
 
-    expect(stages.slice(0, 4)).toEqual(["starting:-:b0", "reading:accounts:b1", "retrying:accounts:b1", "reading:accounts:b1"]);
+    expect(stages.slice(0, 4)).toEqual(["starting:-:b0", "reading:accounts:b1", "rate-limited:accounts:b1", "reading:accounts:b1"]);
+  });
+});
+
+describe("runDataExport rate limits", () => {
+  it("says when a rate-limited batch resumes, and reports other failures as retrying", async () => {
+    jest.spyOn(Date, "now").mockReturnValue(1_000);
+    mockBatch
+      .mockResolvedValueOnce(reply(429, {}, { "Retry-After": "4" }))
+      .mockResolvedValueOnce(reply(503, {}))
+      .mockResolvedValue(reply(200, { payload: { dataset: "x", rows: [], next_cursor: null } }));
+    const paused: unknown[] = [];
+
+    await runDataExport("token", {
+      sleepFor: noWait,
+      now: exportedAt,
+      onProgress: (p) => { if (p.stage === "rate-limited" || p.stage === "retrying") paused.push([p.stage, p.resumesAt]); },
+    });
+
+    expect(paused).toEqual([["rate-limited", 5_000], ["retrying", null]]);
+    jest.restoreAllMocks();
+  });
+
+  it("stops at once when the server asks for a longer wait than a retry holds for", async () => {
+    mockRequest.mockResolvedValue(reply(429, {}, { "Retry-After": "1800" }));
+
+    await expect(runDataExport("token", { sleepFor: noWait, now: exportedAt })).rejects.toMatchObject({ status: 429, retryAfterMs: 1_800_000 });
+    expect(mockRequest).toHaveBeenCalledTimes(1);
   });
 });

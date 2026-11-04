@@ -2,20 +2,22 @@ import { completeDataExport, failDataExport, getDataExportBatch, requestDataExpo
 import { buildExportCsv, exportFileName } from "./csv";
 import type { ExportSection } from "./csv";
 import { EXPORT_BATCH_INTERVAL_MS } from "./constants";
-import { ExportHttpError, createPacer, parseRetryAfter, sleep, withRetry } from "./retry";
+import { ExportHttpError, createPacer, isRateLimited, parseRetryAfter, sleep, withRetry } from "./retry";
 import type { Sleep } from "./retry";
 
 export type PreparedExport = { fileName: string; csv: string; rowCount: number };
 
 // Where a running export is: the dataset being read (by position in the file), the batch within it, and the
-// records read so far. `datasetCount` is 0 until the server has listed the datasets.
+// records read so far. `datasetCount` is 0 until the server has listed the datasets. While rate-limited,
+// `resumesAt` is when the paused request goes out again (ms since epoch); otherwise it is null.
 export type ExportProgress = {
-  stage: "starting" | "reading" | "retrying" | "building";
+  stage: "starting" | "reading" | "retrying" | "rate-limited" | "building";
   dataset: string | null;
   datasetIndex: number;
   datasetCount: number;
   batch: number;
   rowCount: number;
+  resumesAt: number | null;
 };
 
 type RunOptions = {
@@ -85,13 +87,19 @@ async function fetchDataset(
 // marked completed once the file is built, or failed when any step gives up; both updates are best effort.
 export async function runDataExport(accessToken: string, options: RunOptions = {}): Promise<PreparedExport> {
   const { isCancelled = () => false, onProgress = () => undefined, sleepFor = sleep, now = () => new Date() } = options;
-  let latest: ExportProgress = { stage: "starting", dataset: null, datasetIndex: 0, datasetCount: 0, batch: 0, rowCount: 0 };
+  let latest: ExportProgress = { stage: "starting", dataset: null, datasetIndex: 0, datasetCount: 0, batch: 0, rowCount: 0, resumesAt: null };
   const report = (progress: ExportProgress) => {
     latest = progress;
     onProgress(progress);
   };
-  // A retry keeps where the export got to and only changes the stage.
-  const onRetry = () => onProgress({ ...latest, stage: "retrying" });
+  // A retry keeps where the export got to and only changes the stage; a 429 also says when it resumes.
+  const onRetry = (error: unknown, delayMs: number) => {
+    if (isRateLimited(error)) {
+      onProgress({ ...latest, stage: "rate-limited", resumesAt: Date.now() + delayMs });
+      return;
+    }
+    onProgress({ ...latest, stage: "retrying" });
+  };
   const retry = <T,>(task: () => Promise<T>) => withRetry(task, { sleepFor, isCancelled, onRetry });
   const pace = createPacer(EXPORT_BATCH_INTERVAL_MS, Date.now, sleepFor);
 
@@ -103,13 +111,13 @@ export async function runDataExport(accessToken: string, options: RunOptions = {
     let rowCount = 0;
     for (const [datasetIndex, dataset] of datasets.entries()) {
       const onBatch = (batch: number, rowsRead: number) =>
-        report({ stage: "reading", dataset, datasetIndex, datasetCount, batch, rowCount: rowCount + rowsRead });
+        report({ stage: "reading", dataset, datasetIndex, datasetCount, batch, rowCount: rowCount + rowsRead, resumesAt: null });
       const rows = await fetchDataset(accessToken, requestId, dataset, { retry, pace, isCancelled, onBatch });
       rowCount += rows.length;
       sections.push({ dataset, rows });
     }
 
-    report({ stage: "building", dataset: null, datasetIndex: datasetCount, datasetCount, batch: 0, rowCount });
+    report({ stage: "building", dataset: null, datasetIndex: datasetCount, datasetCount, batch: 0, rowCount, resumesAt: null });
     const exportedAt = now();
     const csv = buildExportCsv(sections, exportedAt);
     // The file is complete either way; a request left open is replaced by the next export.

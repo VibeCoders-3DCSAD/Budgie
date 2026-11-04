@@ -1,6 +1,7 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import type React from "react";
 import DataExportScreen from "../DataExportScreen";
+import { ExportHttpError } from "../dataExport/retry";
 
 const mockRunDataExport = jest.fn();
 const mockSaveExportFile = jest.fn();
@@ -82,6 +83,16 @@ it("shows progress and the current step while the export is being prepared", asy
   expect(view.getByLabelText("Export progress").props.accessibilityValue).toMatchObject({ now: 36 });
   expect(view.getByLabelText("Export my data").props.accessibilityState).toMatchObject({ busy: true });
   await act(async () => { finish(prepared); });
+});
+
+it("says when to come back once the export limit is reached", async () => {
+  mockRunDataExport.mockRejectedValueOnce(new ExportHttpError(429, 1_741_000));
+  const view = render(<DataExportScreen />);
+
+  await act(async () => { fireEvent.press(view.getByLabelText("Export my data")); });
+
+  expect(view.getByText("Export limit reached")).toBeTruthy();
+  expect(view.getByText("You have started too many exports. Try again in 30 minutes.")).toBeTruthy();
 });
 
 it("shows the offline banner and explains a tap instead of exporting", async () => {

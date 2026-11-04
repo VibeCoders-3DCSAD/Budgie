@@ -22,6 +22,12 @@ const INCLUDED = [
   "Billers, remittances & consents",
 ];
 
+// The server's wait, rounded up to whole minutes so the user never comes back too early.
+export function exportLimitMessage(retryAfterMs: number): string {
+  const minutes = Math.max(1, Math.ceil(retryAfterMs / 60_000));
+  return `You have started too many exports. Try again in ${minutes} ${minutes === 1 ? "minute" : "minutes"}.`;
+}
+
 function primaryLabel(state: DataExportState): string {
   if (state.kind === "failed") return "Try the export again";
   if (state.kind !== "ready") return "Export my data";
@@ -33,6 +39,9 @@ function primaryLabel(state: DataExportState): string {
 function ExportStatus({ state }: { state: DataExportState }) {
   if (state.kind === "preparing") return <ExportProgressCard step={state} />;
   if (state.kind === "ready" && state.saving) return <ExportProgressCard step={{ kind: "saving" }} />;
+  if (state.kind === "failed" && state.retryAfterMs !== null) {
+    return <StatusCard tone="err" title="Export limit reached">{exportLimitMessage(state.retryAfterMs)}</StatusCard>;
+  }
   if (state.kind === "failed") {
     return <StatusCard tone="err" title="Export failed">Your data export could not be prepared. Try the export again.</StatusCard>;
   }

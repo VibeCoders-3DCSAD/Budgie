@@ -1,7 +1,7 @@
 import { progressMessage } from "../components/ExportProgressCard";
 import type { ExportProgress } from "../dataExport/runDataExport";
 
-const reading: ExportProgress = { stage: "reading", dataset: "billers_and_remittances", datasetIndex: 10, datasetCount: 14, batch: 3, rowCount: 1500 };
+const reading: ExportProgress = { stage: "reading", dataset: "billers_and_remittances", datasetIndex: 10, datasetCount: 14, batch: 3, rowCount: 1500, resumesAt: null };
 
 describe("progressMessage", () => {
   it("starts at 0% before the server lists the datasets", () => {
@@ -25,6 +25,16 @@ describe("progressMessage", () => {
       message: "The export is taking a short break before trying again. Your progress is kept.",
       percent: 71,
     });
+  });
+
+  it("counts down to when a rate-limited export resumes", () => {
+    const limited: ExportProgress = { ...reading, stage: "rate-limited", resumesAt: 10_000 };
+    expect(progressMessage({ kind: "preparing", progress: limited }, 1_500)).toMatchObject({
+      title: "Slowing down",
+      message: "Too many requests were sent at once. The export resumes in 9 seconds. Your progress is kept.",
+      percent: 71,
+    });
+    expect(progressMessage({ kind: "preparing", progress: limited }, 9_200).message).toContain("resumes in 1 second.");
   });
 
   it("is full while building and saving", () => {

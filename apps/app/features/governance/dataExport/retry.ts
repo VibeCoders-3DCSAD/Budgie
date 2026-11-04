@@ -17,6 +17,17 @@ export class ExportHttpError extends Error {
   }
 }
 
+// The server answered 429: too many requests in its window.
+export function isRateLimited(error: unknown): error is ExportHttpError {
+  return error instanceof ExportHttpError && error.status === 429;
+}
+
+// The server asked for a longer wait than a retry holds for (the hourly limit on new exports); retrying
+// sooner is refused again, so the export stops and tells the user when to come back.
+function waitsTooLong(error: unknown): boolean {
+  return isRateLimited(error) && error.retryAfterMs !== null && error.retryAfterMs > MAX_DELAY_MS;
+}
+
 export function isRetryable(error: unknown): boolean {
   if (!(error instanceof ExportHttpError)) return true;
   return error.status === 429 || error.status >= 500;
@@ -41,17 +52,18 @@ export async function withRetry<T>(
   { sleepFor = sleep, isCancelled = () => false, onRetry = () => undefined }: {
     sleepFor?: Sleep;
     isCancelled?: () => boolean;
-    // Called before each wait, so the caller can say the export is pausing.
-    onRetry?: () => void;
+    // Called before each wait with the error and the wait, so the caller can say why the export is pausing.
+    onRetry?: (error: unknown, delayMs: number) => void;
   } = {},
 ): Promise<T> {
   for (let attempt = 1; ; attempt += 1) {
     try {
       return await task();
     } catch (error) {
-      if (attempt >= MAX_ATTEMPTS || !isRetryable(error) || isCancelled()) throw error;
-      onRetry();
-      await sleepFor(retryDelayMs(attempt, error));
+      if (attempt >= MAX_ATTEMPTS || !isRetryable(error) || isCancelled() || waitsTooLong(error)) throw error;
+      const delayMs = retryDelayMs(attempt, error);
+      onRetry(error, delayMs);
+      await sleepFor(delayMs);
     }
   }
 }

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { runDataExport } from "./runDataExport";
 import type { ExportProgress, PreparedExport } from "./runDataExport";
 import { saveExportFile } from "./saveExportFile";
+import { isRateLimited } from "./retry";
 
 export type DataExportState =
   | { kind: "idle" }
   | { kind: "preparing"; progress: ExportProgress | null }
   | { kind: "ready"; prepared: PreparedExport; saving: boolean; saved: boolean }
-  | { kind: "failed" };
+  // `retryAfterMs` is set when the server refused for rate limiting and said how long to wait.
+  | { kind: "failed"; retryAfterMs: number | null };
 
 // Prepares the export, then offers it for saving at once. The prepared file stays in memory while the
 // screen is open, so a closed picker or a second copy does not need another export.
@@ -40,8 +42,9 @@ export function useDataExport(accessToken: string) {
     let prepared: PreparedExport;
     try {
       prepared = await runDataExport(accessToken, { isCancelled: () => !mounted.current, onProgress });
-    } catch {
-      if (mounted.current) setState({ kind: "failed" });
+    } catch (error) {
+      const retryAfterMs = isRateLimited(error) ? error.retryAfterMs : null;
+      if (mounted.current) setState({ kind: "failed", retryAfterMs });
       return;
     }
     if (mounted.current) await save(prepared);

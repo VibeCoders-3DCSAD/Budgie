@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Text, View } from "react-native";
 import type { ExportProgress } from "../dataExport/runDataExport";
 import { privacyTones } from "./governanceUi";
@@ -30,8 +31,13 @@ function batchDetail(progress: ExportProgress): string | null {
   return `Batch ${progress.batch} · ${records(progress.rowCount)} so far`;
 }
 
+function secondsUntil(resumesAt: number | null, now: number): number {
+  if (resumesAt === null) return 0;
+  return Math.max(0, Math.ceil((resumesAt - now) / 1_000));
+}
+
 // Copy follows docs/requirements-engineering/features/14-user-settings.md (export status messages).
-export function progressMessage(step: ExportStep): ProgressMessage {
+export function progressMessage(step: ExportStep, now: number = Date.now()): ProgressMessage {
   if (step.kind === "saving") {
     return { title: "Saving file", message: "Your export file is being saved. Choose where to keep it if asked.", detail: null, percent: 100 };
   }
@@ -41,6 +47,15 @@ export function progressMessage(step: ExportStep): ProgressMessage {
   }
   if (progress.stage === "building") {
     return { title: "Building file", message: "Your export file is being built. This only takes a moment.", detail: `${records(progress.rowCount)} gathered`, percent: 100 };
+  }
+  if (progress.stage === "rate-limited") {
+    const seconds = secondsUntil(progress.resumesAt, now);
+    return {
+      title: "Slowing down",
+      message: `Too many requests were sent at once. The export resumes in ${seconds} ${seconds === 1 ? "second" : "seconds"}. Your progress is kept.`,
+      detail: batchDetail(progress),
+      percent: readPercent(progress),
+    };
   }
   if (progress.stage === "retrying") {
     return { title: "Waiting to retry", message: "The export is taking a short break before trying again. Your progress is kept.", detail: batchDetail(progress), percent: readPercent(progress) };
@@ -54,9 +69,22 @@ export function progressMessage(step: ExportStep): ProgressMessage {
   };
 }
 
+// The current time, refreshed every second while `ticking`, so the rate-limit countdown counts down.
+function useNow(ticking: boolean): number {
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    if (!ticking) return undefined;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(timer);
+  }, [ticking]);
+  return now;
+}
+
 // Shown while the export is prepared and saved: a progress bar and a message saying what is happening.
 export function ExportProgressCard({ step }: { step: ExportStep }) {
-  const { title, message, detail, percent } = progressMessage(step);
+  const now = useNow(step.kind === "preparing" && step.progress?.stage === "rate-limited");
+  const { title, message, detail, percent } = progressMessage(step, now);
   return (
     <View
       accessibilityLiveRegion="polite"
