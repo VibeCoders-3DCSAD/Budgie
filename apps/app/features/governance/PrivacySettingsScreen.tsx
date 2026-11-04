@@ -3,22 +3,22 @@ import { Pressable, Text, TextStyle, View } from "react-native";
 import {
   CaretRight,
   ClockAfternoon,
+  DownloadSimple,
   LockKey,
   Trash,
   User,
 } from "phosphor-react-native";
 import { useConnectivityStore } from "../../services/connectivity";
 import { useToast } from "../../components/Toast";
-import UserProfileScreen from "./UserProfileScreen";
 import PreferencesScreen from "./PreferencesScreen";
-import AccountOffboardingScreen from "./AccountOffboardingScreen";
+import { router } from "expo-router";
+import { ROUTES } from "../../routes";
 
 type PrivacySettingsScreenProps = {
   accessToken: string;
   userId: string;
   deviceId: string;
   onBackToLogin?: () => void;
-  onDeleted?: (scheduledDate: string) => void;
   onSubPageChange?: (showingSubPage: boolean) => void;
   beforeDangerZone?: React.ReactNode;
 };
@@ -125,6 +125,7 @@ function NavRow({
   labelColor = INK,
   labelWeight = "600",
   disabled,
+  accessibilityLabel,
 }: {
   icon: React.ReactNode;
   label: string;
@@ -135,11 +136,14 @@ function NavRow({
   labelColor?: string;
   labelWeight?: TextStyle["fontWeight"];
   disabled?: boolean;
+  accessibilityLabel?: string;
 }) {
   const Wrapper = onPress && !disabled ? Pressable : View;
   return (
     <Wrapper
       onPress={onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={accessibilityLabel ?? label}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -165,9 +169,8 @@ function NavRow({
   );
 }
 
-export default function PrivacySettingsScreen({ accessToken, userId, deviceId, onBackToLogin, onDeleted, onSubPageChange, beforeDangerZone }: PrivacySettingsScreenProps) {
+export default function PrivacySettingsScreen({ accessToken, userId, deviceId, onBackToLogin, onSubPageChange, beforeDangerZone }: PrivacySettingsScreenProps) {
   const [subPage, setSubPage] = useState<string | null>(null);
-  const [exported, setExported] = useState(false);
   const online = useConnectivityStore(state => state.online);
   const { showToast } = useToast();
 
@@ -177,39 +180,6 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
 
   if (subPage === "preferences") {
     return <PreferencesScreen accessToken={accessToken} userId={userId} deviceId={deviceId} onBack={() => setSubPage(null)} />;
-  }
-
-  if (subPage === "export") {
-    return (
-      <View>
-        <Pressable
-          onPress={() => setSubPage(null)}
-          accessibilityRole="button"
-          accessibilityLabel="Back to settings"
-          style={{ flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 16 }}
-        >
-          <CaretRight size={18} color={MUTED} weight="bold" style={{ transform: [{ rotate: "180deg" }] }} />
-          <Text style={{ fontFamily: "Manrope", fontWeight: "600", fontSize: 13, color: MUTED }}>
-            Settings
-          </Text>
-        </Pressable>
-        <Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: INK, marginBottom: 16 }}>
-          Export data
-        </Text>
-        <UserProfileScreen accessToken={accessToken} alreadyExported={exported} onExported={() => setExported(true)} onDone={() => setSubPage(null)} />
-      </View>
-    );
-  }
-
-  if (subPage === "delete-account") {
-    return (
-      <AccountOffboardingScreen
-        accessToken={accessToken}
-        onBack={() => setSubPage(null)}
-        onGoToExport={() => setSubPage("export")}
-        onDeleted={onDeleted}
-      />
-    );
   }
 
   return (
@@ -227,10 +197,21 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
 
       {beforeDangerZone ? <View style={{ marginBottom: 20 }}>{beforeDangerZone}</View> : null}
 
+      <View style={{ marginBottom: 12 }}>
+        <BorderedGroup>
+          <NavRow
+            icon={<DownloadSimple size={18} color={MUTED} />}
+            label="Export data"
+            subtitle="Download your financial data as a CSV file"
+            onPress={() => router.push(ROUTES.dataExport)}
+          />
+        </BorderedGroup>
+      </View>
+
       <Pressable
         onPress={() => {
           if (!online) { showToast("This action can only be done while online"); return; }
-          setSubPage("delete-account");
+          router.push(ROUTES.deleteAccount);
         }}
         accessibilityRole="button"
         accessibilityLabel="Delete account"

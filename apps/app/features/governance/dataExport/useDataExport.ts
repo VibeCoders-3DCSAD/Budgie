@@ -1,0 +1,48 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { runDataExport } from "./runDataExport";
+import type { PreparedExport } from "./runDataExport";
+import { saveExportFile } from "./saveExportFile";
+
+export type DataExportState =
+  | { kind: "idle" }
+  | { kind: "preparing" }
+  | { kind: "ready"; prepared: PreparedExport; saving: boolean; saved: boolean }
+  | { kind: "failed" };
+
+// Prepares the export, then offers it for saving at once. The prepared file stays in memory while the
+// screen is open, so a closed picker or a second copy does not need another export.
+export function useDataExport(accessToken: string) {
+  const [state, setState] = useState<DataExportState>({ kind: "idle" });
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  const save = useCallback(async (prepared: PreparedExport) => {
+    setState({ kind: "ready", prepared, saving: true, saved: false });
+    let saved = false;
+    try {
+      saved = (await saveExportFile(prepared.fileName, prepared.csv)).saved;
+    } catch (error) {
+      console.error("[data-export] saving the export file failed", error);
+    }
+    if (mounted.current) setState({ kind: "ready", prepared, saving: false, saved });
+    return saved;
+  }, []);
+
+  const start = useCallback(async () => {
+    setState({ kind: "preparing" });
+    let prepared: PreparedExport;
+    try {
+      prepared = await runDataExport(accessToken, { isCancelled: () => !mounted.current });
+    } catch {
+      if (mounted.current) setState({ kind: "failed" });
+      return;
+    }
+    if (mounted.current) await save(prepared);
+  }, [accessToken, save]);
+
+  return { state, start, save };
+}

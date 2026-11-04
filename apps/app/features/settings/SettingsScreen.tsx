@@ -14,12 +14,12 @@ type Props = {
 
 // Privacy and account settings plus the shell's own rows; sub-pages of the privacy screen hide the extras.
 export default function SettingsScreen({ accessToken, userId, deviceId, onLock }: Props) {
-  const { confirmLogout, showDeletionSuccess } = useLogout();
+  const { confirmLogout } = useLogout();
   const [subPage, setSubPage] = useState(false);
   return (
     <View>
       <PrivacySettingsScreen accessToken={accessToken} userId={userId} deviceId={deviceId} onBackToLogin={confirmLogout}
-        onSubPageChange={setSubPage} onDeleted={showDeletionSuccess}
+        onSubPageChange={setSubPage}
         beforeDangerZone={subPage ? null : <SettingsShellSection />} />
       {subPage ? null : <AccountActions onLock={onLock} />}
     </View>

@@ -18,6 +18,15 @@ export type DataExportRequest = {
     id: string;
     status: "requested" | "processing" | "available" | "completed" | "failed" | "expired" | "cancelled";
   };
+  // Dataset names in file order; the client fetches each one in batches.
+  datasets: string[];
+};
+
+export type DataExportBatch = {
+  dataset: string;
+  rows: Record<string, unknown>[];
+  // The last id of this page, or null when the dataset has no more rows.
+  next_cursor: string | null;
 };
 
 export type AccountDeletionRequest = {
@@ -26,5 +35,5 @@ export type AccountDeletionRequest = {
   requested_at: string;
   scheduled_delete_at?: string;
   confirmed_at?: string;
-  cancelled_at?: string;
+  cancelled_at?: string | null;
 };

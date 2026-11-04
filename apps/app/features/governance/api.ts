@@ -1,4 +1,5 @@
-import type { AccountDeletionRequest, ConsentRecord, DataExportRequest } from "./types";
+import type { AccountDeletionRequest, ConsentRecord, DataExportBatch, DataExportRequest } from "./types";
+import { EXPORT_BATCH_SIZE } from "./dataExport/constants";
 import { hasCurrentTermsConsent } from "./constants";
 import type { SeasonalPreferences } from "@odin/spending-insights/seasons";
 import { apiFetch } from "../../lib/helpers/apiFetch";
@@ -36,15 +37,41 @@ export function submitConsent(
   );
 }
 
-export function getDataExports(accessToken: string) {
-  return apiFetch<{ payload?: { requests: { id: string; status: string; requested_at: string }[] }; error?: string; message?: string }>(
-    accessToken, "/odin/api/data-export-requests",
+export function requestDataExport(accessToken: string) {
+  return apiFetch<{ payload?: DataExportRequest; error?: string; message?: string }>(
+    accessToken, "/odin/api/data-export-requests", { method: "POST", body: { payload: { format: "csv" } } },
   );
 }
 
-export function requestDataExport(accessToken: string) {
-  return apiFetch<{ payload?: DataExportRequest; error?: string; message?: string }>(
-    accessToken, "/odin/api/data-export-requests", { method: "POST", body: { payload: {} } },
+export function getDataExportBatch(accessToken: string, requestId: string, dataset: string, after: string | null) {
+  const query = new URLSearchParams({ dataset, limit: String(EXPORT_BATCH_SIZE) });
+  if (after) query.set("after", after);
+  return apiFetch<{ payload?: DataExportBatch; error?: string; message?: string }>(
+    accessToken, `/odin/api/data-export-requests/${requestId}/batches?${query.toString()}`,
+  );
+}
+
+export function completeDataExport(accessToken: string, requestId: string) {
+  return apiFetch<{ message?: string }>(
+    accessToken, `/odin/api/data-export-requests/${requestId}/complete`, { method: "POST", body: { payload: {} } },
+  );
+}
+
+export function failDataExport(accessToken: string, requestId: string, reason: string) {
+  return apiFetch<{ message?: string }>(
+    accessToken, `/odin/api/data-export-requests/${requestId}/fail`, { method: "POST", body: { payload: { reason } } },
+  );
+}
+
+export function getAccountDeletionHistory(accessToken: string) {
+  return apiFetch<{ payload?: { requests: AccountDeletionRequest[] }; error?: string; message?: string }>(
+    accessToken, "/odin/api/account-deletion-requests",
+  );
+}
+
+export function getActiveAccountDeletion(accessToken: string) {
+  return apiFetch<{ payload?: { request: AccountDeletionRequest | null }; error?: string; message?: string }>(
+    accessToken, "/odin/api/account-deletion-requests/active",
   );
 }
 
