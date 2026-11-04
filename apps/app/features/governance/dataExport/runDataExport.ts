@@ -2,7 +2,7 @@ import { completeDataExport, failDataExport, getDataExportBatch, requestDataExpo
 import { buildExportCsv, exportFileName } from "./csv";
 import type { ExportSection } from "./csv";
 import { EXPORT_BATCH_INTERVAL_MS } from "./constants";
-import { ExportHttpError, createPacer, isRateLimited, parseRetryAfter, sleep, withRetry } from "./retry";
+import { ExportHttpError, ExportLimitError, createPacer, isRateLimited, parseRetryAfter, sleep, withRetry } from "./retry";
 import type { Sleep } from "./retry";
 
 export type PreparedExport = { fileName: string; csv: string; rowCount: number };
@@ -41,13 +41,19 @@ function ensureOk(response: Response): void {
   throw new ExportHttpError(response.status, parseRetryAfter(response.headers.get("Retry-After")));
 }
 
+// The hourly limit on new exports outlasts any retry, so a 429 here stops the export at once.
 async function startExport(accessToken: string, retry: <T>(task: () => Promise<T>) => Promise<T>) {
-  return retry(async () => {
-    const { response, body } = await requestDataExport(accessToken);
-    ensureOk(response);
-    if (!body.payload?.request.id || !Array.isArray(body.payload.datasets)) throw new ExportHttpError(502, null);
-    return { requestId: body.payload.request.id, datasets: body.payload.datasets };
-  });
+  try {
+    return await retry(async () => {
+      const { response, body } = await requestDataExport(accessToken);
+      ensureOk(response);
+      if (!body.payload?.request.id || !Array.isArray(body.payload.datasets)) throw new ExportHttpError(502, null);
+      return { requestId: body.payload.request.id, datasets: body.payload.datasets };
+    });
+  } catch (error) {
+    if (isRateLimited(error)) throw new ExportLimitError(error.retryAfterMs);
+    throw error;
+  }
 }
 
 async function fetchDataset(
@@ -101,10 +107,11 @@ export async function runDataExport(accessToken: string, options: RunOptions = {
     onProgress({ ...latest, stage: "retrying" });
   };
   const retry = <T,>(task: () => Promise<T>) => withRetry(task, { sleepFor, isCancelled, onRetry });
+  const retryStart = <T,>(task: () => Promise<T>) => withRetry(task, { sleepFor, isCancelled, onRetry, retryRateLimited: false });
   const pace = createPacer(EXPORT_BATCH_INTERVAL_MS, Date.now, sleepFor);
 
   report(latest);
-  const { requestId, datasets } = await startExport(accessToken, retry);
+  const { requestId, datasets } = await startExport(accessToken, retryStart);
   const datasetCount = datasets.length;
   try {
     const sections: ExportSection[] = [];

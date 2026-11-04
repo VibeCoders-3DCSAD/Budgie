@@ -2,13 +2,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { runDataExport } from "./runDataExport";
 import type { ExportProgress, PreparedExport } from "./runDataExport";
 import { saveExportFile } from "./saveExportFile";
-import { isRateLimited } from "./retry";
+import { ExportLimitError } from "./retry";
 
 export type DataExportState =
   | { kind: "idle" }
   | { kind: "preparing"; progress: ExportProgress | null }
   | { kind: "ready"; prepared: PreparedExport; saving: boolean; saved: boolean }
-  // `retryAfterMs` is set when the server refused for rate limiting and said how long to wait.
+  // `retryAfterMs` is set when the server refused a new export for the hourly limit and said how long to wait.
   | { kind: "failed"; retryAfterMs: number | null };
 
 // Prepares the export, then offers it for saving at once. The prepared file stays in memory while the
@@ -43,7 +43,7 @@ export function useDataExport(accessToken: string) {
     try {
       prepared = await runDataExport(accessToken, { isCancelled: () => !mounted.current, onProgress });
     } catch (error) {
-      const retryAfterMs = isRateLimited(error) ? error.retryAfterMs : null;
+      const retryAfterMs = error instanceof ExportLimitError ? error.retryAfterMs : null;
       if (mounted.current) setState({ kind: "failed", retryAfterMs });
       return;
     }

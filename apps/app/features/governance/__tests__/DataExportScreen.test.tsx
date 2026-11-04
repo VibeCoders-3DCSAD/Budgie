@@ -1,7 +1,7 @@
 import { act, fireEvent, render } from "@testing-library/react-native";
 import type React from "react";
 import DataExportScreen from "../DataExportScreen";
-import { ExportHttpError } from "../dataExport/retry";
+import { ExportHttpError, ExportLimitError } from "../dataExport/retry";
 
 const mockRunDataExport = jest.fn();
 const mockSaveExportFile = jest.fn();
@@ -86,13 +86,23 @@ it("shows progress and the current step while the export is being prepared", asy
 });
 
 it("says when to come back once the export limit is reached", async () => {
-  mockRunDataExport.mockRejectedValueOnce(new ExportHttpError(429, 1_741_000));
+  mockRunDataExport.mockRejectedValueOnce(new ExportLimitError(1_741_000));
   const view = render(<DataExportScreen />);
 
   await act(async () => { fireEvent.press(view.getByLabelText("Export my data")); });
 
   expect(view.getByText("Export limit reached")).toBeTruthy();
   expect(view.getByText("You have started too many exports. Try again in 30 minutes.")).toBeTruthy();
+});
+
+it("reports a batch that stayed rate-limited as a failed export, not the export limit", async () => {
+  mockRunDataExport.mockRejectedValueOnce(new ExportHttpError(429, 20_000));
+  const view = render(<DataExportScreen />);
+
+  await act(async () => { fireEvent.press(view.getByLabelText("Export my data")); });
+
+  expect(view.getByText("Export failed")).toBeTruthy();
+  expect(view.queryByText("Export limit reached")).toBeNull();
 });
 
 it("shows the offline banner and explains a tap instead of exporting", async () => {

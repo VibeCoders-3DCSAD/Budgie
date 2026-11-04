@@ -9,11 +9,12 @@ describe("export retries", () => {
     expect(isRetryable(new ExportHttpError(400, null))).toBe(false);
   });
 
-  it("waits as long as Retry-After asks, capped at 30 seconds", () => {
+  it("waits as long as Retry-After asks, capped at the 60-second batch window", () => {
     expect(parseRetryAfter("12")).toBe(12_000);
     expect(parseRetryAfter("soon")).toBeNull();
     expect(retryDelayMs(1, new ExportHttpError(429, 12_000))).toBe(12_000);
-    expect(retryDelayMs(1, new ExportHttpError(429, 600_000))).toBe(30_000);
+    expect(retryDelayMs(1, new ExportHttpError(429, 45_000))).toBe(45_000);
+    expect(retryDelayMs(1, new ExportHttpError(429, 600_000))).toBe(60_000);
   });
 
   it("backs off exponentially with jitter otherwise", () => {

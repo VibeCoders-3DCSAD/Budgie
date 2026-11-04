@@ -7,6 +7,7 @@ jest.mock("../../api", () => ({
 
 import { completeDataExport, failDataExport, getDataExportBatch, requestDataExport } from "../../api";
 import { runDataExport } from "../runDataExport";
+import { ExportLimitError } from "../retry";
 
 const mockRequest = requestDataExport as jest.Mock;
 const mockBatch = getDataExportBatch as jest.Mock;
@@ -142,10 +143,26 @@ describe("runDataExport rate limits", () => {
     jest.restoreAllMocks();
   });
 
-  it("stops at once when the server asks for a longer wait than a retry holds for", async () => {
-    mockRequest.mockResolvedValue(reply(429, {}, { "Retry-After": "1800" }));
+  it.each([["1800", 1_800_000], ["5", 5_000]])("stops on the first refused start (Retry-After %s s) with the export limit", async (header, waitMs) => {
+    mockRequest.mockResolvedValue(reply(429, {}, { "Retry-After": header }));
 
-    await expect(runDataExport("token", { sleepFor: noWait, now: exportedAt })).rejects.toMatchObject({ status: 429, retryAfterMs: 1_800_000 });
+    const failure = runDataExport("token", { sleepFor: noWait, now: exportedAt });
+
+    await expect(failure).rejects.toBeInstanceOf(ExportLimitError);
+    await expect(failure).rejects.toMatchObject({ retryAfterMs: waitMs });
     expect(mockRequest).toHaveBeenCalledTimes(1);
+    expect(mockFail).not.toHaveBeenCalled();
+  });
+
+  it("pauses a rate-limited batch for the full minute the server asks, then carries on", async () => {
+    mockBatch
+      .mockResolvedValueOnce(reply(429, {}, { "Retry-After": "55" }))
+      .mockResolvedValue(reply(200, { payload: { dataset: "x", rows: [], next_cursor: null } }));
+    const sleeps: number[] = [];
+
+    await runDataExport("token", { sleepFor: async (ms) => { sleeps.push(ms); }, now: exportedAt });
+
+    expect(sleeps).toContain(55_000);
+    expect(mockComplete).toHaveBeenCalled();
   });
 });

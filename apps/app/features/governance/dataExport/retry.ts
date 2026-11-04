@@ -4,6 +4,8 @@
 export const MAX_ATTEMPTS = 5;
 const BASE_DELAY_MS = 1_000;
 const MAX_DELAY_MS = 30_000;
+// The batch limit counts requests per minute, so the server never asks a batch to wait longer than this.
+const MAX_RETRY_AFTER_MS = 60_000;
 
 export type Sleep = (ms: number) => Promise<void>;
 
@@ -18,14 +20,17 @@ export class ExportHttpError extends Error {
 }
 
 // The server answered 429: too many requests in its window.
-export function isRateLimited(error: unknown): error is ExportHttpError {
-  return error instanceof ExportHttpError && error.status === 429;
+// Raised when the server refused to start a new export because the user started too many; carries the
+// server's wait so the screen can say when to come back.
+export class ExportLimitError extends Error {
+  constructor(readonly retryAfterMs: number | null) {
+    super("Export limit reached");
+    this.name = "ExportLimitError";
+  }
 }
 
-// The server asked for a longer wait than a retry holds for (the hourly limit on new exports); retrying
-// sooner is refused again, so the export stops and tells the user when to come back.
-function waitsTooLong(error: unknown): boolean {
-  return isRateLimited(error) && error.retryAfterMs !== null && error.retryAfterMs > MAX_DELAY_MS;
+export function isRateLimited(error: unknown): error is ExportHttpError {
+  return error instanceof ExportHttpError && error.status === 429;
 }
 
 export function isRetryable(error: unknown): boolean {
@@ -42,16 +47,18 @@ export function parseRetryAfter(value: string | null): number | null {
 
 // Exponential backoff with jitter, or the server's Retry-After when it sent one.
 export function retryDelayMs(attempt: number, error: unknown, random: () => number = Math.random): number {
-  if (error instanceof ExportHttpError && error.retryAfterMs !== null) return Math.min(error.retryAfterMs, MAX_DELAY_MS);
+  if (error instanceof ExportHttpError && error.retryAfterMs !== null) return Math.min(error.retryAfterMs, MAX_RETRY_AFTER_MS);
   const backoff = BASE_DELAY_MS * 2 ** (attempt - 1);
   return Math.min(backoff + random() * BASE_DELAY_MS, MAX_DELAY_MS);
 }
 
 export async function withRetry<T>(
   task: () => Promise<T>,
-  { sleepFor = sleep, isCancelled = () => false, onRetry = () => undefined }: {
+  { sleepFor = sleep, isCancelled = () => false, onRetry = () => undefined, retryRateLimited = true }: {
     sleepFor?: Sleep;
     isCancelled?: () => boolean;
+    // False for requests whose limit outlasts any retry (starting a new export): a 429 fails at once.
+    retryRateLimited?: boolean;
     // Called before each wait with the error and the wait, so the caller can say why the export is pausing.
     onRetry?: (error: unknown, delayMs: number) => void;
   } = {},
@@ -60,7 +67,8 @@ export async function withRetry<T>(
     try {
       return await task();
     } catch (error) {
-      if (attempt >= MAX_ATTEMPTS || !isRetryable(error) || isCancelled() || waitsTooLong(error)) throw error;
+      if (attempt >= MAX_ATTEMPTS || !isRetryable(error) || isCancelled()) throw error;
+      if (!retryRateLimited && isRateLimited(error)) throw error;
       const delayMs = retryDelayMs(attempt, error);
       onRetry(error, delayMs);
       await sleepFor(delayMs);
