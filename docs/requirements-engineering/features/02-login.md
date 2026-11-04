@@ -10,7 +10,22 @@ email verification. Login restricts access until email verification is complete.
 - Log in with Google
 - Recover a forgotten password
 - Log out
+- Accept the Terms & Conditions before first use
 - Display authentication and network errors
+
+### 2.1.1 Terms & Conditions Consent
+
+- Show the Terms & Conditions in a centred modal after sign-in when the user has
+  not accepted the current terms version
+- Show the terms version caption above the terms text
+- Keep Agree & continue disabled until the terms text is scrolled to the end;
+  text that fits without scrolling counts as read
+- Record consent for the current terms version when the user agrees, then
+  continue to the app
+- Lock the app when the user declines or presses the Android back button; the
+  modal cannot be dismissed without a choice
+- Do not ask again users who already accepted the current terms version
+- Ask again when the terms version changes
 
 ### 2.2 Authentication Forms
 
@@ -36,6 +51,10 @@ email verification. Login restricts access until email verification is complete.
 - Success state: the requested authentication action completed
 - Password-reset-sent state: the reset request was accepted
 - Session-expired state: the user must authenticate again
+- Terms-unread state: the terms are shown and Agree & continue is disabled until the text is scrolled to the end
+- Terms-read state: the terms have been read to the end and the user can agree or decline
+- Consent-submitting state: the consent is being recorded and duplicate submission is prevented
+- Consent-declined state: the user declined the terms and the app is locked
 
 ### 2.4 Authentication Validation
 
@@ -78,6 +97,7 @@ email verification. Login restricts access until email verification is complete.
 - Profile bootstrap failure: `Your profile could not be loaded. Try again.`
 - Session restore failure: `Your session could not be restored. Sign in again.`
 - Consent status failure: `Your consent status could not be checked. Try again.`
+- Consent save failure: `Consent service is unavailable. Please try again.`
 - Missing access token: `No sign-in session was returned. Sign in again and try again.`
 - Logout failure: `Logout failed. Check your connection and try again.`
 
@@ -110,4 +130,6 @@ email verification. Login restricts access until email verification is complete.
 - Google-login progress: `Opening Google sign-in... Please wait a moment.`
 - Logout progress: `Logging you out... Please wait a moment.`
 - Logged-out success: `You are logged out. Sign in again when you are ready.`
+- Terms unread: `Scroll to the end to accept.`
+- Terms read: `By continuing you agree to these terms.`
 - Native Google logout warning: `Logged out from Odin. Google sign-out could not be completed; try again from Google later.`
