@@ -38,15 +38,15 @@ function CycleCard({ account, cycle, current, transactions, statement, payment, 
       {statement ? <Pill label="Statement recorded" tone="ok" /> : <Pill label={pending ? "Statement pending" : "Estimate"} tone="warn" />}
       {statement ? paymentStatus ? <Pill label={paymentStatus.label} tone={paymentStatus.tone} /> : <Pill label="Unpaid" tone="neutral" /> : null}
     </Pills>
-    <InfoRow label={statement ? "Statement balance" : "Estimated balance"} value={formatPeso(statement ? statement.statement_balance_centavos : estimatedBalanceCentavos)} />
+    <InfoRow label={statement ? "Statement balance" : "Estimated balance"} term={statement ? "statement-balance" : undefined} value={formatPeso(statement ? statement.statement_balance_centavos : estimatedBalanceCentavos)} />
     {expanded ? <>
       {statement ? <>
-        <InfoRow label="Minimum due" value={formatPeso(statement.minimum_due_centavos)} />
+        <InfoRow label="Minimum due" term="minimum-amount-due" value={formatPeso(statement.minimum_due_centavos)} />
         <InfoRow label="Due date" value={formatShortDate(statement.due_date)} />
         <InfoRow label="Finance charges" value={formatPeso(statement.finance_charge_centavos)} />
       </> : null}
       <InfoRow label="Cycle start" value={formatShortDate(cycle.cycle_start_date)} />
-      <InfoRow label="Cut-off" value={formatShortDate(cycle.cutoff_date)} />
+      <InfoRow label="Cut-off" term="cut-off" value={formatShortDate(cycle.cutoff_date)} />
       <InfoRow label="Statement date" value={statement ? formatShortDate(statement.statement_date) : cycle.statement_date ? formatShortDate(cycle.statement_date) : "Not recorded"} />
 
       {statement && payment && paymentStatus ? <>
@@ -115,16 +115,16 @@ export function CreditCardInstallmentList({ userId, deviceId, installments, sett
   return <View style={{ gap: 12 }}>
     <SectionHeader title="Active installments" />
     {installments.map((item) => <FormCard key={item.id} title={item.description}>
-      <InfoRow label="Remaining principal" value={formatPeso(item.remaining_principal_centavos)} />
-      <InfoRow label="Monthly amortization" value={formatPeso(item.monthly_amortization_centavos)} />
+      <InfoRow label="Remaining principal" term="principal" value={formatPeso(item.remaining_principal_centavos)} />
+      <InfoRow label="Monthly amortization" term="monthly-amortization" value={formatPeso(item.monthly_amortization_centavos)} />
       <InfoRow label="Months left" value={`${item.remaining_months} of ${item.term_months}`} />
       {settlements.filter((settlement) => settlement.installment_id === item.id).map((settlement) => <Note key={settlement.id}>Settlement {settlement.status}: {formatPeso(settlement.settlement_amount_centavos)} on {settlement.settlement_date}</Note>)}
       {item.settlement_status === "active" && editing?.id !== item.id ? <LinkButton label="Record early settlement" accessibilityLabel={`Record early settlement for ${item.description}`} onPress={() => { setEditing(item); setAmount(""); setPrincipal((item.remaining_principal_centavos / 100).toFixed(2)); setFee(""); setDate(today); setError(null); }} /> : null}
       {editing?.id === item.id ? <View style={{ gap: 10 }}>
         <Divider />
-        <TextField label="Settlement amount" accessibilityLabel="Early settlement amount" value={amount} onChangeText={setAmount} placeholder="Enter settlement amount" keyboardType="decimal-pad" />
+        <TextField label="Settlement amount" term="early-settlement" accessibilityLabel="Early settlement amount" value={amount} onChangeText={setAmount} placeholder="Enter settlement amount" keyboardType="decimal-pad" />
         <TextField label="Remaining principal" accessibilityLabel="Early settlement remaining principal" value={principal} onChangeText={setPrincipal} placeholder="Enter remaining principal" keyboardType="decimal-pad" />
-        <TextField label="Pre-termination fee" accessibilityLabel="Pre-termination fee" value={fee} onChangeText={setFee} placeholder="Enter pre-termination fee" keyboardType="decimal-pad" />
+        <TextField label="Pre-termination fee" term="pre-termination-fee" accessibilityLabel="Pre-termination fee" value={fee} onChangeText={setFee} placeholder="Enter pre-termination fee" keyboardType="decimal-pad" />
         <PickerField label="Settlement date" accessibilityLabel="Select early settlement date" value={date} onPress={() => setPicker(true)} />
         {picker ? <DateTimePicker value={new Date(`${date}T12:00:00`)} mode="date" display={Platform.OS === "ios" ? "spinner" : "default"} onChange={(event, value) => { if (event.type === "set" && value) setDate(`${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`); if (Platform.OS !== "ios") setPicker(false); }} /> : null}
         {error ? <Banner tone="error">{error}</Banner> : null}

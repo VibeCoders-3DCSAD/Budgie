@@ -6,6 +6,7 @@ import { BottomSheetSurface } from "../../../../components/BottomSheetSurface";
 import { ActionSheet } from "../../../../components/ActionSheet";
 import { parseExactCentavos } from "../../../../lib/format/money";
 import { formatDeviceDate } from "../../../../lib/dates";
+import { WithTermInfo } from "../../../../components/TermInfo";
 
 const P = {
   shell: "#fcf8f0",
@@ -109,10 +110,10 @@ export default function CreditCardStatementForm({ userId, deviceId, cycleId, cyc
       <Text style={{ fontFamily: "Manrope", fontSize: 11, color: P.muted, marginTop: 4 }}>On or after {cycleCutoffDate} and no later than {today}.</Text>
       {invalidFields.includes("statement") ? <Text style={{ fontFamily: "Manrope", fontSize: 11, color: P.error, marginTop: 4 }}>{!statementDate ? "Statement date is required." : "Choose a statement date on or after the billing-cycle cutoff and no later than today."}</Text> : null}
 
-      <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11.5, color: P.ink, marginTop: 12, marginBottom: 6 }}>Statement balance</Text>
+      <WithTermInfo term="statement-balance" style={{ marginTop: 12, marginBottom: 6 }}><Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11.5, color: P.ink }}>Statement balance</Text></WithTermInfo>
       <TextInput value={balance} onChangeText={(value) => { setBalance(value); setInvalidFields((fields) => fields.filter((field) => field !== "balance")); setError(null); }} keyboardType="decimal-pad" placeholder="Enter statement balance" placeholderTextColor={P.muted} style={{ height: 46, borderWidth: 1, borderColor: invalidFields.includes("balance") ? P.error : P.line, color: P.ink, backgroundColor: P.shell, paddingHorizontal: 12, borderRadius: 10, fontFamily: "Manrope", fontSize: 14 }} />
 
-      <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11.5, color: P.ink, marginTop: 12, marginBottom: 6 }}>Minimum amount due</Text>
+      <WithTermInfo term="minimum-amount-due" style={{ marginTop: 12, marginBottom: 6 }}><Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11.5, color: P.ink }}>Minimum amount due</Text></WithTermInfo>
       <TextInput value={minimumDue} onChangeText={(value) => { setMinimumDue(value); setInvalidFields((fields) => fields.filter((field) => field !== "minimum")); setError(null); }} keyboardType="decimal-pad" placeholder="Enter minimum amount due" placeholderTextColor={P.muted} style={{ height: 46, borderWidth: 1, borderColor: invalidFields.includes("minimum") ? P.error : P.line, color: P.ink, backgroundColor: P.shell, paddingHorizontal: 12, borderRadius: 10, fontFamily: "Manrope", fontSize: 14 }} />
 
       <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11.5, color: P.ink, marginTop: 12, marginBottom: 6 }}>Finance charges or interest</Text>

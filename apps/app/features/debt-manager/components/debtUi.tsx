@@ -7,6 +7,8 @@ import type { CreditCardStrategy } from "../../../local-db/repositories/credit-c
 import type { DebtForecastStatus } from "../forecast/helpers/debtForecast";
 import type { DebtTrendRange } from "../forecast/helpers/debtTrendRange";
 import { formatPesoOr } from "../../../lib/format/money";
+import type { GlossaryTermId } from "../../glossary/terms";
+import { WithTermInfo } from "../../../components/TermInfo";
 
 // Debt Manager building blocks on top of the Budgie V4 form kit (screens v5: Debts, Debt detail, Card detail).
 
@@ -56,9 +58,9 @@ export function Pills({ children }: { children: ReactNode }) {
 }
 
 // A label on the left and a bold value on the right (b-row).
-export function InfoRow({ label, value, tone }: { label: string; value: string; tone?: Tone }) {
-  return <View style={{ flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 12 }}>
-    <Text style={{ fontFamily: v4Font, fontSize: 12.5, color: v4.ink2, flexShrink: 1 }}>{label}</Text>
+export function InfoRow({ label, value, tone, term }: { label: string; value: string; tone?: Tone; term?: GlossaryTermId }) {
+  return <View style={{ flexDirection: "row", alignItems: term ? "center" : "baseline", justifyContent: "space-between", gap: 12 }}>
+    <WithTermInfo term={term}><Text style={{ fontFamily: v4Font, fontSize: 12.5, color: v4.ink2, flexShrink: 1 }}>{label}</Text></WithTermInfo>
     <Text style={{ fontFamily: v4Font, fontSize: 13, fontWeight: "700", color: tone ? toneColor(tone) : v4.ink, fontVariant: ["tabular-nums"], textAlign: "right", flexShrink: 1 }}>{value}</Text>
   </View>;
 }

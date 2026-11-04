@@ -4,6 +4,7 @@ import { allocationLabel, formatForecastPeso, formatPeso, toCentavos } from "../
 import type { FinancialPlanAllocation } from "../types";
 import { groupPlanAllocations } from "../helpers/groupPlanAllocations";
 import { PlanAmountInput } from "./PlanAmountInput";
+import { WithTermInfo } from "../../../components/TermInfo";
 
 type Props = {
   allocations: FinancialPlanAllocation[];
@@ -40,7 +41,7 @@ export function PlanAllocations({ allocations, restrictions, showSpendingProgres
   return (
     <View style={{ marginTop: 24 }}>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Text accessibilityRole="header" style={{ flex: 1, fontFamily: "Manrope", fontWeight: "800", fontSize: 16, color: "#1B1C1A" }}>Category Allocations</Text>
+        <WithTermInfo term="allocation" style={{ flex: 1 }}><Text accessibilityRole="header" style={{ flexShrink: 1, fontFamily: "Manrope", fontWeight: "800", fontSize: 16, color: "#1B1C1A" }}>Category Allocations</Text></WithTermInfo>
         {headerAction}
       </View>
       {!readOnly ? <Text style={{ fontFamily: "Manrope", fontSize: 12, lineHeight: 18, color: "#6B7A6F", marginTop: 2 }}>Fixed and minimum amounts are protected. Adjust flexible amounts before saving.</Text> : null}

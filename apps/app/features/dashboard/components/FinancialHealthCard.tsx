@@ -5,6 +5,8 @@ import { API_BASE_URL, REQUEST_TIMEOUT_MS } from "../../../lib/api";
 import { useConnectivityStore } from "../../../services/connectivity";
 import { authorizedFetch } from "../../../lib/localAccess";
 import { formatIncomeShare, formatMonthsCovered, formatProfilePeso, PROFILE_STATUS } from "../../../lib/helpers/financialProfileWording";
+import { WithTermInfo } from "../../../components/TermInfo";
+import type { GlossaryTermId } from "../../glossary/terms";
 
 type RuleAssessment = {
   status?: "SUCCESS" | "INSUFFICIENT_DATA" | "INSUFFICIENT_HISTORY";
@@ -145,12 +147,12 @@ export function FinancialHealthCard({ accessToken, initialClassification }: { ac
   }, [accessToken, initialClassification, online]);
 
   const cards = classification?.credit_card_behavior ?? [];
-  const rows = [
+  const rows: { label: string; term?: GlossaryTermId; title: string; detail: string; color: string }[] = [
     ...([
-      ["Emergency fund", classification?.emergency_savings],
-      ["Debt burden", classification?.debt_burden],
-      ["Financial margin", classification?.financial_margin],
-    ] as const).map(([label, assessment]) => ({ label, ...describe(label, assessment) })),
+      ["Emergency fund", classification?.emergency_savings, "emergency-fund"],
+      ["Debt burden", classification?.debt_burden, "debt-burden"],
+      ["Financial margin", classification?.financial_margin, "financial-margin"],
+    ] as const).map(([label, assessment, term]) => ({ label, term, ...describe(label, assessment) })),
     ...(cards.length === 0
       ? [{ label: "Credit card", ...describeCard({ status: "INSUFFICIENT_HISTORY" }) }]
       : cards.map((assessment, index) => ({ label: cards.length > 1 ? `Credit card ${index + 1}` : "Credit card", ...describeCard(assessment) }))),
@@ -167,7 +169,8 @@ export function FinancialHealthCard({ accessToken, initialClassification }: { ac
         return (
           <View key={label} style={{ borderTopWidth: index === 0 ? 0 : 1, borderTopColor: P.line, paddingTop: index === 0 ? 0 : 12, marginTop: index === 0 ? 0 : 12 }}>
             <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
-              <Text style={{ flex: 1, flexShrink: 1, fontFamily: "Manrope", fontWeight: "700", fontSize: 13, color: P.ink }}>{label}</Text>
+              {/* Onboarding shows this card before the signed-in shell exists, so its (i) buttons would lead nowhere. */}
+              <WithTermInfo term={initialClassification ? undefined : item.term} style={{ flex: 1 }}><Text style={{ flex: 1, flexShrink: 1, fontFamily: "Manrope", fontWeight: "700", fontSize: 13, color: P.ink }}>{label}</Text></WithTermInfo>
               <Text style={{ flex: 1, flexShrink: 1, fontFamily: "Manrope", fontWeight: "800", fontSize: 13, color: item.color, textAlign: "right" }}>{item.title}</Text>
             </View>
             <Text style={{ fontFamily: "Manrope", fontSize: 12, color: P.ink2, marginTop: 3 }}>{item.detail}</Text>

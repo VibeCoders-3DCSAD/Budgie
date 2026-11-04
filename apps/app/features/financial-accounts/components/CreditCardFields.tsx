@@ -21,12 +21,13 @@ type Props = {
 export function CreditCardFields({ creditLimit, cutoffDay, threshold, allowsExtraPayments, fieldErrors, onCreditLimitChange, onCutoffDayChange, onThresholdChange, onToggleExtraPayments }: Props) {
   return (
     <>
-      <FormField label="CREDIT LIMIT (₱)" required error={fieldErrors.creditLimit}>
+      <FormField label="CREDIT LIMIT (₱)" term="credit-limit" required error={fieldErrors.creditLimit}>
         <AccountTextInput value={creditLimit} onChangeText={onCreditLimitChange} placeholder="Enter credit limit" keyboardType="decimal-pad" invalid={Boolean(fieldErrors.creditLimit)} />
       </FormField>
 
       <FormField
         label="BILLING CYCLE END DAY"
+        term="cut-off"
         hint="Your bank may call this the cut-off date. Enter the day your billing cycle ends each month (1-31)."
         required
         error={fieldErrors.cutoffDay}

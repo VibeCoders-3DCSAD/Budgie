@@ -21,6 +21,7 @@ import { useDashboardData } from "./hooks/useDashboardData";
 import { groupSpendingCategories } from "./helpers/spendingGroups";
 import { DEFAULT_TAXONOMY_COLOR, TaxonomyIcon } from "../taxonomy/taxonomyVisuals";
 import { dashboardColors as P, dashboardStyles } from "./dashboardAppearance";
+import { WithTermInfo } from "../../components/TermInfo";
 
 type Props = {
   userId: string;
@@ -142,7 +143,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
       </View>
       {reminders}
 
-      <View style={[dashboardStyles.card, { marginTop: 12 }]}><Text style={{ fontFamily: "Manrope", fontSize: 14, color: P.secondary }}>Net monthly cash flow</Text><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos >= 0 ? P.green : P.error, marginTop: 4 }}>{formatPeso(s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos)}</Text></View>
+      <View style={[dashboardStyles.card, { marginTop: 12 }]}><WithTermInfo term="cash-flow"><Text style={{ fontFamily: "Manrope", fontSize: 14, color: P.secondary }}>Net monthly cash flow</Text></WithTermInfo><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos >= 0 ? P.green : P.error, marginTop: 4 }}>{formatPeso(s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos)}</Text></View>
 
       <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
         <SnapshotCard title="Savings goals" stale={staleSnapshot(savingsSnap)} unavailable={savingsUnavailable} onRefresh={refresh} onNavigate={() => onNavigate("savings-goals")} actionLabel={!savingsSnap || savingsCount === 0 ? "Create a goal" : undefined} copy={savingsText ?? (savingsUnavailable ? "Savings goal information is unavailable." : !savingsSnap || savingsCount === 0 ? "No savings goals yet. Create one when you're ready." : savingsCount === null ? "Savings goal summary is unavailable. Refresh to try again." : `${savingsCount} savings goal${savingsCount === 1 ? "" : "s"} in progress${savingsCentavos === null ? "." : ` · ${formatPeso(savingsCentavos)} saved.`}`)} />

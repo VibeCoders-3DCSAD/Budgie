@@ -28,7 +28,7 @@ type Props = {
 
 export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCentavos, creditCardBudgetCentavos, loanBudgetCentavos, shortfallCentavos, surplusCentavos, repayments, surplusRecommendations }: Props) {
   const hasShortfall = shortfallCentavos > 0;
-  return <FormCard title={`${strategy === "snowball" ? "Snowball" : "Avalanche"} repayment plan`}>
+  return <FormCard title={`${strategy === "snowball" ? "Snowball" : "Avalanche"} repayment plan`} term={strategy === "snowball" ? "snowball" : "avalanche"}>
     {hasPlan ? <>
       <View>
         <Text style={{ color: v4.ink2, fontFamily: v4Font, fontSize: 12 }}>Debt budget this month</Text>
@@ -38,7 +38,7 @@ export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCen
       <Divider />
       <InfoRow label="Planned card payments" value={php(creditCardBudgetCentavos)} />
       <InfoRow label="Planned loan payments" value={php(loanBudgetCentavos)} />
-      <View accessibilityRole={hasShortfall ? "alert" : undefined}><InfoRow label={hasShortfall ? "Plan shortfall" : "Strategy surplus"} value={php(hasShortfall ? shortfallCentavos : surplusCentavos)} tone={hasShortfall ? "err" : "ok"} /></View>
+      <View accessibilityRole={hasShortfall ? "alert" : undefined}><InfoRow label={hasShortfall ? "Plan shortfall" : "Strategy surplus"} term={hasShortfall ? "shortfall" : "surplus"} value={php(hasShortfall ? shortfallCentavos : surplusCentavos)} tone={hasShortfall ? "err" : "ok"} /></View>
       {repayments.length ? <RowList title="Financial Plan repayments" rows={repayments} /> : null}
       {surplusRecommendations.length ? <RowList title="Recommended surplus allocation" rows={surplusRecommendations} /> : null}
     </> : <Note>Accept a Financial Plan for this month to calculate allocation and surplus.</Note>}

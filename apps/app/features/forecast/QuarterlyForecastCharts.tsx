@@ -9,6 +9,7 @@ import { ForecastCategoryPicker } from "./ForecastCategoryPicker";
 import { manilaToday } from "../../lib/dates";
 import { LEGACY_SEASON_LABELS, SEASON_PRESETS, normalizeCustomEvents, type SeasonalPreferences } from "@odin/spending-insights/seasons";
 import { formatPeso } from "../../lib/format/money";
+import { WithTermInfo } from "../../components/TermInfo";
 
 const P = { brand: "#013220", ink: "#1B1C1A", muted: "#6B7A6F", line: "#D9E5DD", shell: "#F6FAF7", over: "#D9001F" };
 
@@ -376,7 +377,7 @@ function ProgressRow({ label, forecast, actual }: { label: string; forecast: num
 // This month's or quarter's forecast against the spending recorded so far, shown inside the spending card.
 function ForecastVsActual({ period, unit, label, forecast, actual }: { period: string; unit: "month" | "quarter"; label: string; forecast: number; actual: number }) {
   return <View style={{ borderTopColor: P.line, borderTopWidth: 1, marginTop: 14, paddingTop: 12 }}>
-    <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 13, fontWeight: "800" }}>Forecast vs Actual</Text>
+    <WithTermInfo term="forecast-vs-actual"><Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 13, fontWeight: "800" }}>Forecast vs Actual</Text></WithTermInfo>
     <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11, marginTop: 2 }}>{period} so far, against this {unit}'s forecast</Text>
     <ProgressRow label={label} forecast={forecast} actual={actual} />
   </View>;

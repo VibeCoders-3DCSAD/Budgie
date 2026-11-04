@@ -24,7 +24,7 @@ export default function SavingsInterestFields({ rate, onRateChange, reference, o
       <Text style={{ ...interestText, color: v4.brand, fontWeight: "700" }}>{expanded ? "Hide advanced options" : "Advanced options"}</Text>
     </Pressable>
     {expanded ? <View style={{ gap: 18 }}>
-      <InterestChoices label="Interest behavior" value={details.method} options={[{ value: "simple", label: "Simple Interest" }, { value: "compound", label: "Compound Interest" }, { value: "none", label: "None" }]} onChange={(method) => {
+      <InterestChoices label="Interest behavior" term="compound-interest" value={details.method} options={[{ value: "simple", label: "Simple Interest" }, { value: "compound", label: "Compound Interest" }, { value: "none", label: "None" }]} onChange={(method) => {
         if (method === "none") onRateChange("0");
         onReferenceChange({ ...details, method, configuration: { ...configuration, autoProject: false } });
       }} />

@@ -5,6 +5,7 @@ import { formatPeso } from "../dashboardFormatting";
 
 import { dashboardColors as P, dashboardStyles } from "../dashboardAppearance";
 import { manilaToday } from "../../../lib/dates";
+import { WithTermInfo } from "../../../components/TermInfo";
 
 type Props = {
   userId: string;
@@ -38,7 +39,7 @@ export function SafeToSpendCard({ userId, reloadKey, onNavigate }: Props) {
   }, [userId, reloadKey]);
 
   return <View style={{ marginTop: 24 }}>
-    <Text style={[dashboardStyles.sectionTitle, { marginBottom: 10 }]}>Safe to spend</Text>
+    <WithTermInfo term="safe-to-spend" style={{ marginBottom: 10 }}><Text style={dashboardStyles.sectionTitle}>Safe to spend</Text></WithTermInfo>
     {state.status === "loading" ? <ActivityIndicator color={P.brand} /> : null}
     {state.status === "error" ? <Text style={{ fontFamily: "Manrope", fontSize: 13, color: P.secondary }}>Your budget could not be loaded. Refresh to try again.</Text> : null}
     {state.status === "ready" && !state.data ? <Pressable accessibilityRole="button" accessibilityLabel="Open Financial Plan" onPress={() => onNavigate("financial-plan")} style={[dashboardStyles.card, { alignItems: "center" }]}>

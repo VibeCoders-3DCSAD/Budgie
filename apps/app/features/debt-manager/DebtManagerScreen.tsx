@@ -81,9 +81,9 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
         </View>
         <Note>Billing cycles and statement activity</Note>
         <ProgressBar label="Credit used" valueLabel={`${formatPeso(currentDebtCentavos)} of ${formatPeso(creditLimitCentavos)}`} ratio={usedRatio} tone={usedRatio >= alertRatio ? "err" : "ok"} />
-        <InfoRow label="Available credit" value={formatPeso(availableCreditCentavos)} tone="ok" />
+        <InfoRow label="Available credit" term="available-credit" value={formatPeso(availableCreditCentavos)} tone="ok" />
         <InfoRow label="Current card debt" value={formatPeso(currentDebtCentavos)} />
-        <InfoRow label="Credit limit" value={formatPeso(creditLimitCentavos)} />
+        <InfoRow label="Credit limit" term="credit-limit" value={formatPeso(creditLimitCentavos)} />
         <CreditCardAvailableCreditReconciliation userId={userId} deviceId={deviceId} accountId={selectedAccount.id} creditLimitCentavos={creditLimitCentavos} onSaved={load} />
       </FormCard>
       {stale ? <Banner tone="warn">Credit-card information may be out of date. Refresh or reconcile it with the latest issuer records.</Banner> : null}

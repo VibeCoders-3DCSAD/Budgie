@@ -42,7 +42,7 @@ export default function NonCreditDebtListScreen({ userId, deviceId, onOpenDebt }
   return <View style={{ gap: 14 }}>
     <SectionHeader title="Loans and other debts" actionLabel="Add debt" accessibilityLabel="Add non-credit-card debt" onAction={() => setEditingDebt(null)} />
     <Note>Select a debt to view payments and repayment details.</Note>
-    <FormCard title="Global repayment strategy">
+    <FormCard title="Global repayment strategy" term="repayment-strategy">
       <Note>Apply surplus after required payments to active non-credit-card debts.</Note>
       <Segment options={[{ key: "snowball", label: "Snowball" }, { key: "avalanche", label: "Avalanche" }]} value={strategy} disabled={savingStrategy} onChange={(option: DebtStrategy) => { setSavingStrategy(true); saveDebtStrategy(userId, deviceId, option).then(() => setStrategy(option)).finally(() => setSavingStrategy(false)); }} />
       <Note>{strategy === "snowball" ? "Snowball pays the smallest balance first." : "Avalanche pays the highest interest rate first."}</Note>

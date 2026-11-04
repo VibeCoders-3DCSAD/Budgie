@@ -5,6 +5,8 @@ import { CaretRight, Check, Info, Warning, WarningCircle } from "phosphor-react-
 import { BottomSheetSurface } from "./BottomSheetSurface";
 import { ActionSheet } from "./ActionSheet";
 import { formatPesoAmount } from "../lib/format/money";
+import type { GlossaryTermId } from "../features/glossary/terms";
+import { WithTermInfo } from "./TermInfo";
 
 // Budgie V4 form tokens (screens v4, "v3" overrides).
 export const v4 = {
@@ -40,12 +42,12 @@ export const tileTints = [
   { bg: "#EAEAE7", fg: "#414942" },
 ] as const;
 
-export function FormCard({ children, title, right }: { children: ReactNode; title?: string; right?: ReactNode }) {
+export function FormCard({ children, title, right, term }: { children: ReactNode; title?: string; right?: ReactNode; term?: GlossaryTermId }) {
   return (
     <View style={styles.card}>
       {title ? (
         <View style={styles.cardHead}>
-          <Text style={styles.cardTitle}>{title}</Text>
+          <WithTermInfo term={term}><Text style={styles.cardTitle}>{title}</Text></WithTermInfo>
           {right}
         </View>
       ) : null}
@@ -54,8 +56,9 @@ export function FormCard({ children, title, right }: { children: ReactNode; titl
   );
 }
 
-export function FieldLabel({ children }: { children: string }) {
-  return <Text style={styles.fieldLabel}>{children}</Text>;
+export function FieldLabel({ children, term }: { children: string; term?: GlossaryTermId }) {
+  if (!term) return <Text style={styles.fieldLabel}>{children}</Text>;
+  return <WithTermInfo term={term} style={styles.fieldLabelRow}><Text style={[styles.fieldLabel, styles.fieldLabelInRow]}>{children}</Text></WithTermInfo>;
 }
 
 export function FieldError({ children }: { children: string }) {
@@ -75,12 +78,13 @@ type PickerFieldProps = {
   accessibilityLabel?: string;
   icon?: ReactNode;
   error?: boolean;
+  term?: GlossaryTermId;
 };
 
-export function PickerField({ label, value, placeholder = false, onPress, accessibilityLabel, icon, error = false }: PickerFieldProps) {
+export function PickerField({ label, value, placeholder = false, onPress, accessibilityLabel, icon, error = false, term }: PickerFieldProps) {
   return (
     <View>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel term={term}>{label}</FieldLabel>
       <Pressable
         onPress={onPress}
         accessibilityRole="button"
@@ -95,10 +99,10 @@ export function PickerField({ label, value, placeholder = false, onPress, access
   );
 }
 
-export function TextField({ label, suffix, error, icon, style, ...input }: TextInputProps & { label: string; suffix?: string; error?: boolean; icon?: ReactNode }) {
+export function TextField({ label, suffix, error, icon, term, style, ...input }: TextInputProps & { label: string; suffix?: string; error?: boolean; icon?: ReactNode; term?: GlossaryTermId }) {
   return (
     <View>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel term={term}>{label}</FieldLabel>
       <View style={[styles.fieldBox, input.multiline ? styles.fieldBoxMultiline : null, error ? styles.fieldBoxError : null]}>
         {icon}
         <TextInput placeholderTextColor={v4.placeholder} {...input} style={[styles.fieldInput, input.multiline ? styles.fieldInputMultiline : null, style]} />
@@ -265,6 +269,8 @@ export const styles = StyleSheet.create({
   cardHead: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 10 },
   cardTitle: { fontFamily: v4Font, fontSize: 13.5, fontWeight: "700", color: v4.ink, flexShrink: 1 },
   fieldLabel: { fontFamily: v4Font, fontSize: 11.5, fontWeight: "600", color: v4.ink2, marginBottom: 5 },
+  fieldLabelRow: { marginBottom: 5 },
+  fieldLabelInRow: { marginBottom: 0 },
   fieldError: { fontFamily: v4Font, fontSize: 10.5, fontWeight: "600", color: v4.error, marginTop: 4 },
   sectionLabel: { fontFamily: v4Font, fontSize: 11, fontWeight: "700", letterSpacing: 0.6, color: v4.ink2, marginBottom: 5 },
   fieldBox: { minHeight: 48, borderWidth: 1, borderColor: v4.border, backgroundColor: v4.surface, borderRadius: 12, paddingHorizontal: 14, flexDirection: "row", alignItems: "center", gap: 9 },
