@@ -29,6 +29,51 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+const HISTORY_LIMIT = 20;
+
+// The user's most recent deletion requests, newest first: pending ones and the ones they cancelled. Completed
+// requests are never listed, because a completed request deletes the account along with its history.
+router.get("/account-deletion-requests", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
+  const userId = request.userId!;
+
+  const { data, error } = await request.supabase!
+    .from("account_deletion_requests")
+    .select("id, status, requested_at, confirmed_at, scheduled_delete_at, cancelled_at")
+    .eq("user_id", userId)
+    .order("requested_at", { ascending: false })
+    .limit(HISTORY_LIMIT);
+
+  if (error) {
+    console.error("[account-deletion] request history lookup failed", { user_id: userId, code: error.code });
+    response.status(500).json({ error: "Internal Server Error", message: "Failed to fetch deletion requests" });
+    return;
+  }
+
+  response.status(200).json({ payload: { requests: data ?? [] } });
+});
+
+// The open deletion request, or null. A confirmed request stays cancellable until the daily job deletes the account.
+router.get("/account-deletion-requests/active", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
+  const userId = request.userId!;
+
+  const { data, error } = await request.supabase!
+    .from("account_deletion_requests")
+    .select("id, status, requested_at, confirmed_at, scheduled_delete_at")
+    .eq("user_id", userId)
+    .in("status", ACTIVE_REQUEST_STATUSES)
+    .order("requested_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[account-deletion] active request lookup failed", { user_id: userId, code: error.code });
+    response.status(500).json({ error: "Internal Server Error", message: "Failed to fetch deletion request" });
+    return;
+  }
+
+  response.status(200).json({ payload: { request: data ?? null } });
+});
+
 router.post("/account-deletion-requests", requireAuth, async (request: AuthenticatedRequest, response: Response) => {
   const userId = request.userId!;
   const authenticatedSupabase = request.supabase!;

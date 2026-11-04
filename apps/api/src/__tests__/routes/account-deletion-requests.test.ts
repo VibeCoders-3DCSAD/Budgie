@@ -550,3 +550,98 @@ describe("POST /odin/api/account-deletion-requests/:id/cancel", () => {
 
 
 });
+
+describe("GET /odin/api/account-deletion-requests/active", () => {
+  function mockActiveLookup(result: { data: unknown; error: unknown }) {
+    const maybeSingle = jest.fn().mockResolvedValue(result);
+    const limit = jest.fn().mockReturnValue({ maybeSingle });
+    const order = jest.fn().mockReturnValue({ limit });
+    const in_ = jest.fn().mockReturnValue({ order });
+    const eq = jest.fn().mockReturnValue({ in: in_ });
+    const select = jest.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({ select });
+    return { eq, in: in_ };
+  }
+
+  beforeEach(() => {
+    mockFrom.mockReset();
+    mockGetUser.mockResolvedValue({ data: { user: { id: validUserId } }, error: null });
+  });
+
+  it("returns the user's pending deletion request", async () => {
+    const pending = { id: "req-1", status: "processing", requested_at: "2026-11-01T00:00:00Z", confirmed_at: "2026-11-01T00:00:00Z", scheduled_delete_at: "2026-12-01T00:00:00Z" };
+    const chain = mockActiveLookup({ data: pending, error: null });
+
+    const response = await request(app).get("/odin/api/account-deletion-requests/active").set(authHeader());
+
+    expect(response.status).toBe(200);
+    expect(response.body.payload.request).toEqual(pending);
+    expect(chain.eq).toHaveBeenCalledWith("user_id", validUserId);
+    expect(chain.in).toHaveBeenCalledWith("status", ["requested", "processing"]);
+  });
+
+  it("returns null when nothing is pending", async () => {
+    mockActiveLookup({ data: null, error: null });
+
+    const response = await request(app).get("/odin/api/account-deletion-requests/active").set(authHeader());
+
+    expect(response.status).toBe(200);
+    expect(response.body.payload.request).toBeNull();
+  });
+
+  it("returns 500 when the lookup fails", async () => {
+    mockActiveLookup({ data: null, error: { code: "XX000", message: "boom" } });
+
+    const response = await request(app).get("/odin/api/account-deletion-requests/active").set(authHeader());
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Failed to fetch deletion request");
+  });
+});
+
+describe("GET /odin/api/account-deletion-requests", () => {
+  function mockHistory(result: { data: unknown; error: unknown }) {
+    const limit = jest.fn().mockResolvedValue(result);
+    const order = jest.fn().mockReturnValue({ limit });
+    const eq = jest.fn().mockReturnValue({ order });
+    const select = jest.fn().mockReturnValue({ eq });
+    mockFrom.mockReturnValue({ select });
+    return { eq, order, limit };
+  }
+
+  beforeEach(() => {
+    mockFrom.mockReset();
+    mockGetUser.mockResolvedValue({ data: { user: { id: validUserId } }, error: null });
+  });
+
+  it("returns the user's recent requests, newest first", async () => {
+    const requests = [
+      { id: "req-2", status: "processing", requested_at: "2026-11-04T00:00:00Z", confirmed_at: "2026-11-04T00:00:00Z", scheduled_delete_at: "2026-12-04T00:00:00Z", cancelled_at: null },
+      { id: "req-1", status: "cancelled", requested_at: "2026-10-01T00:00:00Z", confirmed_at: "2026-10-01T00:00:00Z", scheduled_delete_at: "2026-10-31T00:00:00Z", cancelled_at: "2026-10-03T00:00:00Z" },
+    ];
+    const chain = mockHistory({ data: requests, error: null });
+
+    const response = await request(app).get("/odin/api/account-deletion-requests").set(authHeader());
+
+    expect(response.status).toBe(200);
+    expect(response.body.payload.requests).toEqual(requests);
+    expect(chain.eq).toHaveBeenCalledWith("user_id", validUserId);
+    expect(chain.order).toHaveBeenCalledWith("requested_at", { ascending: false });
+    expect(chain.limit).toHaveBeenCalledWith(20);
+  });
+
+  it("returns 500 without the database message when the lookup fails", async () => {
+    mockHistory({ data: null, error: { code: "XX000", message: "relation secret does not exist" } });
+
+    const response = await request(app).get("/odin/api/account-deletion-requests").set(authHeader());
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Failed to fetch deletion requests");
+  });
+
+  it("returns 401 without authorization", async () => {
+    const response = await request(app).get("/odin/api/account-deletion-requests");
+
+    expect(response.status).toBe(401);
+  });
+});

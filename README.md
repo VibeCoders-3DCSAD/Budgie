@@ -227,8 +227,8 @@ the selected duration range rather than inventing an exact month count.
 | `privacy` | get/update privacy settings |
 | `consents` | record user consent |
 | `push-device-tokens` | register device token |
-| `data-export-requests` | list/create export requests |
-| `account-deletion-requests` | create/confirm/cancel deletion (30-day delay) |
+| `data-export-requests` | list/create CSV export requests; read data in rate-limited batches (`/:id/batches`); mark `/:id/complete` or `/:id/fail` |
+| `account-deletion-requests` | list recent requests (history, including cancelled); create/confirm/cancel deletion (30-day delay); `/active` returns the pending request |
 | `onboarding` | create/update session, upsert responses, submit (triggers profile assessment) |
 | `profile` | get/confirm/reject/select/reassign financial profile assignment |
 | `sync` | push local changes, pull server changes, register device |
@@ -475,6 +475,10 @@ odin/
 ```
 
 ### Recurring Transaction Engine
+
+Confirmed account deletions are a queue: the `process-account-deletions` pg_cron job runs daily at midnight Asia/Manila and calls `private.process_account_deletion_queue`, which deletes each account past its `scheduled_delete_at` through `private.delete_user_account`. A failed deletion stays queued and is retried the next day.
+
+Data exports are assembled on the device: it pulls each dataset from the API in batches (paced under the per-user limit, retried with backoff and `Retry-After`), builds one CSV, and saves it through a browser download on web or the system folder picker on Android and iOS.
 
 Recurring income and biller auto-posts run as pg_cron jobs every 5 minutes (`private.post_due_recurring_income`, `private.post_due_scheduled_payments`). Devices post the same paydays offline with the same derived ids, so whichever posts first wins. A biller whose source account cannot cover its due dates is skipped, on the server and on the device. `odin.run_recurring_transaction_engine` runs the income job on demand and is exposed via:
 
