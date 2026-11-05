@@ -134,8 +134,10 @@
 - Allocate required contributions before distributing surplus.
 - Allow users to choose Avalanche or Snowball for savings allocation.
 - After emergency fund priority, Avalanche favors the goal with the largest
-  current-cycle contribution shortfall; Snowball favors the goal with the
-  smallest remaining target amount.
+  current-cycle contribution shortfall, then, when shortfalls are equal (for
+  example, every required contribution is already covered), the goal with the
+  largest remaining target amount; Snowball favors the goal with the smallest
+  remaining target amount. Remaining ties go to the earliest target date.
 - Show funded, partially funded, and unfunded goals with understandable reasons.
 - Exclude archived goals from new allocation proposals.
 - Allow users to review a proposed contribution and open Transaction Management

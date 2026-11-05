@@ -3,7 +3,7 @@ import { getPlanCommitmentPayments } from "../../../local-db/repositories/financ
 import { getSavingsAllocationStrategy, type SavingsAllocationStrategy } from "../../../local-db/repositories/savings/savingsAllocationPreferences";
 import { listSavingsGoals } from "../../../local-db/repositories/savings/savingsGoals";
 import { getRequiredSavingsContributionsForPeriod } from "./requiredSavingsContributionQueries";
-import { allocateSavingsEnvelope, type AllocatableSavingsGoal, type SavingsAllocationProposal, type SavingsCycleAllocation } from "../helpers/savingsEnvelopeAllocation";
+import { allocateSavingsEnvelope, fundingState, type AllocatableSavingsGoal, type SavingsAllocationProposal, type SavingsCycleAllocation } from "../helpers/savingsEnvelopeAllocation";
 
 export async function getCurrentSavingsEnvelopeAllocation(userId: string, asOfDate: string): Promise<SavingsCycleAllocation | null> {
   const period = getCurrentFinancialPlanPeriod(asOfDate);
@@ -17,7 +17,7 @@ export async function getCurrentSavingsEnvelopeAllocation(userId: string, asOfDa
     getPlanCommitmentPayments(userId, { start: plan.periodStart, end: plan.periodEnd }),
   ]);
   const requirementsByGoalId = new Map(requirements.contributions.filter((contribution) => contribution.source === "goal").map((contribution) => [contribution.savingsId, contribution]));
-  const recordedForGoal = (id: string) => payments.paidCentavos[`savings:${id}`] ?? 0;
+  const recordedForGoal = (id: string) => recordedCentavosFor(payments.paidCentavos, id);
   const goals = savedGoals.filter((goal) => goal.status === "active" && (goal.remainingAmountCentavos > 0 || recordedForGoal(goal.id) > 0)).map((goal) => {
     const requirement = requirementsByGoalId.get(goal.id);
     return {
@@ -56,7 +56,7 @@ function allocatePlannedSavings(goals: AllocatableSavingsGoal[], strategy: Savin
   const reservedProposals = reservationAllocation.proposals.map((proposal) => {
     const reserved = Math.min(proposal.remainingAmountCentavos, reservedByGoalId.get(proposal.id) ?? 0);
     const required = Math.min(proposal.remainingAmountCentavos, Math.max(0, proposal.requiredCentavos - proposal.recordedContributionCentavos));
-    return { ...proposal, proposedRequiredCentavos: Math.min(required, reserved), proposedSurplusCentavos: Math.max(0, reserved - required), proposedTotalCentavos: reserved, unfundedRequiredCentavos: Math.max(0, required - reserved), state: reserved >= required ? "funded" as const : reserved > 0 ? "partially_funded" as const : "unfunded" as const, reason: reserved > 0 ? proposal.reason : "no_envelope" as const };
+    return { ...proposal, proposedRequiredCentavos: Math.min(required, reserved), proposedSurplusCentavos: Math.max(0, reserved - required), proposedTotalCentavos: reserved, unfundedRequiredCentavos: Math.max(0, required - reserved), state: fundingState(reserved, required), reason: reserved > 0 ? proposal.reason : "no_envelope" as const };
   });
   const surplusAllocation = allocateSavingsEnvelope(savingsSurplusCentavos, strategy, reservedProposals.map((proposal) => ({ ...proposal, remainingAmountCentavos: Math.max(0, proposal.remainingAmountCentavos - proposal.proposedTotalCentavos), recordedContributionCentavos: proposal.recordedContributionCentavos + proposal.proposedRequiredCentavos })));
   const surplusByGoalId = new Map(surplusAllocation.proposals.map((proposal) => [proposal.id, proposal]));
@@ -66,13 +66,13 @@ function allocatePlannedSavings(goals: AllocatableSavingsGoal[], strategy: Savin
     const proposedRequiredCentavos = proposal.proposedRequiredCentavos + surplus.proposedRequiredCentavos;
     const proposedSurplusCentavos = proposal.proposedSurplusCentavos + surplus.proposedSurplusCentavos;
     const proposedTotalCentavos = proposal.proposedTotalCentavos + surplus.proposedTotalCentavos;
-    return { ...proposal, proposedRequiredCentavos, proposedSurplusCentavos, proposedTotalCentavos, unfundedRequiredCentavos: Math.max(0, proposal.unfundedRequiredCentavos - surplus.proposedRequiredCentavos), state: proposedTotalCentavos >= Math.min(proposal.remainingAmountCentavos, Math.max(0, proposal.requiredCentavos - proposal.recordedContributionCentavos)) ? "funded" as const : proposedTotalCentavos > 0 ? "partially_funded" as const : "unfunded" as const, reason: proposal.proposedTotalCentavos > 0 ? proposal.reason : surplus.reason };
+    return { ...proposal, proposedRequiredCentavos, proposedSurplusCentavos, proposedTotalCentavos, unfundedRequiredCentavos: Math.max(0, proposal.unfundedRequiredCentavos - surplus.proposedRequiredCentavos), state: fundingState(proposedTotalCentavos, Math.min(proposal.remainingAmountCentavos, Math.max(0, proposal.requiredCentavos - proposal.recordedContributionCentavos))), reason: proposal.proposedTotalCentavos > 0 ? proposal.reason : surplus.reason };
   });
   return plannedProposals;
 }
 
 function buildSavingsCycle(plannedProposals: SavingsAllocationProposal[], envelopeCentavos: number, paidCentavos: Record<string, number>, dueDatesByGoalId: Map<string, string>): SavingsCycleAllocation {
-  const recordedForGoal = (id: string) => paidCentavos[`savings:${id}`] ?? 0;
+  const recordedForGoal = (id: string) => recordedCentavosFor(paidCentavos, id);
   const contributions = plannedProposals.filter((proposal) => proposal.proposedTotalCentavos > 0).map((proposal) => ({ id: proposal.id, name: proposal.name, dueDate: dueDatesByGoalId.get(proposal.id) ?? null, plannedCentavos: proposal.proposedTotalCentavos, recordedCentavos: recordedForGoal(proposal.id) }));
   // Extra deposits to one goal cannot settle another goal's monthly allocation.
   const recordedCentavos = contributions.reduce((total, contribution) => total + Math.min(contribution.plannedCentavos, Math.max(0, contribution.recordedCentavos)), 0);
@@ -88,4 +88,11 @@ function remainingProposal(proposal: SavingsAllocationProposal, recordedContribu
   const remainingAmountCentavos = Math.max(0, proposal.remainingAmountCentavos - recordedContributionCentavos);
   const required = Math.min(remainingAmountCentavos, Math.max(0, proposal.requiredCentavos - recordedContributionCentavos));
   return { ...proposal, plannedTotalCentavos: proposal.proposedTotalCentavos, remainingAmountCentavos, recordedContributionCentavos, proposedRequiredCentavos, proposedSurplusCentavos, proposedTotalCentavos: proposedRequiredCentavos + proposedSurplusCentavos, unfundedRequiredCentavos: Math.max(0, required - proposedRequiredCentavos) };
+}
+
+// Deposits recorded this month for one goal; malformed or negative totals count as nothing.
+function recordedCentavosFor(paidCentavos: Record<string, number>, goalId: string): number {
+  const paid = paidCentavos[`savings:${goalId}`];
+  if (typeof paid !== "number" || !Number.isFinite(paid)) return 0;
+  return Math.max(0, Math.trunc(paid));
 }
