@@ -7,7 +7,8 @@ import { Divider, InfoRow } from "./debtUi";
 import type { DebtSurplusPlan, DebtSurplusRecommendation } from "../helpers/debtSurplusPlan";
 import { formatPeso as php } from "../../financial-plan/helpers/financialPlanPresentation";
 
-export type DebtPlanRow = { id: string; label: string; amountCentavos: number; dueDate?: string | null; payment?: CommitmentPayment };
+// subtitle replaces the due-date line, for rows that have no due date or amount due (surplus).
+export type DebtPlanRow = { id: string; label: string; amountCentavos: number; dueDate?: string | null; payment?: CommitmentPayment; subtitle?: string };
 
 const PAYMENT_STATUS = {
   paid: { label: "Paid", background: "#E3F2EA", color: "#0E6D46" },
@@ -49,7 +50,7 @@ export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCen
 }
 
 function surplusRow(recommendation: DebtSurplusRecommendation): DebtPlanRow {
-  const row = { id: recommendation.id, label: recommendation.label, amountCentavos: recommendation.plannedCentavos };
+  const row = { id: recommendation.id, label: recommendation.label, amountCentavos: recommendation.plannedCentavos, subtitle: "Extra payment this month" };
   if (recommendation.paidCentavos === 0) return row;
   const status = recommendation.remainingCentavos === 0 ? "paid" as const : "partial" as const;
   return { ...row, payment: { paidCentavos: recommendation.paidCentavos, dueCentavos: recommendation.plannedCentavos, status } };
@@ -68,6 +69,13 @@ function UnassignedSurplusRow({ amountCentavos }: { amountCentavos: number }) {
   </View>;
 }
 
+function rowSubtitle(row: DebtPlanRow): string {
+  if (row.subtitle) return row.subtitle;
+  const due = row.dueDate ? `Due ${row.dueDate}` : "No scheduled date";
+  if (!row.payment) return due;
+  return `${due} · Amount due: ${php(row.payment.dueCentavos)}`;
+}
+
 function RowList({ title, rows }: { title: string; rows: DebtPlanRow[] }) {
   return <View style={{ gap: 8 }}>
     <Divider />
@@ -76,7 +84,7 @@ function RowList({ title, rows }: { title: string; rows: DebtPlanRow[] }) {
       <View style={{ alignItems: "center", flexDirection: "row", gap: 12 }}>
         <View style={{ flex: 1 }}>
           <Text style={{ color: v4.ink, fontFamily: v4Font, fontSize: 13, fontWeight: "700" }}>{row.label}</Text>
-          <Text style={{ color: v4.mut, fontFamily: v4Font, fontSize: 11, marginTop: 2 }}>{row.dueDate ? `Due ${row.dueDate}` : "No scheduled date"}{row.payment ? ` · Amount due: ${php(row.payment.dueCentavos)}` : ""}</Text>
+          <Text style={{ color: v4.mut, fontFamily: v4Font, fontSize: 11, marginTop: 2 }}>{rowSubtitle(row)}</Text>
         </View>
         <Text style={{ color: v4.ink, fontFamily: v4Font, fontSize: 13, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{php(row.amountCentavos)}</Text>
       </View>

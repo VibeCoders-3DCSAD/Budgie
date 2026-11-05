@@ -267,6 +267,8 @@ describe("DebtManagerOverview debt surplus", () => {
 
     await waitFor(() => expect(view.getByText("Surplus left to pay")).toBeTruthy());
     expect(view.getByLabelText("Loan, ₱10.00, Partially paid, paid ₱5.00 of ₱10.00")).toBeTruthy();
+    expect(view.getByText("Extra payment this month")).toBeTruthy();
+    expect(view.queryByText(/Amount due: ₱10.00/)).toBeNull();
     expect(view.queryByText(/Not assigned to a debt/)).toBeNull();
   });
 });

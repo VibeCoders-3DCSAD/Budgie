@@ -31,13 +31,6 @@ describe("allocateDebtRepayments", () => {
     expect(result.allocations).toEqual(new Map([["salary", 1_000], ["loan", 5_000]]));
   });
 
-  it("allocates only the supplied Financial Plan surplus when minimum payments are excluded", () => {
-    const result = allocateDebtRepayments({ debts, debtBudgetCentavos: 3_000, strategy: "avalanche", includeMinimumPayments: false });
-
-    expect(result.requiredPaymentCentavos).toBe(0);
-    expect(result.allocations).toEqual(new Map([["small", 0], ["high-rate", 3_000]]));
-  });
-
   it("does not direct surplus to debts that do not allow extra payments", () => {
     const result = allocateDebtRepayments({ debts: debts.map((debt) => debt.id === "small" ? { ...debt, allowsExtraPayments: false } : debt), debtBudgetCentavos: 7_000, strategy: "snowball" });
 

@@ -6,7 +6,7 @@ const loan = (overrides: Partial<DebtSurplusCandidate> = {}): DebtSurplusCandida
   annualInterestRateBps: 1_200, startBalanceCentavos: 1_000_000, reservedCentavos: 200_000, paidThisPeriodCentavos: 0, ...overrides,
 });
 const statement = (overrides: Partial<DebtSurplusCandidate> = {}): DebtSurplusCandidate => ({
-  id: "statement:s1", label: "Visa statement", kind: "credit_card_statement", status: "active", allowsExtraPayments: true,
+  id: "card:card-1", label: "Visa statement", kind: "credit_card_statement", status: "active", allowsExtraPayments: true,
   annualInterestRateBps: 0, startBalanceCentavos: 800_000, reservedCentavos: 0, paidThisPeriodCentavos: 0, ...overrides,
 });
 
@@ -32,13 +32,13 @@ describe("planDebtSurplus", () => {
   it("puts card statements ahead of loans under Avalanche, then the highest rate", () => {
     const plan = planDebtSurplus({ candidates: [loan({ id: "high", annualInterestRateBps: 3_000 }), loan({ id: "low", annualInterestRateBps: 500 }), statement()], surplusCentavos: 3_000_000, strategy: "avalanche" });
 
-    expect(plan.recommendations.map((row) => row.id)).toEqual(["statement:s1", "high", "low"]);
+    expect(plan.recommendations.map((row) => row.id)).toEqual(["card:card-1", "high", "low"]);
   });
 
   it("orders Snowball by the smallest balance left after required payments", () => {
     const plan = planDebtSurplus({ candidates: [loan({ id: "big" }), loan({ id: "small", startBalanceCentavos: 300_000 }), statement({ startBalanceCentavos: 700_000 })], surplusCentavos: 3_000_000, strategy: "snowball" });
 
-    expect(plan.recommendations.map((row) => row.id)).toEqual(["small", "statement:s1", "big"]);
+    expect(plan.recommendations.map((row) => row.id)).toEqual(["small", "card:card-1", "big"]);
   });
 
   it("applies the user's priorities first and leaves out debts that cannot take extra payments", () => {
@@ -48,7 +48,7 @@ describe("planDebtSurplus", () => {
       priorities: [{ debtAccountId: "first", priorityRank: 1 }, { debtAccountId: "first", priorityRank: 2 }, { debtAccountId: "salary", priorityRank: 3 }],
     });
 
-    expect(plan.recommendations.map((row) => row.id)).toEqual(["first", "statement:s1"]);
+    expect(plan.recommendations.map((row) => row.id)).toEqual(["first", "card:card-1"]);
   });
 
   it("treats non-finite and fractional amounts as safe whole centavos", () => {
@@ -94,6 +94,35 @@ describe("buildDebtSurplusCandidates", () => {
       reservations: [{ creditCardStatementId: "s1", amountCentavos: 150_000 }],
     });
 
-    expect(candidate).toMatchObject({ id: "statement:s1", label: "Visa statement", kind: "credit_card_statement", startBalanceCentavos: 400_000, reservedCentavos: 150_000, paidThisPeriodCentavos: 200_000 });
+    expect(candidate).toMatchObject({ id: "card:card-1", label: "Visa statement", kind: "credit_card_statement", startBalanceCentavos: 400_000, reservedCentavos: 150_000, paidThisPeriodCentavos: 200_000 });
+  });
+
+  describe("a statement issued after the plan month began", () => {
+    const base = {
+      debts: [], debtPayments: [], period, today: "2026-10-28",
+      cards: [{ id: "card-1", name: "Visa" }] as never,
+      cycles: [{ id: "cycle-1", account_id: "card-1" }, { id: "cycle-2", account_id: "card-1" }] as never,
+      statements: [
+        { id: "sept", cycle_id: "cycle-1", statement_date: "2026-09-25", statement_balance_centavos: 500_000, authoritative: true, deleted: false },
+        { id: "oct", cycle_id: "cycle-2", statement_date: "2026-10-25", statement_balance_centavos: 900_000, authoritative: true, deleted: false },
+      ] as never,
+    };
+
+    it("keeps the card's surplus on the statement the plan reserved for and counts every payment to the card", () => {
+      const [candidate] = buildDebtSurplusCandidates({ ...base,
+        cardPayments: [{ statement_id: "sept", cycle_id: "cycle-1", payment_date: "2026-10-10", amount_centavos: 200_000 }, { statement_id: "oct", cycle_id: "cycle-2", payment_date: "2026-10-27", amount_centavos: 150_000 }] as never,
+        reservations: [{ creditCardStatementId: "sept", amountCentavos: 200_000 }],
+      });
+
+      expect(candidate).toMatchObject({ id: "card:card-1", startBalanceCentavos: 500_000, reservedCentavos: 200_000, paidThisPeriodCentavos: 350_000 });
+      expect(planDebtSurplus({ candidates: [candidate!], surplusCentavos: 300_000, strategy: "avalanche" }).recommendations[0]).toMatchObject({ plannedCentavos: 300_000, paidCentavos: 150_000, remainingCentavos: 150_000 });
+    });
+
+    it("uses the statement issued before the month began when the plan reserved nothing for the card", () => {
+      const [candidate] = buildDebtSurplusCandidates({ ...base, cardPayments: [], reservations: [] });
+
+      expect(candidate).toMatchObject({ startBalanceCentavos: 500_000, reservedCentavos: 0 });
+    });
   });
 });
+

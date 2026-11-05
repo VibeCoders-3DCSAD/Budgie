@@ -116,6 +116,7 @@
 - Include unpaid credit-card statements as candidates for surplus recommendations after required payment targets are considered.
 - Size each debt's surplus from what was owed at the start of the plan month less its required payment, so surplus never exceeds the balance.
 - Count payments recorded this plan month above a debt's required payment toward its recommended surplus, and show the surplus left to pay.
+- Keep a credit card's surplus on that card for the whole plan month: size it from the statement the plan reserved for (or the statement issued before the month began), so a statement issued mid-month does not move it, and count every payment made to that card this month toward it.
 - Show surplus that no debt can take as "Not assigned to a debt". The user decides where that money goes; the app suggests adding it to their savings goals but does not cap or redirect it.
 - Show a plan shortfall and the strategy surplus together when both apply.
 - Exclude archived and deleted debts from current repayment planning.

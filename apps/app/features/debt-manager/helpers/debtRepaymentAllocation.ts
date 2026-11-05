@@ -30,20 +30,18 @@ export function allocateDebtRepayments({
   debtBudgetCentavos,
   strategy,
   priorities = [],
-  includeMinimumPayments = true,
 }: {
   debts: AllocatableDebt[];
   debtBudgetCentavos: number;
   strategy: DebtStrategy;
   priorities?: DebtPriority[];
-  includeMinimumPayments?: boolean;
 }): DebtRepaymentAllocation {
   const activeDebts = debts.filter((debt) => debt.status === "active" && debt.currentBalanceCentavos > 0);
-  const requiredPaymentCentavos = includeMinimumPayments ? activeDebts.reduce((total, debt) => total + Math.min(debt.minimumPaymentCentavos, debt.currentBalanceCentavos), 0) : 0;
+  const requiredPaymentCentavos = activeDebts.reduce((total, debt) => total + Math.min(debt.minimumPaymentCentavos, debt.currentBalanceCentavos), 0);
   const availableCentavos = Math.max(0, debtBudgetCentavos);
   const shortfallCentavos = Math.max(0, requiredPaymentCentavos - availableCentavos);
   let remainingSurplusCentavos = Math.max(0, availableCentavos - requiredPaymentCentavos);
-  const allocations = new Map(activeDebts.map((debt) => [debt.id, includeMinimumPayments ? Math.min(debt.minimumPaymentCentavos, debt.currentBalanceCentavos) : 0]));
+  const allocations = new Map(activeDebts.map((debt) => [debt.id, Math.min(debt.minimumPaymentCentavos, debt.currentBalanceCentavos)]));
   const activeById = new Map(activeDebts.map((debt) => [debt.id, debt]));
   const prioritized = priorities
     .slice()

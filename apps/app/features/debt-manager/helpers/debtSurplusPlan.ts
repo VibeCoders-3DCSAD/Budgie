@@ -134,9 +134,15 @@ function sumReserved(reservations: PlanDebtReservation[], matches: (reservation:
 const inPeriod = (date: string, period: { start: string; end: string }, today: string) => date >= period.start && date <= period.end && date <= today;
 
 /**
- * Builds surplus candidates for the plan month: loans and each card's latest
- * unpaid statement, with what was owed at the start of the month, the plan's
- * required payment, and what has been paid this month.
+ * Builds surplus candidates for the plan month: loans and each credit card,
+ * with what was owed at the start of the month, the plan's required payment,
+ * and what has been paid this month.
+ *
+ * A card's surplus belongs to the card for the whole plan month. It is sized
+ * from the statement the plan reserved for (or, without a reservation, the
+ * statement already issued when the month began), so a statement issued
+ * mid-month does not move it, and every payment made to the card this month
+ * counts toward it.
  */
 export function buildDebtSurplusCandidates({ debts, debtPayments, cards, cycles, statements, cardPayments, reservations, period, today }: {
   debts: DebtAccount[];
@@ -160,22 +166,33 @@ export function buildDebtSurplusCandidates({ debts, debtPayments, cards, cycles,
       paidThisPeriodCentavos: paidThisPeriod.reduce((total, payment) => total + toCentavos(payment.amount_centavos), 0),
     };
   });
-  const cardStatements = cards.flatMap((card): DebtSurplusCandidate[] => {
+  const cardCandidates = cards.flatMap((card): DebtSurplusCandidate[] => {
     const cycleIds = new Set(cycles.filter((cycle) => cycle.account_id === card.id).map((cycle) => cycle.id));
-    const statement = statements
+    const cardStatements = statements
       .filter((item) => item.authoritative && !item.deleted && cycleIds.has(item.cycle_id) && item.statement_date <= today)
-      .sort((left, right) => right.statement_date.localeCompare(left.statement_date))[0];
+      .sort((left, right) => right.statement_date.localeCompare(left.statement_date));
+    const statement = anchorStatement(cardStatements, reservations, period);
     if (!statement) return [];
-    const statementPayments = cardPayments.filter((payment) => payment.statement_id === statement.id && payment.payment_date <= today);
-    const paidBeforePeriod = statementPayments.filter((payment) => payment.payment_date < period.start).reduce((total, payment) => total + toCentavos(payment.amount_centavos), 0);
-    const paidThisPeriod = statementPayments.filter((payment) => inPeriod(payment.payment_date, period, today)).reduce((total, payment) => total + toCentavos(payment.amount_centavos), 0);
+    const cardStatementIds = new Set(cardStatements.map((item) => item.id));
+    const cardPaymentsToDate = cardPayments.filter((payment) => (cardStatementIds.has(payment.statement_id) || cycleIds.has(payment.cycle_id)) && payment.payment_date <= today);
+    const paidBeforePeriod = cardPaymentsToDate.filter((payment) => payment.statement_id === statement.id && payment.payment_date < period.start).reduce((total, payment) => total + toCentavos(payment.amount_centavos), 0);
+    const paidThisPeriod = cardPaymentsToDate.filter((payment) => inPeriod(payment.payment_date, period, today)).reduce((total, payment) => total + toCentavos(payment.amount_centavos), 0);
     return [{
-      id: `statement:${statement.id}`, label: `${card.name} statement`, kind: "credit_card_statement", status: "active",
+      id: `card:${card.id}`, label: `${card.name} statement`, kind: "credit_card_statement", status: "active",
       allowsExtraPayments: true, annualInterestRateBps: 0,
       startBalanceCentavos: Math.max(0, toCentavos(statement.statement_balance_centavos) - paidBeforePeriod),
-      reservedCentavos: sumReserved(reservations, (reservation) => reservation.creditCardStatementId === statement.id),
+      reservedCentavos: sumReserved(reservations, (reservation) => typeof reservation.creditCardStatementId === "string" && cardStatementIds.has(reservation.creditCardStatementId)),
       paidThisPeriodCentavos: paidThisPeriod,
     }];
   });
-  return [...loans, ...cardStatements];
+  return [...loans, ...cardCandidates];
+}
+
+// Statements are newest first. The plan's reserved statement wins; otherwise
+// the newest one issued before the month began; otherwise the newest so far.
+function anchorStatement(statements: CreditCardStatement[], reservations: PlanDebtReservation[], period: { start: string }): CreditCardStatement | undefined {
+  const reservedIds = new Set(reservations.map((reservation) => reservation.creditCardStatementId).filter((id): id is string => typeof id === "string"));
+  const reserved = statements.find((statement) => reservedIds.has(statement.id));
+  if (reserved) return reserved;
+  return statements.find((statement) => statement.statement_date < period.start) ?? statements[0];
 }
