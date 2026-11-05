@@ -27,7 +27,7 @@ plugins.push(["expo-sqlite", { useSQLCipher: true }], "./plugins/withOfflineData
 const config = {
   name: "Budgie",
   slug: "app",
-  version: "1.0.0",
+  version: "1.0.1",
   scheme: "odin",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -46,6 +46,7 @@ const config = {
   android: {
     allowBackup: false,
     package: "com.odin.finances",
+    versionCode: 2,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
