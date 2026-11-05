@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { findAvailableUpdate, findUnseenReleaseNotes, markReleaseNotesSeen } from "../services/appUpdateChecks";
 import type { AppRelease } from "../services/githubReleases";
 
-// Checks run once per app open; a failed check stays quiet and retries on the next open.
+// Checks run once per app launch; a failed check stays quiet and retries on the next launch.
 export function useAppUpdates() {
   const [availableUpdate, setAvailableUpdate] = useState<AppRelease | null>(null);
   const [releaseNotes, setReleaseNotes] = useState<AppRelease | null>(null);

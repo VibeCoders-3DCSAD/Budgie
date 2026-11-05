@@ -14,6 +14,7 @@ jest.mock("../hooks/useAccessLifecycle", () => ({ useAccessLifecycle: jest.fn(()
 jest.mock("../../../hooks/useDeepLink", () => ({ useDeepLink: () => ({ isPasswordRecovery: false,
   isResolvingRecoveryToken: false, recoveryToken: null, recoveryRefreshToken: null, verificationToken: null, clearAuthLinks: jest.fn() }) }));
 jest.mock("../../../local-db/databaseAccess", () => ({ enableDatabaseProtection: jest.fn() }));
+jest.mock("../../app-updates/AppUpdatePrompts", () => ({ AppUpdatePrompts: () => null }));
 jest.mock("../components/PinAccessScreen", () => require("./routeStubs").PinAccessScreen);
 jest.mock("../../onboarding/OnboardingFlow", () => require("./routeStubs").OnboardingFlow);
 

@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ToastProvider } from "../components/Toast";
+import { AppUpdatePrompts } from "../features/app-updates/AppUpdatePrompts";
 import { useDeepLink } from "../hooks/useDeepLink";
 import { enableDatabaseProtection } from "../local-db/databaseAccess";
 import { AccessProvider } from "../features/auth/components/AccessProvider";
@@ -49,6 +50,8 @@ export default function RootLayout() {
 
   return <SafeAreaProvider><ToastProvider>
     <AccessProvider value={{ deviceId, links }}><AccessGate phase={phase} deviceId={deviceId} /></AccessProvider>
+    {/* Mounted above the access gate so it checks once per launch, not on every login or unlock. */}
+    <AppUpdatePrompts />
     <StatusBar style="dark" />
   </ToastProvider></SafeAreaProvider>;
 }
