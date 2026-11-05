@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
 import { useEffect } from "react";
+import { AppUpdatePrompts } from "../../../features/app-updates/AppUpdatePrompts";
 import { useSession } from "../../../features/auth/components/AccessProvider";
 import { signOutGoogle } from "../../../features/auth/services/googleSignIn";
 import { useAuthStore } from "../../../features/auth/stores/useAuthStore";
@@ -27,6 +28,7 @@ export default function ShellLayout() {
   return <InitialSyncGate key={userId} accessToken={accessToken} userId={userId} deviceId={deviceId}>
     <SyncProvider userId={userId} deviceId={deviceId} accessToken={accessToken} onLoggedOut={finishLogout} signOut={signOutGoogle}>
       <Stack screenOptions={{ headerShown: false }} />
+      <AppUpdatePrompts />
     </SyncProvider>
   </InitialSyncGate>;
 }
