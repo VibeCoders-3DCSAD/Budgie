@@ -164,4 +164,25 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
     expect(allocation?.remainingToContributeCentavos).toBe(1_284_369);
     expect(allocation?.contributions.find((row) => row.id === "rtx")).toMatchObject({ plannedCentavos: 1_284_369, recordedCentavos: 0 });
   });
+
+  it("reports surplus no goal can take on its own and keeps it out of the amount left to contribute", async () => {
+    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", goalCategory: "emergency_fund", status: "active", isAchieved: false, targetDate: "2026-12-01", remainingAmountCentavos: 500_000 }]);
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: { savingsReservations: [{ savingsGoalId: "goal-1", amountCentavos: 300_000 }], savingsSurplusCentavos: 1_000_000 } });
+    mockGetPayments.mockResolvedValue({ paidCentavos: { "savings:goal-1": 100_000 }, settledKeys: [] });
+
+    const allocation = await getCurrentSavingsEnvelopeAllocation("user-1", "2026-10-15");
+
+    // The goal had ₱6,000 of room this month (₱5,000 left plus the ₱1,000 already deposited) out of a ₱13,000 budget.
+    expect(allocation).toMatchObject({ envelopeCentavos: 1_300_000, unallocatedCentavos: 700_000, remainingToContributeCentavos: 500_000, contributions: [expect.objectContaining({ plannedCentavos: 600_000, recordedCentavos: 100_000 })] });
+  });
+
+  it("reaches nothing left to contribute once every goal is filled, even with surplus to spare", async () => {
+    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", goalCategory: "emergency_fund", status: "active", isAchieved: true, targetDate: "2026-12-01", remainingAmountCentavos: 0 }]);
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: { savingsReservations: [{ savingsGoalId: "goal-1", amountCentavos: 200_000 }], savingsSurplusCentavos: 600_000 } });
+    mockGetPayments.mockResolvedValue({ paidCentavos: { "savings:goal-1": 200_000 }, settledKeys: [] });
+
+    const allocation = await getCurrentSavingsEnvelopeAllocation("user-1", "2026-10-15");
+
+    expect(allocation).toMatchObject({ envelopeCentavos: 800_000, unallocatedCentavos: 600_000, remainingToContributeCentavos: 0 });
+  });
 });

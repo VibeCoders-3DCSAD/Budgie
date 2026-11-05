@@ -78,4 +78,25 @@ describe("SavingsAllocationReview", () => {
     expect(view.getByLabelText("RTX 5090, ₱12,843.69, Not done, Due Oct 15, 2026")).toBeTruthy();
     expect(view.getByText("₱14,515.59")).toBeTruthy();
   });
+
+  it("shows surplus no goal can take as its own row", async () => {
+    mockGetCurrentSavingsEnvelopeAllocation.mockResolvedValue({ envelopeCentavos: 1_300_000, unallocatedCentavos: 800_000, remainingToContributeCentavos: 400_000, contributions: [
+      { id: "goal-1", name: "Emergency fund", dueDate: null, plannedCentavos: 500_000, recordedCentavos: 100_000 },
+    ], proposals: [] });
+    const view = render(<SavingsAllocationReview userId="user-1" deviceId="device-1" />);
+
+    await waitFor(() => expect(view.getByText("Not assigned to a goal")).toBeTruthy());
+    expect(view.getByLabelText("Not assigned to a goal, ₱8,000.00. We suggest adding it to your other goals.")).toBeTruthy();
+    expect(view.getByText("₱4,000.00")).toBeTruthy();
+  });
+
+  it("hides the unassigned row when every peso has a goal", async () => {
+    mockGetCurrentSavingsEnvelopeAllocation.mockResolvedValue({ envelopeCentavos: 500_000, unallocatedCentavos: 0, remainingToContributeCentavos: 500_000, contributions: [
+      { id: "goal-1", name: "Emergency fund", dueDate: null, plannedCentavos: 500_000, recordedCentavos: 0 },
+    ], proposals: [] });
+    const view = render(<SavingsAllocationReview userId="user-1" deviceId="device-1" />);
+
+    await waitFor(() => expect(view.getByText("Savings Budget this month")).toBeTruthy());
+    expect(view.queryByText("Not assigned to a goal")).toBeNull();
+  });
 });

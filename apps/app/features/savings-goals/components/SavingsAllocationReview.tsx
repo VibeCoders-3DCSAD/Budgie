@@ -67,6 +67,7 @@ export default function SavingsAllocationReview({ userId, deviceId, syncVersion 
     <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 14, fontWeight: "800" }}>This cycle</Text>
     <Row label="Savings Budget this month" value={money(allocation.envelopeCentavos)} />
     {allocation.contributions.map((contribution) => <SavingsContributionRow key={contribution.id} contribution={contribution} />)}
+    {allocation.unallocatedCentavos > 0 ? <UnassignedSurplusRow amountCentavos={allocation.unallocatedCentavos} /> : null}
     <Row label="Remaining to contribute" value={money(allocation.remainingToContributeCentavos)} />
     <Pressable accessibilityRole="button" accessibilityLabel="Change surplus strategy" accessibilityState={{ expanded: choosingStrategy }} onPress={() => setChoosingStrategy((current) => !current)} style={{ alignItems: "center", borderTopColor: P.line, borderTopWidth: 1, flexDirection: "row", gap: 8, marginTop: 6, paddingTop: 10 }}>
       <Text style={{ color: P.muted, flex: 1, fontFamily: "Manrope", fontSize: 12 }}>Extra savings go to</Text>
@@ -93,6 +94,16 @@ function SavingsContributionRow({ contribution }: { contribution: SavingsCycleCo
     </View>
     <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>{money(contribution.plannedCentavos)}</Text>
     <Text style={{ color: done ? P.brand : P.muted, fontFamily: "Manrope", fontSize: 11, fontWeight: "700" }}>{status}</Text>
+  </View>;
+}
+
+function UnassignedSurplusRow({ amountCentavos }: { amountCentavos: number }) {
+  return <View accessibilityLabel={`Not assigned to a goal, ${money(amountCentavos)}. We suggest adding it to your other goals.`} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 5 }}>
+    <View style={{ flex: 1, gap: 2 }}>
+      <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12 }}>Not assigned to a goal</Text>
+      <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11 }}>We suggest adding it to your other goals.</Text>
+    </View>
+    <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>{money(amountCentavos)}</Text>
   </View>;
 }
 

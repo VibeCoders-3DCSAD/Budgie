@@ -76,10 +76,14 @@ function buildSavingsCycle(plannedProposals: SavingsAllocationProposal[], envelo
   const contributions = plannedProposals.filter((proposal) => proposal.proposedTotalCentavos > 0).map((proposal) => ({ id: proposal.id, name: proposal.name, dueDate: dueDatesByGoalId.get(proposal.id) ?? null, plannedCentavos: proposal.proposedTotalCentavos, recordedCentavos: recordedForGoal(proposal.id) }));
   // Extra deposits to one goal cannot settle another goal's monthly allocation.
   const recordedCentavos = contributions.reduce((total, contribution) => total + Math.min(contribution.plannedCentavos, Math.max(0, contribution.recordedCentavos)), 0);
-  const remainingToContributeCentavos = Math.max(0, envelopeCentavos - recordedCentavos);
+  // Surplus that no goal can take (every goal is already planned up to its
+  // target) is not money anyone can contribute, so it is reported on its own.
+  const plannedCentavos = contributions.reduce((total, contribution) => total + contribution.plannedCentavos, 0);
+  const unassignedCentavos = Math.max(0, envelopeCentavos - plannedCentavos);
+  const remainingToContributeCentavos = Math.max(0, envelopeCentavos - unassignedCentavos - recordedCentavos);
   const proposals = plannedProposals.map((proposal) => remainingProposal(proposal, recordedForGoal(proposal.id)));
   const requiredCentavos = proposals.reduce((total, proposal) => total + Math.min(proposal.remainingAmountCentavos, Math.max(0, proposal.requiredCentavos - proposal.recordedContributionCentavos)), 0);
-  return { envelopeCentavos, requiredCentavos, accountRequiredCentavos: 0, shortfallCentavos: Math.max(0, requiredCentavos - remainingToContributeCentavos), unallocatedCentavos: Math.max(0, remainingToContributeCentavos - proposals.reduce((total, proposal) => total + proposal.proposedTotalCentavos, 0)), proposals, contributions, remainingToContributeCentavos };
+  return { envelopeCentavos, requiredCentavos, accountRequiredCentavos: 0, shortfallCentavos: Math.max(0, requiredCentavos - remainingToContributeCentavos), unallocatedCentavos: unassignedCentavos, proposals, contributions, remainingToContributeCentavos };
 }
 
 function remainingProposal(proposal: SavingsAllocationProposal, recordedContributionCentavos: number) {

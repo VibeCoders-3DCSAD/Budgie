@@ -139,6 +139,10 @@
   largest remaining target amount; Snowball favors the goal with the smallest
   remaining target amount. Remaining ties go to the earliest target date.
 - Show funded, partially funded, and unfunded goals with understandable reasons.
+- Show savings surplus that no goal can take this cycle as "Not assigned to a
+  goal", and leave it out of the amount remaining to contribute. The user
+  decides where that money goes; the app suggests adding it to their other
+  goals but does not cap or redirect it.
 - Exclude archived goals from new allocation proposals.
 - Allow users to review a proposed contribution and open Transaction Management
   to confirm it. A proposal alone does not move money or change goal progress.
