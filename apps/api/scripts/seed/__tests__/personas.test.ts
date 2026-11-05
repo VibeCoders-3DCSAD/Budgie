@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { buildSeedData, requiredSubcategorySlugs } from "../history.js";
+import { SURPLUS_DEMO, buildSeedData, requiredSubcategorySlugs } from "../history.js";
 import { buildPersonaSeedData, demoPersonas, parseDemoPersona, personaHistoryMonths, seasonalSpending, type DemoPersona } from "../personas.js";
 
 const subcategoryIds = new Map(requiredSubcategorySlugs.map((slug) => [slug, randomUUID()]));
@@ -13,7 +13,22 @@ it("validates persona names and preserves the default option", () => {
   expect(() => parseDemoPersona("__proto__")).toThrow("--persona must be");
   const data = buildSeedData({ userId, today: "2026-10-21", seed: 42, subcategoryIds });
   expect(data.transactions.length).toBeGreaterThan(1_000);
-  expect(data.savingsGoals).toEqual([]);
+  expect(data.savingsGoals.map((goal) => goal.name)).toEqual(["Emergency Fund", "Japan Trip", "New Laptop"]);
+});
+
+it("gives the default seed's current plan a savings and debt surplus to allocate", () => {
+  const data = buildSeedData({ userId, today: "2026-10-21", seed: 42, subcategoryIds });
+  const plan = data.financialPlans.find((row) => row.period_start === "2026-10-01")!;
+  const earlier = data.financialPlans.find((row) => row.period_start === "2026-09-01")!;
+
+  expect(plan).toMatchObject({ savings_surplus_centavos: SURPLUS_DEMO.savingsSurplus * 100, debt_surplus_centavos: SURPLUS_DEMO.debtSurplus * 100, shortfall_centavos: 0 });
+  expect((plan.available_funds_centavos as number) - (plan.required_funds_centavos as number)).toBeGreaterThanOrEqual((SURPLUS_DEMO.savingsSurplus + SURPLUS_DEMO.debtSurplus) * 100);
+  expect(data.planSavingsReservations.filter((row) => row.plan_id === plan.id)).toHaveLength(3);
+  expect(data.planSavingsReservations.some((row) => row.plan_id === earlier.id)).toBe(false);
+  expect(data.savingsGoals.every((goal) => goal.linked_account_id === data.accounts.find((account) => account.name === "Goal Savings")?.id)).toBe(true);
+  expect(data.debtAccounts.filter((debt) => debt.allows_extra_payments).map((debt) => debt.name)).toEqual(["Personal Loan", "Motorcycle Loan"]);
+  expect(data.debtPayments.filter((payment) => payment.notes === "Extra payment from the plan's debt surplus")).toEqual([expect.objectContaining({ payment_date: "2026-10-05", amount_centavos: SURPLUS_DEMO.extraLoanPayment * 100 })]);
+  expect(data.transactions.filter((row) => row.notes === "Performance bonus")).toEqual([expect.objectContaining({ transaction_date: "2026-10-01", amount_centavos: SURPLUS_DEMO.bonus * 100 })]);
 });
 
 it("seeds four children's tuition only in Q1–Q2 with higher spending in those months", () => {

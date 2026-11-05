@@ -139,6 +139,10 @@ async function clearSeededData(supabase: SupabaseClient, userId: string) {
       selectIds(supabase.from("transactions").select("id").eq("user_id", userId).in(column, accountIds).or(unseeded)),
     ))).flat().filter((id) => !recordTransactionIds.has(id));
     if (referencing.length > 0) throw new Error("Refusing to remove seeded accounts referenced by non-seeded transactions. Move those transactions first.");
+    // Checked before anything is deleted: a user's own goal linked to a seeded account blocks removing that account.
+    const unseededGoals = `metadata->>dummy_data_source.is.null,metadata->>dummy_data_source.not.in.(${seedMarker},${legacySeedMarker})`;
+    const linkedGoals = await selectIds(supabase.from("savings_goals").select("id").eq("user_id", userId).in("linked_account_id", accountIds).or(unseededGoals));
+    if (linkedGoals.length > 0) throw new Error("Refusing to remove seeded accounts linked to non-seeded savings goals. Link those goals to another account or delete them first.");
   }
 
   await deleteByIds(supabase, "scheduled_payment_records", userId, "id", (records ?? []).map((record) => record.id as string));
@@ -234,6 +238,8 @@ async function main() {
   console.log(`  ${data.savingsGoals.length} savings goals (${data.savingsGoalActivities.length} contributions)`);
   console.log(`  ${data.debtAccounts.length} debts (${data.debtPayments.length} payments)`);
   console.log(`  ${data.creditCardCycles.length} card cycles, ${data.creditCardStatements.length} statements, ${data.creditCardPayments.length} card payments, ${data.financialPlans.length} financial plans`);
+  const currentPlan = data.financialPlans.find((plan) => plan.period_start === `${options.today.slice(0, 7)}-01`);
+  if (currentPlan) console.log(`  This month's plan: ${peso(currentPlan.savings_surplus_centavos as number)} savings surplus and ${peso(currentPlan.debt_surplus_centavos as number)} debt surplus to allocate`);
   console.log(`  ${medicines.length} unusual medicine purchases confirmed as frequent spending`);
   if (tuition.length) console.log(`  ${tuition.length} tuition payments expected again January through June`);
   if (holiday.length) console.log(`  ${holiday.length} holiday clothes purchases expected again in the month they were bought`);

@@ -84,6 +84,22 @@ function wholePesos(amountCentavos: number) {
 
 type Reservation = { monthIndex: number; amountCentavos: number; dueDate: string };
 
+// This month's plan demonstrates surplus allocation: a one-off bonus funds a
+// savings surplus (Emergency Fund first, then Avalanche or Snowball) and a debt
+// surplus (loans that allow extra payments; card statements are fully reserved).
+export const SURPLUS_DEMO = { bonus: 30_000, savingsSurplus: 13_000, debtSurplus: 8_000, extraLoanPayment: 3_000 } as const;
+
+// Past months split what is left 60/40 between savings and debt. This month
+// uses the demo amounts when the plan can afford them, and otherwise splits
+// what is left the same way.
+function planSurplus(remainingCentavos: number, isCurrentMonth: boolean): { savingsSurplus: number; debtSurplus: number } {
+  if (remainingCentavos <= 0) return { savingsSurplus: 0, debtSurplus: 0 };
+  const demoTotal = centavos(SURPLUS_DEMO.savingsSurplus + SURPLUS_DEMO.debtSurplus);
+  if (isCurrentMonth && remainingCentavos >= demoTotal) return { savingsSurplus: centavos(SURPLUS_DEMO.savingsSurplus), debtSurplus: centavos(SURPLUS_DEMO.debtSurplus) };
+  const savingsSurplus = Math.floor(remainingCentavos * 0.6);
+  return { savingsSurplus, debtSurplus: remainingCentavos - savingsSurplus };
+}
+
 export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId: string; today: string; seed: number; subcategoryIds: Map<string, string> }): SeedData {
   const random = createRandom(seed);
   const noisy = (pesos: number, spread = 0.12) => centavos(pesos * (1 - spread + random() * spread * 2));
@@ -99,8 +115,14 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
   const inWindow = (date: string) => date >= start && date <= today;
   const monthIndexOf = (date: string) => months.indexOf(monthStartOf(date));
 
-  const accountIds = { bank: randomUUID(), wallet: randomUUID(), rewardsCard: randomUUID(), cashbackCard: randomUUID() };
-  const openingBalances = { [accountIds.bank]: centavos(90_000), [accountIds.wallet]: centavos(6_000) };
+  const accountIds = { bank: randomUUID(), wallet: randomUUID(), rewardsCard: randomUUID(), cashbackCard: randomUUID(), savings: randomUUID() };
+  // Savings goals for the surplus demo; the savings account holds exactly what the goals have saved.
+  const goalSpecs = [
+    { name: "Emergency Fund", goalType: "emergency_fund", target: 60_000, saved: 57_000, monthly: 2_000, months: 6, priority: "high", notes: "Almost complete: surplus fills it first." },
+    { name: "Japan Trip", goalType: "custom", target: 80_000, saved: 20_000, monthly: 5_000, months: 12, priority: "medium", notes: "Largest remaining need: Avalanche sends extra savings here." },
+    { name: "New Laptop", goalType: "custom", target: 45_000, saved: 38_000, monthly: 2_000, months: 4, priority: "medium", notes: "Closest to target: Snowball sends extra savings here." },
+  ];
+  const openingBalances = { [accountIds.bank]: centavos(90_000), [accountIds.wallet]: centavos(6_000), [accountIds.savings]: centavos(goalSpecs.reduce((total, goal) => total + goal.saved, 0)) };
 
   const transactions: Transaction[] = [];
   const addTransaction = (input: {
@@ -127,6 +149,7 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
     }
     const bonusDate = monthDate(month, 15);
     if (month.slice(5, 7) === "12" && inWindow(bonusDate)) addTransaction({ date: bonusDate, type: "income", amount: centavos(32_500), slug: "income_salary", destination: accountIds.bank, merchant: "Northstar Services", notes: "13th month pay" });
+    if (month === currentMonth) addTransaction({ date: monthDate(month, 1), type: "income", amount: centavos(SURPLUS_DEMO.bonus), slug: "income_salary", destination: accountIds.bank, merchant: "Northstar Services", notes: "Performance bonus" });
     const freelanceDate = monthDate(month, 22);
     if (inWindow(freelanceDate)) addTransaction({ date: freelanceDate, type: "income", amount: noisy(9_000, 0.35), slug: "income_freelance", destination: accountIds.wallet, merchant: "Freelance design client" });
     if (index < 5) {
@@ -189,9 +212,9 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
   }
 
   // Non-credit-card debts: two still active, two paid off inside the window.
-  const debtSpecs = [
-    { name: "Personal Loan", lender: "Bank", presetKey: "personal_loan", original: 120_000, startingBalance: 92_000, rateBps: 1_250, method: "diminishing_balance", payment: 4_500, day: 5, firstMonthIndex: 0, openedOn: monthDate(addMonths(start, -8), 5), termMonths: 36, presetData: { personalLoan: { purpose: "Home improvements" } }, notes: "Consistent monthly payments." },
-    { name: "Motorcycle Loan", lender: "Finance", presetKey: "auto_loan", original: 190_000, startingBalance: 190_000, rateBps: 890, method: "diminishing_balance", payment: 6_800, day: 20, firstMonthIndex: 1, openedOn: monthDate(start, 20), termMonths: 36, presetData: { autoLoan: { vehicleDescription: "Commuter motorcycle", vehiclePurchasePriceCentavos: centavos(240_000), downpaymentCentavos: centavos(50_000), financedPrincipalCentavos: centavos(190_000) } }, notes: null },
+  const debtSpecs: { name: string; lender: string; presetKey: string; original: number; startingBalance: number; rateBps: number; method: string; payment: number; day: number; firstMonthIndex: number; openedOn: string; termMonths: number; presetData: Row; notes: string | null; allowsExtraPayments?: boolean; extraThisMonth?: number }[] = [
+    { name: "Personal Loan", lender: "Bank", presetKey: "personal_loan", original: 120_000, startingBalance: 92_000, rateBps: 1_250, method: "diminishing_balance", payment: 4_500, day: 5, firstMonthIndex: 0, openedOn: monthDate(addMonths(start, -8), 5), termMonths: 36, presetData: { personalLoan: { purpose: "Home improvements" } }, notes: "Consistent monthly payments.", allowsExtraPayments: true, extraThisMonth: SURPLUS_DEMO.extraLoanPayment },
+    { name: "Motorcycle Loan", lender: "Finance", presetKey: "auto_loan", original: 190_000, startingBalance: 190_000, rateBps: 890, method: "diminishing_balance", payment: 6_800, day: 20, firstMonthIndex: 1, openedOn: monthDate(start, 20), termMonths: 36, allowsExtraPayments: true, presetData: { autoLoan: { vehicleDescription: "Commuter motorcycle", vehiclePurchasePriceCentavos: centavos(240_000), downpaymentCentavos: centavos(50_000), financedPrincipalCentavos: centavos(190_000) } }, notes: null },
     { name: "Refrigerator Installment", lender: "Abenson", presetKey: "custom_debt", original: 24_000, startingBalance: 24_000, rateBps: 0, method: "no_interest", payment: 3_000, day: 28, firstMonthIndex: 0, openedOn: monthDate(addMonths(start, -1), 28), termMonths: 8, presetData: { customDebt: { providerCalculatedInterest: false } }, notes: "0% store installment." },
     { name: "SSS Salary Loan", lender: "SSS", presetKey: "salary_loan", original: 20_000, startingBalance: 20_000, rateBps: 1_000, method: "flat_add_on", payment: 2_000, day: 15, firstMonthIndex: 0, openedOn: monthDate(addMonths(start, -1), 15), termMonths: 11, presetData: { salaryLoan: { provider: "sss", linkedIncomeSourceId: incomeSourceIds.salary, repaymentMethod: "manual_payment", deductionAmountCentavos: null, deductionSchedule: null } }, notes: null },
   ];
@@ -218,6 +241,13 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
       debtPayments.push({ id: paymentId, debt_account_id: id, user_id: userId, transaction_id: transaction.id, source: "transaction", payment_date: dueDate, amount_centavos: principal + interest, principal_centavos: principal, interest_centavos: interest, notes: null, metadata: marker, version: 1, deleted: false });
       balance -= principal;
       lastPaymentDate = dueDate;
+      // A payment above the plan's required payment counts toward this month's debt surplus.
+      if (month !== currentMonth || !spec.extraThisMonth || balance <= 0) continue;
+      const extra = Math.min(balance, centavos(spec.extraThisMonth));
+      const extraId = randomUUID();
+      const extraTransaction = addTransaction({ date: dueDate, type: "expense", amount: extra, source: accountIds.bank, merchant: spec.lender, notes: `${spec.name} extra payment`, mutationId: `debt-payment:${extraId}` });
+      debtPayments.push({ id: extraId, debt_account_id: id, user_id: userId, transaction_id: extraTransaction.id, source: "transaction", payment_date: dueDate, amount_centavos: extra, principal_centavos: extra, interest_centavos: 0, notes: "Extra payment from the plan's debt surplus", metadata: marker, version: 1, deleted: false });
+      balance -= extra;
     }
     const paidOff = balance === 0;
     const remainingPayments = Math.ceil(balance / Math.max(1, payment - Math.round(balance * spec.rateBps / 10_000 / 12)));
@@ -225,7 +255,7 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
       id, user_id: userId, linked_account_id: accountIds.bank, name: spec.name, lender_name: spec.lender, preset_key: spec.presetKey,
       status: paidOff ? "paid_off" : "active", paid_off_at: paidOff ? manilaNoon(lastPaymentDate!) : null,
       original_balance_centavos: centavos(spec.original), current_balance_centavos: balance, annual_interest_rate_bps: spec.rateBps,
-      minimum_payment_centavos: payment, due_day_of_month: spec.day, opened_on: spec.openedOn, payment_frequency: "monthly", payment_schedule: {},
+      minimum_payment_centavos: payment, allows_extra_payments: spec.allowsExtraPayments ?? false, due_day_of_month: spec.day, opened_on: spec.openedOn, payment_frequency: "monthly", payment_schedule: {},
       next_due_date: paidOff ? null : nextMonthlyDate(today, spec.day),
       target_payoff_date: paidOff ? lastPaymentDate : monthDate(addMonths(currentMonth, remainingPayments), spec.day),
       interest_period: spec.rateBps === 0 ? "none" : "annual", interest_method: spec.method,
@@ -373,7 +403,15 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
     accountRow(accountIds.wallet, "Daily Wallet", "e_wallet", "Wallet", 2, start),
     accountRow(accountIds.rewardsCard, "Rewards Visa", "credit_card", "Bank", 3, cardOpenedOn[accountIds.rewardsCard], false),
     accountRow(accountIds.cashbackCard, "Cashback Mastercard", "credit_card", "Credit", 4, cardOpenedOn[accountIds.cashbackCard], false),
+    accountRow(accountIds.savings, "Goal Savings", "savings", "Bank", 5, start),
   ];
+  const contributionDay = 25;
+  const savingsGoals = goalSpecs.map((goal) => ({
+    id: randomUUID(), user_id: userId, linked_account_id: accountIds.savings, name: goal.name, goal_type: goal.goalType, is_emergency_fund: goal.goalType === "emergency_fund",
+    target_amount_centavos: centavos(goal.target), starting_amount_centavos: centavos(goal.saved), target_date: monthDate(addMonths(currentMonth, goal.months), contributionDay),
+    priority: goal.priority, status: "active", planned_contribution_amount_centavos: centavos(goal.monthly), contribution_frequency: "monthly", contribution_interval_count: 1,
+    contribution_day_of_month: contributionDay, next_contribution_date: nextMonthlyDate(today, contributionDay), notes: goal.notes, metadata: marker, version: 1, deleted: false,
+  }));
 
   // One accepted plan per month. Each plan's forecast tracks what was actually spent that month, give or take a few percent.
   const allocationSpecs: { slug: string; rule: "FIXED" | "MINIMUM" | "FLEXIBLE"; pesos: number }[] = [
@@ -396,6 +434,7 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
   const planForecastPoints: Row[] = [];
   const planAllocations: Row[] = [];
   const planDebtReservations: Row[] = [];
+  const planSavingsReservations: Row[] = [];
   for (const [index, month] of months.entries()) {
     const planId = randomUUID();
     const allocations = allocationSpecs.map((spec) => {
@@ -412,27 +451,31 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
       ...statementReservations.filter((reservation) => reservation.monthIndex === index)
         .map((reservation) => ({ id: randomUUID(), plan_id: planId, debt_account_id: null, credit_card_statement_id: reservation.statementId, amount_centavos: reservation.amountCentavos, due_date: reservation.dueDate })),
     ];
-    const availableFunds = centavos(32_500 * 2 + 9_000 + (month.slice(5, 7) === "12" ? 32_500 : 0));
+    const savings = month === currentMonth
+      ? savingsGoals.map((goal) => ({ id: randomUUID(), plan_id: planId, savings_goal_id: goal.id, amount_centavos: goal.planned_contribution_amount_centavos, due_date: monthDate(month, contributionDay) }))
+      : [];
+    const availableFunds = centavos(32_500 * 2 + 9_000 + (month.slice(5, 7) === "12" ? 32_500 : 0) + (month === currentMonth ? SURPLUS_DEMO.bonus : 0));
     const sum = (rows: { amount_centavos?: number; allocated_amount_centavos?: number }[]) => rows.reduce((total, row) => total + (row.allocated_amount_centavos ?? row.amount_centavos ?? 0), 0);
-    const required = sum(allocations) + sum(debts);
+    const required = sum(allocations) + sum(debts) + sum(savings);
     const remaining = availableFunds - required;
-    const savingsSurplus = remaining > 0 ? Math.floor(remaining * 0.6) : 0;
+    const { savingsSurplus, debtSurplus } = planSurplus(remaining, month === currentMonth);
     financialPlans.push({
       id: planId, user_id: userId, period_start: month, period_end: addDays(addMonths(month, 1), -1), status: "accepted",
       forecast_month: month.slice(0, 7), forecast_total_centavos: allocations.reduce((total, allocation) => total + allocation.forecast_amount_centavos, 0),
       forecast_model_version: seedForecastModelVersion, forecast_generated_at: `${addDays(month, -2)}T09:00:00+08:00`, forecast_quality: index < 2 ? "COLD_START" : "PERSONALIZED",
       available_funds_centavos: availableFunds, required_funds_centavos: required, shortfall_centavos: Math.max(0, -remaining),
-      savings_surplus_centavos: savingsSurplus, debt_surplus_centavos: Math.max(0, remaining) - savingsSurplus, version: 1, deleted: false,
+      savings_surplus_centavos: savingsSurplus, debt_surplus_centavos: debtSurplus, version: 1, deleted: false,
     });
     planForecastPoints.push(...allocations.map((allocation) => ({ plan_id: planId, category_key: allocation.subcategory_id, amount_centavos: allocation.forecast_amount_centavos })));
     planAllocations.push(...allocations);
     planDebtReservations.push(...debts);
+    planSavingsReservations.push(...savings);
   }
 
   return {
-    accounts, savingsGoals: [], savingsGoalActivities: [], incomeSources, debtAccounts, creditCardDetails, creditCardCycles, transactions, creditCardTransactions,
+    accounts, savingsGoals, savingsGoalActivities: [], incomeSources, debtAccounts, creditCardDetails, creditCardCycles, transactions, creditCardTransactions,
     creditCardStatements, creditCardPayments, debtPayments, scheduledPayments, scheduledPaymentRecords,
-    financialPlans, planForecastPoints, planAllocations, planDebtReservations, planSavingsReservations: [], availableCreditAdjustments,
+    financialPlans, planForecastPoints, planAllocations, planDebtReservations, planSavingsReservations, availableCreditAdjustments,
     summary: { start, end: today, endingBalances: Object.fromEntries(accounts.map((account) => [account.name, account.current_balance_centavos as number])) },
   };
 }
