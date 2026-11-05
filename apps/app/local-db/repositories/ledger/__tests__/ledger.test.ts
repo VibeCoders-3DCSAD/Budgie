@@ -187,8 +187,8 @@ describe("transaction list pagination", () => {
       await harness.migrateAll();
       mockInitDatabase.mockResolvedValue(harness.db);
       harness.sqlite.exec(`
-        INSERT INTO savings_goals (id, user_id, name, goal_type, target_amount_centavos, created_at, updated_at)
-        VALUES ('goal-1', 'user-1', 'Emergency Fund', 'custom', 100000, 'now', 'now');
+        INSERT INTO savings_goals (id, user_id, name, target_amount_centavos, created_at, updated_at)
+        VALUES ('goal-1', 'user-1', 'Emergency Fund', 100000, 'now', 'now');
       `);
       harness.sqlite.prepare(`INSERT INTO transactions
         (id, user_id, transaction_type, transaction_date, amount_centavos, destination_savings_goal_id, notes, created_at, updated_at)

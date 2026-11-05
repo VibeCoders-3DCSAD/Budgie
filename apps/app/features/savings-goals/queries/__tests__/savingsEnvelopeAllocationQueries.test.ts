@@ -33,7 +33,7 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
     mockListSavingsGoals.mockResolvedValue([{
       id: "goal-1",
       name: "Emergency fund",
-      goalCategory: "emergency_fund",
+      isEmergencyFund: true,
       status: "active",
       isAchieved: false,
       targetDate: "2026-12-01",
@@ -61,8 +61,8 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
   it("uses the selected strategy for surplus after reservations", async () => {
     mockGetSavingsAllocationStrategy.mockResolvedValue("snowball");
     mockListSavingsGoals.mockResolvedValue([
-      { id: "goal-1", name: "Long-term", goalCategory: "custom", status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 10_000_000, contributionFrequency: "monthly", nextContributionDate: "2026-10-20" },
-      { id: "goal-2", name: "Short-term", goalCategory: "custom", status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 5_000_000, contributionFrequency: "monthly", nextContributionDate: "2026-10-20" },
+      { id: "goal-1", name: "Long-term", isEmergencyFund: false, status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 10_000_000, contributionFrequency: "monthly", nextContributionDate: "2026-10-20" },
+      { id: "goal-2", name: "Short-term", isEmergencyFund: false, status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 5_000_000, contributionFrequency: "monthly", nextContributionDate: "2026-10-20" },
     ]);
     mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({
       periodStart: "2026-10-01",
@@ -153,7 +153,7 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
 
   it("does not let extra deposits to another goal pay the RTX 5090 allocation", async () => {
     const [goal] = await mockListSavingsGoals();
-    mockListSavingsGoals.mockResolvedValue([goal, { ...goal, id: "rtx", name: "RTX 5090", goalCategory: "custom" }]);
+    mockListSavingsGoals.mockResolvedValue([goal, { ...goal, id: "rtx", name: "RTX 5090", isEmergencyFund: false }]);
     mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: {
       savingsReservations: [{ savingsGoalId: "goal-1", amountCentavos: 769_231 }, { savingsGoalId: "rtx", amountCentavos: 1_284_369 }], savingsSurplusCentavos: 0,
     } });
@@ -166,7 +166,7 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
   });
 
   it("reports surplus no goal can take on its own and keeps it out of the amount left to contribute", async () => {
-    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", goalCategory: "emergency_fund", status: "active", isAchieved: false, targetDate: "2026-12-01", remainingAmountCentavos: 500_000 }]);
+    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", isEmergencyFund: true, status: "active", isAchieved: false, targetDate: "2026-12-01", remainingAmountCentavos: 500_000 }]);
     mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: { savingsReservations: [{ savingsGoalId: "goal-1", amountCentavos: 300_000 }], savingsSurplusCentavos: 1_000_000 } });
     mockGetPayments.mockResolvedValue({ paidCentavos: { "savings:goal-1": 100_000 }, settledKeys: [] });
 
@@ -177,7 +177,7 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
   });
 
   it("reaches nothing left to contribute once every goal is filled, even with surplus to spare", async () => {
-    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", goalCategory: "emergency_fund", status: "active", isAchieved: true, targetDate: "2026-12-01", remainingAmountCentavos: 0 }]);
+    mockListSavingsGoals.mockResolvedValue([{ id: "goal-1", name: "Emergency fund", isEmergencyFund: true, status: "active", isAchieved: true, targetDate: "2026-12-01", remainingAmountCentavos: 0 }]);
     mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: { savingsReservations: [{ savingsGoalId: "goal-1", amountCentavos: 200_000 }], savingsSurplusCentavos: 600_000 } });
     mockGetPayments.mockResolvedValue({ paidCentavos: { "savings:goal-1": 200_000 }, settledKeys: [] });
 

@@ -29,7 +29,7 @@ type Subcategory = { id: string; category_id: string | null; label: string; mini
 type Category = { id: string; slug: string; label: string; minimum_amount_centavos: number | null; fixed_amount_centavos: number | null };
 type Timestamped = { updated_at: string };
 type Debt = Timestamped & { id: string; status: string; paid_off_at: string | null; current_balance_centavos: number; minimum_payment_centavos: number; payment_frequency: string; payment_schedule: { semiMonthlyDays?: [number, number]; customIntervalDays?: number } | null; next_due_date: string | null; annual_interest_rate_bps: number; allows_extra_payments: boolean };
-type Goal = Timestamped & { id: string; planned_contribution_amount_centavos: number | null; contribution_frequency: string | null; contribution_interval_count: number | null; contribution_day_of_month: number | null; contribution_second_day_of_month: number | null; custom_interval_days: number | null; next_contribution_date: string | null; goal_type: string; target_amount_centavos: number; current_amount_centavos: number };
+type Goal = Timestamped & { id: string; planned_contribution_amount_centavos: number | null; contribution_frequency: string | null; contribution_interval_count: number | null; contribution_day_of_month: number | null; contribution_second_day_of_month: number | null; custom_interval_days: number | null; next_contribution_date: string | null; is_emergency_fund: boolean; target_amount_centavos: number; current_amount_centavos: number };
 type FinancialAccount = Timestamped & { id: string; kind: string; current_balance_centavos: number };
 type Transaction = Timestamped & { id: string; amount_centavos: number; transaction_date: string; transaction_type: "income" | "expense"; category_id: string | null; subcategory_id: string | null; source_savings_goal_id?: string | null; destination_savings_goal_id?: string | null };
 type OnboardingSession = { raw_answers: Record<string, unknown> | null };
@@ -378,7 +378,7 @@ async function loadSurplusTargets(supabase: SupabaseClient, userId: string, goal
     supabase.from("credit_card_details").select("account_id, credit_limit_centavos, available_credit_centavos").eq("user_id", userId).eq("allows_extra_payments", true).eq("deleted", false).limit(100),
   ]);
   // Extra savings remain possible beyond the target and independently of scheduled contributions.
-  const eligibleEmergencyGoalId = goals.find((goal) => goal.goal_type === "emergency_fund")?.id ?? null;
+  const eligibleEmergencyGoalId = goals.find((goal) => goal.is_emergency_fund === true)?.id ?? null;
   const strategy = strategyResult.data?.strategy === "snowball" ? "snowball" : "avalanche";
   const priorityIds = (prioritiesResult.data ?? []).map((priority) => priority.debt_account_id).filter((id): id is string => typeof id === "string");
   const eligibleDebtId = skipDebtRepayments || strategyResult.error || prioritiesResult.error ? null : selectEligibleDebt(debts, strategy, priorityIds);

@@ -1,9 +1,9 @@
 import { allocateSavingsEnvelope } from "../savingsEnvelopeAllocation";
 
 const goals = [
-  { id: "fund", name: "Emergency fund", goalCategory: "emergency_fund", targetDate: "2026-12-01", remainingAmountCentavos: 10_000, requiredCentavos: 3_000, recordedContributionCentavos: 0 },
-  { id: "holiday", name: "Holiday", goalCategory: "custom", targetDate: "2026-11-01", remainingAmountCentavos: 2_000, requiredCentavos: 1_000, recordedContributionCentavos: 0 },
-  { id: "car", name: "Car", goalCategory: "custom", targetDate: "2026-10-01", remainingAmountCentavos: 8_000, requiredCentavos: 4_000, recordedContributionCentavos: 0 },
+  { id: "fund", name: "Emergency fund", isEmergencyFund: true, targetDate: "2026-12-01", remainingAmountCentavos: 10_000, requiredCentavos: 3_000, recordedContributionCentavos: 0 },
+  { id: "holiday", name: "Holiday", isEmergencyFund: false, targetDate: "2026-11-01", remainingAmountCentavos: 2_000, requiredCentavos: 1_000, recordedContributionCentavos: 0 },
+  { id: "car", name: "Car", isEmergencyFund: false, targetDate: "2026-10-01", remainingAmountCentavos: 8_000, requiredCentavos: 4_000, recordedContributionCentavos: 0 },
 ];
 
 describe("allocateSavingsEnvelope", () => {
@@ -36,10 +36,10 @@ describe("allocateSavingsEnvelope", () => {
 describe("allocateSavingsEnvelope surplus priority", () => {
   // Every required contribution is already covered, so only surplus is left to place.
   const covered = [
-    { id: "car", name: "Car", goalCategory: "custom", targetDate: "2028-06-01", remainingAmountCentavos: 4_000_000, requiredCentavos: 1_000_000, recordedContributionCentavos: 1_000_000 },
-    { id: "trip", name: "Trip", goalCategory: "custom", targetDate: "2027-03-01", remainingAmountCentavos: 300_000, requiredCentavos: 100_000, recordedContributionCentavos: 100_000 },
-    { id: "phone", name: "Phone", goalCategory: "custom", targetDate: "2026-12-01", remainingAmountCentavos: 750_000, requiredCentavos: 150_000, recordedContributionCentavos: 150_000 },
-    { id: "fund", name: "Emergency fund", goalCategory: "emergency_fund", targetDate: "2027-12-01", remainingAmountCentavos: 100_000, requiredCentavos: 200_000, recordedContributionCentavos: 200_000 },
+    { id: "car", name: "Car", isEmergencyFund: false, targetDate: "2028-06-01", remainingAmountCentavos: 4_000_000, requiredCentavos: 1_000_000, recordedContributionCentavos: 1_000_000 },
+    { id: "trip", name: "Trip", isEmergencyFund: false, targetDate: "2027-03-01", remainingAmountCentavos: 300_000, requiredCentavos: 100_000, recordedContributionCentavos: 100_000 },
+    { id: "phone", name: "Phone", isEmergencyFund: false, targetDate: "2026-12-01", remainingAmountCentavos: 750_000, requiredCentavos: 150_000, recordedContributionCentavos: 150_000 },
+    { id: "fund", name: "Emergency fund", isEmergencyFund: true, targetDate: "2027-12-01", remainingAmountCentavos: 100_000, requiredCentavos: 200_000, recordedContributionCentavos: 200_000 },
   ];
   const surplusById = (result: ReturnType<typeof allocateSavingsEnvelope>) => Object.fromEntries(result.proposals.map((goal) => [goal.id, goal.proposedSurplusCentavos]));
 
@@ -59,17 +59,17 @@ describe("allocateSavingsEnvelope surplus priority", () => {
 
   it("still ranks Avalanche by unmet required contribution before remaining amount", () => {
     const result = allocateSavingsEnvelope(0, "avalanche", [
-      { id: "big", name: "Big", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 9_000_000, requiredCentavos: 1_000, recordedContributionCentavos: 0 },
-      { id: "due", name: "Due", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 50_000, requiredCentavos: 20_000, recordedContributionCentavos: 0 },
+      { id: "big", name: "Big", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 9_000_000, requiredCentavos: 1_000, recordedContributionCentavos: 0 },
+      { id: "due", name: "Due", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 50_000, requiredCentavos: 20_000, recordedContributionCentavos: 0 },
     ]);
     expect(result.proposals.map((goal) => goal.id)).toEqual(["due", "big"]);
   });
 
   it("orders several Emergency Funds by the strategy and gives the same order regardless of input order", () => {
     const funds = [
-      { id: "a", name: "Fund A", goalCategory: "emergency_fund", targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
-      { id: "b", name: "Fund B", goalCategory: "emergency_fund", targetDate: null, remainingAmountCentavos: 5_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
-      { id: "c", name: "Other", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 9_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
+      { id: "a", name: "Fund A", isEmergencyFund: true, targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
+      { id: "b", name: "Fund B", isEmergencyFund: true, targetDate: null, remainingAmountCentavos: 5_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
+      { id: "c", name: "Other", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 9_000, requiredCentavos: 0, recordedContributionCentavos: 0 },
     ];
     const forward = allocateSavingsEnvelope(1_000, "avalanche", funds).proposals.map((goal) => goal.id);
     const reversed = allocateSavingsEnvelope(1_000, "avalanche", [...funds].reverse()).proposals.map((goal) => goal.id);
@@ -85,15 +85,15 @@ describe("allocateSavingsEnvelope surplus priority", () => {
 
   it("treats non-finite and fractional amounts as safe whole centavos", () => {
     const result = allocateSavingsEnvelope(Number.NaN, "avalanche", [
-      { id: "x", name: "X", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 1_000.9, requiredCentavos: Number.POSITIVE_INFINITY, recordedContributionCentavos: -50 },
+      { id: "x", name: "X", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 1_000.9, requiredCentavos: Number.POSITIVE_INFINITY, recordedContributionCentavos: -50 },
     ]);
     expect(result).toMatchObject({ envelopeCentavos: 0, requiredCentavos: 0, unallocatedCentavos: 0 });
     expect(result.proposals[0]).toMatchObject({ remainingAmountCentavos: 1_000, requiredCentavos: 0, recordedContributionCentavos: 0, proposedTotalCentavos: 0 });
-    expect(allocateSavingsEnvelope(1_500.7, "snowball", [{ id: "y", name: "Y", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 400, recordedContributionCentavos: 0 }])).toMatchObject({ envelopeCentavos: 1_500, unallocatedCentavos: 500 });
+    expect(allocateSavingsEnvelope(1_500.7, "snowball", [{ id: "y", name: "Y", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 400, recordedContributionCentavos: 0 }])).toMatchObject({ envelopeCentavos: 1_500, unallocatedCentavos: 500 });
   });
 
   it("caps a goal's required contribution at what it still needs to reach its target", () => {
-    const result = allocateSavingsEnvelope(0, "avalanche", [{ id: "z", name: "Z", goalCategory: "custom", targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 3_000, recordedContributionCentavos: 0 }]);
+    const result = allocateSavingsEnvelope(0, "avalanche", [{ id: "z", name: "Z", isEmergencyFund: false, targetDate: null, remainingAmountCentavos: 1_000, requiredCentavos: 3_000, recordedContributionCentavos: 0 }]);
     expect(result).toMatchObject({ requiredCentavos: 1_000, shortfallCentavos: 1_000 });
   });
 });

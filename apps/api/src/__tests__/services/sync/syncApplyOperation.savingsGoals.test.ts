@@ -3,8 +3,8 @@ import { prepareOperation } from "../../../services/sync/syncApplyOperation.js";
 const createOperation = {
   operation_id: "operation-1", entity: "savings_goals", record_id: "goal-1",
   operation_type: "create" as const, base_version: null,
-  changed_fields: ["linked_account_id", "name", "goal_type", "target_amount_centavos", "starting_amount_centavos", "target_date", "priority", "planned_contribution_amount_centavos", "contribution_frequency", "next_contribution_date"],
-  payload: { linked_account_id: "account-1", name: "Emergency Fund", goal_type: "emergency_fund", target_amount_centavos: 100_00, starting_amount_centavos: 0, target_date: "2026-12-31", priority: "high", planned_contribution_amount_centavos: 1_000, contribution_frequency: "monthly", next_contribution_date: "2026-04-30" },
+  changed_fields: ["linked_account_id", "name", "is_emergency_fund", "target_amount_centavos", "starting_amount_centavos", "target_date", "priority", "planned_contribution_amount_centavos", "contribution_frequency", "next_contribution_date"],
+  payload: { linked_account_id: "account-1", name: "Emergency Fund", is_emergency_fund: true, target_amount_centavos: 100_00, starting_amount_centavos: 0, target_date: "2026-12-31", priority: "high", planned_contribution_amount_centavos: 1_000, contribution_frequency: "monthly", next_contribution_date: "2026-04-30" },
 };
 
 const accountQuery = {
@@ -42,8 +42,9 @@ describe("savings-goal sync validation", () => {
     })).rejects.toThrow("savings activity kind is invalid");
   });
 
-  it("rejects invalid types and unknown fields", async () => {
-    await expect(prepareOperation(supabase as never, "user-1", { ...createOperation, payload: { ...createOperation.payload, goal_type: "investment" } })).rejects.toThrow("goal_type is invalid");
+  it("rejects the removed goal type, invalid flags, and unknown fields", async () => {
+    await expect(prepareOperation(supabase as never, "user-1", { ...createOperation, payload: { ...createOperation.payload, goal_type: "emergency_fund" } })).rejects.toThrow("goal_type is not syncable");
+    await expect(prepareOperation(supabase as never, "user-1", { ...createOperation, payload: { ...createOperation.payload, is_emergency_fund: "yes" } })).rejects.toThrow("is_emergency_fund must be boolean");
     await expect(prepareOperation(supabase as never, "user-1", { ...createOperation, payload: { ...createOperation.payload, arbitrary_field: "nope" } })).rejects.toThrow("arbitrary_field is not syncable");
   });
 

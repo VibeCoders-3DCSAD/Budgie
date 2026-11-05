@@ -5,7 +5,6 @@ import {
   SAVINGS_GOAL_CONTRIBUTION_FREQUENCIES,
   SAVINGS_GOAL_FIELDS,
   SAVINGS_GOAL_PRIORITIES,
-  SAVINGS_GOAL_TYPES,
 } from "./constants/savings.js";
 import {
   allowedPayload,
@@ -24,14 +23,13 @@ import { findOwnedRow } from "./syncOwnership.js";
 async function validateSavingsGoal({ supabase, userId }: SyncContext, payload: Payload, creating: boolean): Promise<Payload> {
   const sanitized = allowedPayload(payload, SAVINGS_GOAL_FIELDS);
   if (creating) {
-    for (const field of ["linked_account_id", "name", "goal_type", "target_amount_centavos", "starting_amount_centavos", "target_date", "priority", "planned_contribution_amount_centavos", "contribution_frequency", "next_contribution_date"]) {
+    for (const field of ["linked_account_id", "name", "target_amount_centavos", "starting_amount_centavos", "target_date", "priority", "planned_contribution_amount_centavos", "contribution_frequency", "next_contribution_date"]) {
       if (!(field in sanitized)) throw new Error(`${field} is required`);
     }
   }
   if (sanitized.name !== undefined && (typeof sanitized.name !== "string" || !sanitized.name.trim())) throw new Error("name must be a non-empty string");
   if (sanitized.is_emergency_fund !== undefined && typeof sanitized.is_emergency_fund !== "boolean") throw new Error("is_emergency_fund must be boolean");
   if (typeof sanitized.name === "string") sanitized.name = sanitized.name.trim();
-  if (sanitized.goal_type !== undefined && !SAVINGS_GOAL_TYPES.includes(sanitized.goal_type as string)) throw new Error("goal_type is invalid");
   if (sanitized.priority !== undefined && !SAVINGS_GOAL_PRIORITIES.includes(sanitized.priority as string)) throw new Error("priority is invalid");
   if (sanitized.status !== undefined && !["active", "archived"].includes(sanitized.status as string)) throw new Error("status is invalid");
   if (sanitized.archived_at !== undefined && sanitized.archived_at !== null) requireIsoTimestamp(sanitized, "archived_at");

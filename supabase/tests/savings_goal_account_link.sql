@@ -16,7 +16,7 @@ DECLARE
   v_account uuid;
   v_result record;
   v_payload jsonb := jsonb_build_object(
-    'name', 'Travel', 'goal_type', 'custom', 'target_amount_centavos', 100000,
+    'name', 'Travel', 'target_amount_centavos', 100000,
     'starting_amount_centavos', 0, 'target_date', '2027-05-17', 'priority', 'high',
     'planned_contribution_amount_centavos', 0, 'contribution_frequency', NULL,
     'next_contribution_date', NULL,
@@ -60,8 +60,8 @@ BEGIN
   END LOOP;
 
   BEGIN
-    INSERT INTO public.savings_goals (id, user_id, name, goal_type, target_amount_centavos)
-    VALUES (gen_random_uuid(), '7f000000-0000-4000-8000-000000000001', 'Unlinked direct insert', 'custom', 100000);
+    INSERT INTO public.savings_goals (id, user_id, name, is_emergency_fund, target_amount_centavos)
+    VALUES (gen_random_uuid(), '7f000000-0000-4000-8000-000000000001', 'Unlinked direct insert', false, 100000);
     RAISE EXCEPTION 'unlinked direct insert was accepted';
   EXCEPTION WHEN raise_exception THEN
     IF SQLERRM <> 'an active linked financial account is required' THEN RAISE; END IF;

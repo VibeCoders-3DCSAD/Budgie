@@ -52,7 +52,7 @@ export const EXPORT_DATASETS: readonly ExportDataset[] = [
   {
     name: "savings_goals",
     table: "savings_goals",
-    columns: ["id", "name", "goal_type", "status", "is_emergency_fund", "target_amount_centavos", "current_amount_centavos", "starting_amount_centavos", "target_date", "projected_completion_date", "achieved_at", "linked_account_id", "notes", "created_at", "updated_at"],
+    columns: ["id", "name", "status", "is_emergency_fund", "target_amount_centavos", "current_amount_centavos", "starting_amount_centavos", "target_date", "projected_completion_date", "achieved_at", "linked_account_id", "notes", "created_at", "updated_at"],
     softDelete: true,
   },
   {

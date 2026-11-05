@@ -84,7 +84,7 @@ describe("Financial Plan recommendations with recorded spending", () => {
     (recommendPlanCategories as jest.Mock).mockResolvedValue({ recommendation: { feasibility: "FEASIBLE", unallocated_surplus: 100, allocations: [{ category_id: "internet", amount: 1680 }] } });
     const result = await getFinancialPlanRecommendation("user", client(50_000, null, {
       debt_accounts: [{ id: "loan", current_balance_centavos: 100_000, minimum_payment_centavos: 10_000, next_due_date: "2026-10-20", payment_frequency: "monthly", allows_extra_payments: true, annual_interest_rate_bps: 1_200 }],
-      savings_goals: [{ id: "goal", goal_type: "emergency_fund", current_amount_centavos: 0, target_amount_centavos: 200_000, planned_contribution_amount_centavos: 5_000, next_contribution_date: "2026-10-25", contribution_frequency: "monthly" }],
+      savings_goals: [{ id: "goal", is_emergency_fund: true, current_amount_centavos: 0, target_amount_centavos: 200_000, planned_contribution_amount_centavos: 5_000, next_contribution_date: "2026-10-25", contribution_frequency: "monthly" }],
       financial_condition_assessments: [{ id: "assessment", assessed_at: "2026-10-18T00:00:00Z", rule_set_version: "financial_rules_v1", output_snapshot: {
         financial_margin: { status: "SUCCESS", label: "POSITIVE_FINANCIAL_MARGIN" },
         emergency_savings: { status: "SUCCESS", label: destination === "savings" ? "EMERGENCY_FUND_INADEQUATE" : "EMERGENCY_FUND_ADEQUATE" },
@@ -107,7 +107,7 @@ describe("Financial Plan recommendations with recorded spending", () => {
       ],
     } });
     const result = await getFinancialPlanRecommendation("user", client(50_000, null, {
-      savings_goals: [{ id: "goal", goal_type: "emergency_fund", current_amount_centavos: currentAmount, target_amount_centavos: 200_000 }],
+      savings_goals: [{ id: "goal", is_emergency_fund: true, current_amount_centavos: currentAmount, target_amount_centavos: 200_000 }],
     }), 500_000, ["internet"], [], [], { skipSavingsContributions: true, skipDebtRepayments: true });
 
     expect(result.recommendation.surplusRecommendation).toMatchObject({ reasonCode: "EMERGENCY_FUND_INADEQUATE", advisoryDestination: { type: "emergency_fund", savingsGoalId: "goal" } });

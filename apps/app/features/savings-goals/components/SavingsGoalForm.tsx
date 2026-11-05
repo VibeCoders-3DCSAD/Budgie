@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Pressable, Text, TextInput, View } from "react-native";
-import { SAVINGS_GOAL_PLACEHOLDERS, SAVINGS_GOAL_PRIORITY_LABELS, SAVINGS_GOAL_PRIORITIES, type SavingsGoalPriority, type SavingsGoalType } from "../constants";
+import { SAVINGS_GOAL_PLACEHOLDERS, SAVINGS_GOAL_PRIORITY_LABELS, SAVINGS_GOAL_PRIORITIES, type SavingsGoalPriority } from "../constants";
 import { LocalDbError } from "../../../local-db/helpers";
 import { createSavingsGoal, updateSavingsGoal, type SavingsGoal } from "../../../local-db/repositories/savings/savingsGoals";
 import RecurringScheduleFields, { type RecurringScheduleFrequency, type RecurringScheduleValue } from "../../../components/RecurringScheduleFields";
@@ -34,7 +34,6 @@ function Field({ label, value, onChangeText, placeholder, numeric, currency, inv
 }
 
 export default function SavingsGoalForm({ userId, deviceId, goal, initialLinkedAccountId, onCancel, onSaved }: Props) {
-  const goalType: SavingsGoalType = goal?.goalType ?? "custom";
   const [name, setName] = useState(goal?.name ?? "");
   const [linkedAccountId, setLinkedAccountId] = useState(goal?.linkedAccountId ?? initialLinkedAccountId ?? null);
   const [accountInvalid, setAccountInvalid] = useState(false);
@@ -80,7 +79,7 @@ export default function SavingsGoalForm({ userId, deviceId, goal, initialLinkedA
     }
     setSaving(true); setMessage(null);
     try {
-      const input = { name, goalType, targetAmountCentavos, startingAmountCentavos, targetDate, priority, isEmergencyFund, emergencyFundBaselineCentavos: goalType === "emergency_fund" ? baseline : null, autoSaveAmountCentavos: plannedContributionAmountCentavos, plannedContributionAmountCentavos, contributionFrequency, contributionIntervalCount: contributionFrequency === null ? null : contributionFrequency === goal?.contributionFrequency ? goal.contributionIntervalCount ?? 1 : 1, contributionDayOfMonth: contributionFrequency === "semi_monthly" || contributionFrequency === "monthly" || contributionFrequency === "quarterly" ? contributionDayOfMonth : null, contributionSecondDayOfMonth: contributionFrequency === "semi_monthly" ? contributionSecondDayOfMonth : null, contributionDayOfWeek: contributionFrequency === "weekly" || contributionFrequency === "biweekly" ? contributionDayOfWeek : null, customIntervalDays: contributionFrequency === "custom" ? parsedCustomIntervalDays : null, nextContributionDate: contributionFrequency === null ? null : nextContributionDate, interestRateBps, notes };
+      const input = { name, targetAmountCentavos, startingAmountCentavos, targetDate, priority, isEmergencyFund, emergencyFundBaselineCentavos: isEmergencyFund ? baseline : null, autoSaveAmountCentavos: plannedContributionAmountCentavos, plannedContributionAmountCentavos, contributionFrequency, contributionIntervalCount: contributionFrequency === null ? null : contributionFrequency === goal?.contributionFrequency ? goal.contributionIntervalCount ?? 1 : 1, contributionDayOfMonth: contributionFrequency === "semi_monthly" || contributionFrequency === "monthly" || contributionFrequency === "quarterly" ? contributionDayOfMonth : null, contributionSecondDayOfMonth: contributionFrequency === "semi_monthly" ? contributionSecondDayOfMonth : null, contributionDayOfWeek: contributionFrequency === "weekly" || contributionFrequency === "biweekly" ? contributionDayOfWeek : null, customIntervalDays: contributionFrequency === "custom" ? parsedCustomIntervalDays : null, nextContributionDate: contributionFrequency === null ? null : nextContributionDate, interestRateBps, notes };
       const accountLink = goal && linkedAccountId === (goal.linkedAccountId ?? null) ? {} : { linkedAccountId };
       const result = goal ? await updateSavingsGoal(userId, deviceId, goal.id, { ...input, ...accountLink }) : await createSavingsGoal(userId, deviceId, { ...input, linkedAccountId });
       onSaved(result.goal);
@@ -115,7 +114,7 @@ export default function SavingsGoalForm({ userId, deviceId, goal, initialLinkedA
   return <View style={{ gap: 14 }}>
     <View><Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 20, fontWeight: "800" }}>{goal ? "Edit savings goal" : "Add savings goal"}</Text><Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12, marginTop: 3 }}>Set a target and track the amount you have already saved.</Text></View>
     <View style={{ backgroundColor: P.card, borderColor: P.line, borderRadius: 14, borderWidth: 1, gap: 14, padding: 14 }}>
-      {goalType === "emergency_fund" && baseline !== null ? <View style={{ backgroundColor: "#F8EFDC", borderRadius: 10, padding: 11 }}><Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>Suggested monthly baseline: {formatPeso(baseline)}</Text><Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11, lineHeight: 16, marginTop: 3 }}>Based on posted expenses from the six completed calendar months before today. Saving keeps this baseline without recalculating it later.</Text></View> : null}
+      {isEmergencyFund && baseline !== null ? <View style={{ backgroundColor: "#F8EFDC", borderRadius: 10, padding: 11 }}><Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>Suggested monthly baseline: {formatPeso(baseline)}</Text><Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11, lineHeight: 16, marginTop: 3 }}>Based on posted expenses from the six completed calendar months before today. Saving keeps this baseline without recalculating it later.</Text></View> : null}
       <Field label="Goal name" value={name} onChangeText={(value) => { setName(value); if (duplicateName) { setDuplicateName(false); setMessage(null); } }} placeholder={SAVINGS_GOAL_PLACEHOLDERS.name} invalid={duplicateName || (invalid && !name.trim())} />
       <SavingsGoalAccountSelector userId={userId} value={linkedAccountId} onChange={(id) => { setLinkedAccountId(id); setAccountInvalid(false); setMessage(null); }} invalid={accountInvalid} />
       <Field label="Target amount" value={target} onChangeText={setTarget} placeholder={SAVINGS_GOAL_PLACEHOLDERS.targetAmount} numeric currency invalid={invalid && (!Number.isSafeInteger(toCentavos(target)) || toCentavos(target) <= 0)} />

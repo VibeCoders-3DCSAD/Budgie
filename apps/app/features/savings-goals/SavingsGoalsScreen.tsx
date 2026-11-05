@@ -108,7 +108,7 @@ function GoalList({ goals, proposalsByGoalId, onOpenGoal }: { goals: SavingsGoal
 
 function GoalRow({ goal, plannedCentavos, divider, onPress }: { goal: SavingsGoal; plannedCentavos: number; divider: boolean; onPress: () => void }) {
   const status = goalStatus(goal);
-  const Icon = goal.isAchieved ? CheckCircle : goal.goalCategory === "emergency_fund" ? ShieldCheck : Target;
+  const Icon = goal.isAchieved ? CheckCircle : goal.isEmergencyFund ? ShieldCheck : Target;
   return <Pressable accessibilityRole="button" accessibilityLabel={`Open ${goal.name}`} onPress={onPress} style={{ borderTopColor: P.line, borderTopWidth: divider ? 1 : 0, flexDirection: "row", gap: 12, paddingVertical: 13 }}>
     <View style={{ alignItems: "center", backgroundColor: P.soft, borderRadius: 10, height: 34, justifyContent: "center", width: 34 }}><Icon size={18} color={P.brand} /></View>
     <View style={{ flex: 1, gap: 6 }}>

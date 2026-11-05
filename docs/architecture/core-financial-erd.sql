@@ -114,7 +114,7 @@ CREATE TABLE savings_goals (
   linked_financial_account_id uuid REFERENCES financial_accounts(financial_account_id),
   linked_subcategory_id uuid REFERENCES subcategories(subcategory_id),
   name text NOT NULL,
-  goal_type text NOT NULL,
+  is_emergency_fund boolean NOT NULL DEFAULT false,
   target_amount_centavos bigint NOT NULL
 );
 

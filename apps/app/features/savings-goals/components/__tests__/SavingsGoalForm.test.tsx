@@ -23,7 +23,7 @@ jest.mock("../../../../local-db/repositories/savings/savingsGoals", () => ({
 jest.mock("../../../../lib/dates", () => ({ ...jest.requireActual("../../../../lib/dates"), manilaToday: () => "2026-10-18" }));
 
 const goal: SavingsGoal = {
-  id: "goal-1", name: "Travel", goalType: "custom", goalCategory: "custom",
+  id: "goal-1", name: "Travel", isEmergencyFund: false,
   targetAmountCentavos: 100_000, startingAmountCentavos: 0, currentAmountCentavos: 0,
   remainingAmountCentavos: 100_000, progressPercent: 0, isAchieved: false,
   contributionShortfallCentavos: 0, targetDate: "2026-12-31", priority: "medium",

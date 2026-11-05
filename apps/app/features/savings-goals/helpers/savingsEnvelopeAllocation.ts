@@ -3,7 +3,7 @@ import type { SavingsAllocationStrategy } from "../../../local-db/repositories/s
 export type AllocatableSavingsGoal = {
   id: string;
   name: string;
-  goalCategory: string;
+  isEmergencyFund: boolean;
   targetDate: string | null;
   remainingAmountCentavos: number;
   requiredCentavos: number;
@@ -60,7 +60,7 @@ function normalizeGoal(goal: AllocatableSavingsGoal): NormalizedGoal {
   return { ...goal, remainingAmountCentavos, requiredCentavos, recordedContributionCentavos, unmetRequiredCentavos };
 }
 
-const isEmergencyFund = (goal: AllocatableSavingsGoal) => goal.goalCategory === "emergency_fund";
+const isEmergencyFund = (goal: AllocatableSavingsGoal) => goal.isEmergencyFund;
 
 function byTargetDateThenId(left: AllocatableSavingsGoal, right: AllocatableSavingsGoal): number {
   const target = (left.targetDate ?? "9999-12-31").localeCompare(right.targetDate ?? "9999-12-31");

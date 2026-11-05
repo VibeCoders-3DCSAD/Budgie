@@ -23,7 +23,7 @@ export async function getCurrentSavingsEnvelopeAllocation(userId: string, asOfDa
     return {
       id: goal.id,
       name: goal.name,
-      goalCategory: goal.goalCategory,
+      isEmergencyFund: goal.isEmergencyFund,
       targetDate: goal.targetDate,
       // Reconstruct this month's capacity before deposits, so completing a goal
       // does not remove its budget or its Done row from the monthly review.

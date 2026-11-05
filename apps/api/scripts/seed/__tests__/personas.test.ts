@@ -68,10 +68,10 @@ it("sends half the debt-burdened worker's income to debt, still short of the req
 it("funds a separate six-month reserve and reconciles house contributions without counting transfers as expenses", () => {
   const data = build("healthy-worker");
   expect(data.debtAccounts).toEqual([]);
-  const emergency = data.savingsGoals.find((row) => row.goal_type === "emergency_fund")!;
+  const emergency = data.savingsGoals.find((row) => row.is_emergency_fund === true)!;
   expect(emergency.starting_amount_centavos).toBe(emergency.target_amount_centavos);
   expect(emergency.target_amount_centavos).toBe(35_000 * 6 * 100);
-  const house = data.savingsGoals.find((row) => row.goal_type === "custom")!;
+  const house = data.savingsGoals.find((row) => row.is_emergency_fund !== true)!;
   const contributions = data.savingsGoalActivities.reduce((sum, row) => sum + Number(row.amount_centavos), 0);
   const houseAccount = data.accounts.find((row) => row.id === house.linked_account_id)!;
   expect(houseAccount.current_balance_centavos).toBe(Number(house.starting_amount_centavos) + contributions);

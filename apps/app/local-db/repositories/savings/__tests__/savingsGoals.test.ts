@@ -7,7 +7,7 @@ const mockDb = {
 };
 jest.mock("../../../client", () => ({ initDatabase: async () => mockDb }));
 
-const input = { linkedAccountId: "account-1", name: "  TRAVEL  ", goalType: "custom" as const, targetAmountCentavos: 100_000, startingAmountCentavos: 0, targetDate: "2026-12-31", priority: "high" as const };
+const input = { linkedAccountId: "account-1", name: "  TRAVEL  ", targetAmountCentavos: 100_000, startingAmountCentavos: 0, targetDate: "2026-12-31", priority: "high" as const };
 
 describe("savings goal names", () => {
   beforeEach(() => { jest.clearAllMocks(); mockDb.getFirstAsync.mockReset(); });
@@ -22,7 +22,7 @@ describe("savings goal names", () => {
 
   it("keeps an unchanged name without conflicting with itself", async () => {
     mockDb.getFirstAsync.mockResolvedValueOnce({
-      id: "goal-1", name: "Travel", goal_type: "custom", target_amount_centavos: 100_000,
+      id: "goal-1", name: "Travel", target_amount_centavos: 100_000,
       starting_amount_centavos: 0, target_date: "2026-12-31", priority: "high", version: 1,
     });
     await expect(updateSavingsGoal("user-1", "device-1", "goal-1", { name: "  Travel  " })).resolves.toMatchObject({ operation: null });
@@ -32,7 +32,7 @@ describe("savings goal names", () => {
 
   it("rejects renaming a goal to another goal's name", async () => {
     mockDb.getFirstAsync.mockResolvedValueOnce({
-      id: "goal-1", name: "Emergency", goal_type: "custom", target_amount_centavos: 100_000,
+      id: "goal-1", name: "Emergency", target_amount_centavos: 100_000,
       starting_amount_centavos: 0, target_date: "2026-12-31", priority: "high", version: 1,
     }).mockResolvedValueOnce({ id: "existing-goal" });
     await expect(updateSavingsGoal("user-1", "device-1", "goal-1", { name: "Travel" })).rejects.toMatchObject({ code: "DUPLICATE_NAME" });
@@ -54,7 +54,7 @@ describe("savings goal names", () => {
 
   it("revalidates an account when relinking an existing goal", async () => {
     mockDb.getFirstAsync.mockResolvedValueOnce({
-      id: "goal-1", name: "Travel", linked_account_id: "account-old", goal_type: "custom", target_amount_centavos: 100_000,
+      id: "goal-1", name: "Travel", linked_account_id: "account-old", target_amount_centavos: 100_000,
       starting_amount_centavos: 0, target_date: "2026-12-31", priority: "high", version: 1,
     }).mockResolvedValueOnce(null);
     await expect(updateSavingsGoal("user-1", "device-1", "goal-1", { linkedAccountId: "account-new" })).rejects.toMatchObject({ code: "VALIDATION_ERROR" });

@@ -2,7 +2,7 @@ import { FinancialPlanInputError } from "./errors.js";
 import { scheduledReservationDates } from "./commitmentSchedule.js";
 
 export const DEBT_COMMITMENT_FIELDS = "id, status, paid_off_at, current_balance_centavos, minimum_payment_centavos, payment_frequency, payment_schedule, next_due_date, annual_interest_rate_bps, allows_extra_payments, updated_at";
-export const SAVINGS_COMMITMENT_FIELDS = "id, planned_contribution_amount_centavos, contribution_frequency, contribution_interval_count, contribution_day_of_month, contribution_second_day_of_month, custom_interval_days, next_contribution_date, goal_type, target_amount_centavos, current_amount_centavos, updated_at";
+export const SAVINGS_COMMITMENT_FIELDS = "id, planned_contribution_amount_centavos, contribution_frequency, contribution_interval_count, contribution_day_of_month, contribution_second_day_of_month, custom_interval_days, next_contribution_date, is_emergency_fund, target_amount_centavos, current_amount_centavos, updated_at";
 type Period = { start: string; end: string };
 type Debt = { id: string; status?: string; paid_off_at?: string | null; current_balance_centavos: number; minimum_payment_centavos: number; next_due_date: string | null; payment_frequency: string; payment_schedule: { semiMonthlyDays?: [number, number]; customIntervalDays?: number; dayOfMonth?: number } | null };
 type Goal = { id: string; planned_contribution_amount_centavos: number | null; next_contribution_date: string | null; contribution_frequency: string | null; contribution_day_of_month: number | null; contribution_second_day_of_month: number | null; contribution_interval_count: number | null; custom_interval_days: number | null };

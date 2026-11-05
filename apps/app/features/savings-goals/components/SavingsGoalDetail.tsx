@@ -3,7 +3,7 @@ import { Modal, Pressable, Text, View } from "react-native";
 import { Archive, ArrowCounterClockwise, ArrowDownLeft, ArrowLeft, ArrowUpRight, PencilSimple, TrashSimple } from "phosphor-react-native";
 import KebabMenu, { type KebabAction } from "../../../components/KebabMenu";
 import type { SavingsGoal } from "../../../local-db/repositories/savings/savingsGoals";
-import { SAVINGS_GOAL_PRIORITY_LABELS, SAVINGS_GOAL_TYPE_LABELS } from "../constants";
+import { SAVINGS_GOAL_PRIORITY_LABELS, savingsGoalKindLabel } from "../constants";
 import { getMinimumContributionPerOccurrence, type ScheduledSavingsGoal } from "../helpers/contributionSchedule";
 import { manilaToday } from "../../../lib/dates";
 import type { SavingsActivity } from "../types";
@@ -81,7 +81,7 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
     </View> : null}
 
     <Section title="Details">
-      <DetailRow label="Type" value={`${SAVINGS_GOAL_TYPE_LABELS[goal.goalType]} · ${SAVINGS_GOAL_PRIORITY_LABELS[goal.priority]} priority`} />
+      <DetailRow label="Type" value={`${savingsGoalKindLabel(goal.isEmergencyFund)} · ${SAVINGS_GOAL_PRIORITY_LABELS[goal.priority]} priority`} />
       <DetailRow label="Account" value={goal.linkedAccountName ?? (goal.linkedAccountId ? "Unavailable" : "Not linked")} />
       <DetailRow label="Next contribution" value={goal.nextContributionDate ? `${formatDate(goal.nextContributionDate)} · ${money(goal.plannedContributionAmountCentavos)}` : "Whenever you choose"} />
       {minimum !== null ? <DetailRow label="Minimum each time" value={money(minimum)} /> : null}

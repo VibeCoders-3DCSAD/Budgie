@@ -7,7 +7,7 @@ let mockSqlite: ReturnType<typeof createSqliteHarness>["sqlite"];
 let mockDb: ReturnType<typeof createSqliteHarness>["db"];
 jest.mock("../../../client", () => ({ initDatabase: async () => mockDb }));
 
-const input = { name: "Travel", linkedAccountId: "active-account", goalType: "custom" as const, targetAmountCentavos: 100_000, startingAmountCentavos: 0, targetDate: "2026-12-31", priority: "high" as const };
+const input = { name: "Travel", linkedAccountId: "active-account", targetAmountCentavos: 100_000, startingAmountCentavos: 0, targetDate: "2026-12-31", priority: "high" as const };
 
 describe("savings goal account persistence in SQLite", () => {
   beforeEach(async () => {

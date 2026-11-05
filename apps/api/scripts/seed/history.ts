@@ -118,9 +118,9 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
   const accountIds = { bank: randomUUID(), wallet: randomUUID(), rewardsCard: randomUUID(), cashbackCard: randomUUID(), savings: randomUUID() };
   // Savings goals for the surplus demo; the savings account holds exactly what the goals have saved.
   const goalSpecs = [
-    { name: "Emergency Fund", goalType: "emergency_fund", target: 60_000, saved: 57_000, monthly: 2_000, months: 6, priority: "high", notes: "Almost complete: surplus fills it first." },
-    { name: "Japan Trip", goalType: "custom", target: 80_000, saved: 20_000, monthly: 5_000, months: 12, priority: "medium", notes: "Largest remaining need: Avalanche sends extra savings here." },
-    { name: "New Laptop", goalType: "custom", target: 45_000, saved: 38_000, monthly: 2_000, months: 4, priority: "medium", notes: "Closest to target: Snowball sends extra savings here." },
+    { name: "Emergency Fund", isEmergencyFund: true, target: 60_000, saved: 57_000, monthly: 2_000, months: 6, priority: "high", notes: "Almost complete: surplus fills it first." },
+    { name: "Japan Trip", isEmergencyFund: false, target: 80_000, saved: 20_000, monthly: 5_000, months: 12, priority: "medium", notes: "Largest remaining need: Avalanche sends extra savings here." },
+    { name: "New Laptop", isEmergencyFund: false, target: 45_000, saved: 38_000, monthly: 2_000, months: 4, priority: "medium", notes: "Closest to target: Snowball sends extra savings here." },
   ];
   const openingBalances = { [accountIds.bank]: centavos(90_000), [accountIds.wallet]: centavos(6_000), [accountIds.savings]: centavos(goalSpecs.reduce((total, goal) => total + goal.saved, 0)) };
 
@@ -407,7 +407,7 @@ export function buildSeedData({ userId, today, seed, subcategoryIds }: { userId:
   ];
   const contributionDay = 25;
   const savingsGoals = goalSpecs.map((goal) => ({
-    id: randomUUID(), user_id: userId, linked_account_id: accountIds.savings, name: goal.name, goal_type: goal.goalType, is_emergency_fund: goal.goalType === "emergency_fund",
+    id: randomUUID(), user_id: userId, linked_account_id: accountIds.savings, name: goal.name, is_emergency_fund: goal.isEmergencyFund,
     target_amount_centavos: centavos(goal.target), starting_amount_centavos: centavos(goal.saved), target_date: monthDate(addMonths(currentMonth, goal.months), contributionDay),
     priority: goal.priority, status: "active", planned_contribution_amount_centavos: centavos(goal.monthly), contribution_frequency: "monthly", contribution_interval_count: 1,
     contribution_day_of_month: contributionDay, next_contribution_date: nextMonthlyDate(today, contributionDay), notes: goal.notes, metadata: marker, version: 1, deleted: false,

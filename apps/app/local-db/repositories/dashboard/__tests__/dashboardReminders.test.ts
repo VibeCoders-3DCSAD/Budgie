@@ -32,8 +32,8 @@ function contribution(id: string, amount: number, date: string) {
     VALUES (?, 'u1', 'goal', ?, 'contribution', ?, ?, 'now', 'now')`).run(id, id, amount, date);
 }
 function savings() {
-  harness.sqlite.exec(`INSERT INTO savings_goals (id, user_id, name, goal_type, target_amount_centavos, starting_amount_centavos, target_date, planned_contribution_amount_centavos, contribution_frequency, next_contribution_date, linked_account_id, created_at, updated_at)
-    VALUES ('goal', 'u1', 'Tuition', 'custom', 10000, 0, '2027-10-22', 1000, 'weekly', '2026-10-22', 'bank', 'now', 'now')`);
+  harness.sqlite.exec(`INSERT INTO savings_goals (id, user_id, name, target_amount_centavos, starting_amount_centavos, target_date, planned_contribution_amount_centavos, contribution_frequency, next_contribution_date, linked_account_id, created_at, updated_at)
+    VALUES ('goal', 'u1', 'Tuition', 10000, 0, '2027-10-22', 1000, 'weekly', '2026-10-22', 'bank', 'now', 'now')`);
 }
 
 it("shows dates today through day seven, excludes day eight and past income, without changing balances", async () => {

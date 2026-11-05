@@ -24,7 +24,7 @@ Table "savings_goals" {
   "linked_financial_account_id" uuid
   "linked_subcategory_id" uuid
   "name" text [not null]
-  "goal_type" text [not null]
+  "is_emergency_fund" boolean [not null, default: false]
   "target_amount_centavos" bigint [not null]
 }
 

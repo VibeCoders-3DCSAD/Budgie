@@ -7,10 +7,10 @@ INSERT INTO public.categories(id, user_id, slug, label, description, is_system) 
   ('7e000000-0000-4000-8000-0000000000b1', '7e000000-0000-4000-8000-000000000001', 'funding_test', 'Funding test', 'Test', false);
 INSERT INTO public.subcategories(id, user_id, category_id, slug, kind, label, description, is_system) VALUES
   ('7e000000-0000-4000-8000-0000000000b2', '7e000000-0000-4000-8000-000000000001', '7e000000-0000-4000-8000-0000000000b1', 'funding_test_item', 'expense', 'Funding expense', 'Test', false);
-INSERT INTO public.savings_goals(id, user_id, name, goal_type, target_amount_centavos, starting_amount_centavos, linked_account_id) VALUES
-  ('7e000000-0000-4000-8000-0000000000c1', '7e000000-0000-4000-8000-000000000001', 'Emergency', 'emergency_fund', 2000000, 1000000, '7e000000-0000-4000-8000-0000000000a1'),
-  ('7e000000-0000-4000-8000-0000000000c2', '7e000000-0000-4000-8000-000000000001', 'Travel', 'custom', 1000000, 500000, '7e000000-0000-4000-8000-0000000000a1'),
-  ('7e000000-0000-4000-8000-0000000000c3', '7e000000-0000-4000-8000-000000000002', 'Foreign', 'custom', 1000000, 500000, '7e000000-0000-4000-8000-0000000000a2');
+INSERT INTO public.savings_goals(id, user_id, name, is_emergency_fund, target_amount_centavos, starting_amount_centavos, linked_account_id) VALUES
+  ('7e000000-0000-4000-8000-0000000000c1', '7e000000-0000-4000-8000-000000000001', 'Emergency', true, 2000000, 1000000, '7e000000-0000-4000-8000-0000000000a1'),
+  ('7e000000-0000-4000-8000-0000000000c2', '7e000000-0000-4000-8000-000000000001', 'Travel', false, 1000000, 500000, '7e000000-0000-4000-8000-0000000000a1'),
+  ('7e000000-0000-4000-8000-0000000000c3', '7e000000-0000-4000-8000-000000000002', 'Foreign', false, 1000000, 500000, '7e000000-0000-4000-8000-0000000000a2');
 SELECT set_config('request.jwt.claim.sub', '7e000000-0000-4000-8000-000000000001', true);
 SET CONSTRAINTS ALL IMMEDIATE;
 DO $$
