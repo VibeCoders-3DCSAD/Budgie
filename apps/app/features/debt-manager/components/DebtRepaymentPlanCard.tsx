@@ -4,6 +4,7 @@ import { FormCard, Note, v4, v4Font } from "../../../components/BudgieForm";
 import type { DebtStrategy } from "../../../local-db/repositories/debts/debtRepaymentPlans";
 import type { CommitmentPayment } from "../../financial-plan/helpers/commitmentPayments";
 import { Divider, InfoRow } from "./debtUi";
+import type { DebtSurplusPlan, DebtSurplusRecommendation } from "../helpers/debtSurplusPlan";
 import { formatPeso as php } from "../../financial-plan/helpers/financialPlanPresentation";
 
 export type DebtPlanRow = { id: string; label: string; amountCentavos: number; dueDate?: string | null; payment?: CommitmentPayment };
@@ -21,12 +22,11 @@ type Props = {
   creditCardBudgetCentavos: number;
   loanBudgetCentavos: number;
   shortfallCentavos: number;
-  surplusCentavos: number;
+  surplusPlan: DebtSurplusPlan;
   repayments: DebtPlanRow[];
-  surplusRecommendations: DebtPlanRow[];
 };
 
-export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCentavos, creditCardBudgetCentavos, loanBudgetCentavos, shortfallCentavos, surplusCentavos, repayments, surplusRecommendations }: Props) {
+export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCentavos, creditCardBudgetCentavos, loanBudgetCentavos, shortfallCentavos, surplusPlan, repayments }: Props) {
   const hasShortfall = shortfallCentavos > 0;
   return <FormCard title={`${strategy === "snowball" ? "Snowball" : "Avalanche"} repayment plan`} term={strategy === "snowball" ? "snowball" : "avalanche"}>
     {hasPlan ? <>
@@ -38,11 +38,34 @@ export default function DebtRepaymentPlanCard({ strategy, hasPlan, debtBudgetCen
       <Divider />
       <InfoRow label="Planned card payments" value={php(creditCardBudgetCentavos)} />
       <InfoRow label="Planned loan payments" value={php(loanBudgetCentavos)} />
-      <View accessibilityRole={hasShortfall ? "alert" : undefined}><InfoRow label={hasShortfall ? "Plan shortfall" : "Strategy surplus"} term={hasShortfall ? "shortfall" : "surplus"} value={php(hasShortfall ? shortfallCentavos : surplusCentavos)} tone={hasShortfall ? "err" : "ok"} /></View>
+      {hasShortfall ? <View accessibilityRole="alert"><InfoRow label="Plan shortfall" term="shortfall" value={php(shortfallCentavos)} tone="err" /></View> : null}
+      <InfoRow label="Strategy surplus" term="surplus" value={php(surplusPlan.surplusCentavos)} tone="ok" />
+      {surplusPlan.surplusCentavos > 0 ? <InfoRow label="Surplus left to pay" value={php(surplusPlan.remainingSurplusCentavos)} /> : null}
       {repayments.length ? <RowList title="Financial Plan repayments" rows={repayments} /> : null}
-      {surplusRecommendations.length ? <RowList title="Recommended surplus allocation" rows={surplusRecommendations} /> : null}
+      {surplusPlan.recommendations.length ? <RowList title="Recommended surplus allocation" rows={surplusPlan.recommendations.map(surplusRow)} /> : null}
+      {surplusPlan.unassignedCentavos > 0 ? <UnassignedSurplusRow amountCentavos={surplusPlan.unassignedCentavos} /> : null}
     </> : <Note>Accept a Financial Plan for this month to calculate allocation and surplus.</Note>}
   </FormCard>;
+}
+
+function surplusRow(recommendation: DebtSurplusRecommendation): DebtPlanRow {
+  const row = { id: recommendation.id, label: recommendation.label, amountCentavos: recommendation.plannedCentavos };
+  if (recommendation.paidCentavos === 0) return row;
+  const status = recommendation.remainingCentavos === 0 ? "paid" as const : "partial" as const;
+  return { ...row, payment: { paidCentavos: recommendation.paidCentavos, dueCentavos: recommendation.plannedCentavos, status } };
+}
+
+function UnassignedSurplusRow({ amountCentavos }: { amountCentavos: number }) {
+  return <View accessible accessibilityLabel={`Not assigned to a debt, ${php(amountCentavos)}. We suggest adding it to your savings goals.`} style={{ gap: 8 }}>
+    <Divider />
+    <View style={{ alignItems: "center", flexDirection: "row", gap: 12 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: v4.ink, fontFamily: v4Font, fontSize: 13, fontWeight: "700" }}>Not assigned to a debt</Text>
+        <Text style={{ color: v4.mut, fontFamily: v4Font, fontSize: 11, marginTop: 2 }}>We suggest adding it to your savings goals.</Text>
+      </View>
+      <Text style={{ color: v4.ink, fontFamily: v4Font, fontSize: 13, fontWeight: "800", fontVariant: ["tabular-nums"] }}>{php(amountCentavos)}</Text>
+    </View>
+  </View>;
 }
 
 function RowList({ title, rows }: { title: string; rows: DebtPlanRow[] }) {

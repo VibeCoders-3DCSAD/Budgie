@@ -110,9 +110,14 @@
 - Show the amount available for repayments, any shortfall, and any surplus after required payments.
 - Allow users to select Snowball or Avalanche as the global surplus repayment strategy.
 - Use Snowball to prioritize smaller outstanding balances and Avalanche to prioritize higher interest rates.
+- Under Avalanche, rank unpaid credit-card statements ahead of loans, because cards do not store an interest rate and their finance charges are usually the highest.
 - Allow users to prioritize eligible debts ahead of the selected strategy when allocating surplus.
 - Recommend surplus only for loans that permit extra payments; exclude salary loans from surplus allocation.
 - Include unpaid credit-card statements as candidates for surplus recommendations after required payment targets are considered.
+- Size each debt's surplus from what was owed at the start of the plan month less its required payment, so surplus never exceeds the balance.
+- Count payments recorded this plan month above a debt's required payment toward its recommended surplus, and show the surplus left to pay.
+- Show surplus that no debt can take as "Not assigned to a debt". The user decides where that money goes; the app suggests adding it to their savings goals but does not cap or redirect it.
+- Show a plan shortfall and the strategy surplus together when both apply.
 - Exclude archived and deleted debts from current repayment planning.
 - Present allocations as recommendations; they do not record payments or move money.
 

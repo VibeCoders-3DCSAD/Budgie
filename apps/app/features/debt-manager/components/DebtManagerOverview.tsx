@@ -23,6 +23,7 @@ import { combineDebtBalanceSeries } from "../forecast/helpers/globalDebtForecast
 import { getAcceptedFinancialPlanForPeriod, getCurrentFinancialPlanPeriod, type AcceptedFinancialPlan } from "../../../local-db/repositories/financial-plans/financialPlans";
 import { getDebtStrategy, listDebtPriorities, type DebtPriority, type DebtStrategy } from "../../../local-db/repositories/debts/debtRepaymentPlans";
 import { allocateDebtRepayments, type DebtRepaymentAllocation } from "../helpers/debtRepaymentAllocation";
+import { buildDebtSurplusCandidates, planDebtSurplus, type DebtSurplusPlan } from "../helpers/debtSurplusPlan";
 import DebtRepaymentPlanCard from "./DebtRepaymentPlanCard";
 import UpcomingPaymentsCard from "./UpcomingPaymentsCard";
 import { buildFinancialPlanRepayments } from "../helpers/financialPlanRepayments";
@@ -30,7 +31,6 @@ import { buildUpcomingDebtPayments } from "../helpers/upcomingDebtPayments";
 
 type Props = { userId: string; onOpenCreditCards: () => void; onOpenNonCreditDebts: () => void; onOpenCard?: (accountId: string) => void; onOpenDebt?: (debtId: string) => void };
 type CardRow = { id: string; name: string; subtitle: string; debtCentavos: number; strategyLabel: string };
-type SurplusRecommendation = { id: string; label: string; amountCentavos: number };
 
 export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenNonCreditDebts, onOpenCard, onOpenDebt }: Props) {
   const [cards, setCards] = useState<FinancialAccount[] | null>(null);
@@ -50,7 +50,7 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
     const { start, end } = currentDebtTrendWindow("month", undefined, new Date(`${today}T00:00:00Z`));
     return buildUpcomingDebtPayments({ periodStart: start, periodEnd: end, debts: trendDebts, creditCards: cards ?? [], creditCardCycles: cycles, creditCardCycleTransactions: transactions, creditCardStatements: statements, creditCardStrategies: strategies, creditCardPayments: payments, debtPayments }, today);
   }, [today, cards, cycles, debtPayments, payments, statements, strategies, transactions, trendDebts]);
-  const overview = useMemo<{ debtBudgetCentavos: number; globalTrend: GlobalDebtPoint[]; summary: DebtManagerSummary; allocation: DebtRepaymentAllocation; surplusAllocation: DebtRepaymentAllocation; creditCardBudgetCentavos: number; loanBudgetCentavos: number; surplusRecommendations: SurplusRecommendation[]; cardRows: CardRow[]; debtStatuses: Map<string, DebtForecastStatus> }>(() => {
+  const overview = useMemo<{ debtBudgetCentavos: number; globalTrend: GlobalDebtPoint[]; summary: DebtManagerSummary; allocation: DebtRepaymentAllocation; surplusPlan: DebtSurplusPlan; creditCardBudgetCentavos: number; loanBudgetCentavos: number; cardRows: CardRow[]; debtStatuses: Map<string, DebtForecastStatus> }>(() => {
     const activeCards = cards ?? [];
     const asOfDate = manilaToday();
     const cardForecasts = activeCards.map((card) => ({ card, forecast: buildCreditCardForecast({ cycles: cycles.filter((cycle) => cycle.account_id === card.id), transactions: transactions.filter((transaction) => transaction.account_id === card.id), statements, strategy: strategies.find((strategy) => strategy.accountId === card.id), payments, installments: installments.filter((installment) => installment.account_id === card.id), availableCreditCentavos: card.creditCardDetails?.availableCreditCentavos ?? 0, creditLimitCentavos: card.creditCardDetails?.creditLimitCentavos ?? 0, billingCycleEndDay: card.creditCardDetails?.cutoffDay ?? null, reconciledAvailableCreditCentavos: card.creditCardDetails?.reconciledAvailableCreditCentavos, preReconciliationAvailableCreditCentavos: card.creditCardDetails?.preReconciliationAvailableCreditCentavos, availableCreditReconciledAt: card.creditCardDetails?.availableCreditReconciledAt, asOfDate }) }));
@@ -61,19 +61,10 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
     const planDebtSurplusCentavos = financialPlan?.recommendation.debtSurplusCentavos;
     const debtSurplusCentavos = typeof planDebtSurplusCentavos === "number" && Number.isSafeInteger(planDebtSurplusCentavos) ? Math.max(0, planDebtSurplusCentavos) : 0;
     const debtBudgetCentavos = debtReservations.reduce((total, reservation) => total + reservationCentavos(reservation), debtSurplusCentavos);
-    const creditCardStatementCandidates = activeCards.flatMap((card) => {
-      const cycleIds = new Set(cycles.filter((cycle) => cycle.account_id === card.id).map((cycle) => cycle.id));
-      const statement = statements.filter((item) => item.authoritative && !item.deleted && cycleIds.has(item.cycle_id) && item.statement_date <= asOfDate).sort((left, right) => right.statement_date.localeCompare(left.statement_date))[0];
-      if (!statement) return [];
-      const paidCentavos = payments.filter((payment) => payment.statement_id === statement.id && payment.payment_date <= asOfDate).reduce((total, payment) => total + payment.amount_centavos, 0);
-      const unpaidCentavos = Math.max(0, statement.statement_balance_centavos - paidCentavos);
-      return unpaidCentavos > 0 ? [{ id: `statement:${statement.id}`, name: `${card.name} statement`, status: "active" as const, type: "custom_debt" as const, currentBalanceCentavos: unpaidCentavos, minimumPaymentCentavos: 0, annualInterestRateBps: 0, allowsExtraPayments: true }] : [];
-    });
     const allocation = allocateDebtRepayments({ debts: trendDebts, debtBudgetCentavos: nonCreditDebtReservationCentavos, strategy: debtStrategy, priorities: debtPriorities });
-    const surplusAllocation = allocateDebtRepayments({ debts: [...trendDebts, ...creditCardStatementCandidates], debtBudgetCentavos: debtSurplusCentavos, strategy: debtStrategy, priorities: debtPriorities, includeMinimumPayments: false });
-    const surplusRecommendations = [...trendDebts, ...creditCardStatementCandidates].flatMap((debt) => {
-      const recommendedCentavos = surplusAllocation.allocations.get(debt.id) ?? 0;
-      return recommendedCentavos > 0 ? [{ id: debt.id, label: debt.name, amountCentavos: recommendedCentavos }] : [];
+    const surplusPlan = planDebtSurplus({
+      candidates: buildDebtSurplusCandidates({ debts: trendDebts, debtPayments, cards: activeCards, cycles, statements, cardPayments: payments, reservations: debtReservations, period: getCurrentFinancialPlanPeriod(asOfDate), today: asOfDate }),
+      surplusCentavos: debtSurplusCentavos, strategy: debtStrategy, priorities: debtPriorities,
     });
     const debtForecasts = trendDebts.map((debt) => ({ debt, forecast: buildDebtForecast(debt, asOfDate, debtPayments.filter((payment) => payment.debt_account_id === debt.id).map((payment) => ({ paymentDate: payment.payment_date, amountCentavos: payment.amount_centavos })), allocation.allocations.get(debt.id)) }));
     const cardSeries = cardForecasts.map(({ card, forecast }) => ({ points: forecast.points.map((point) => ({ date: point.date, balanceCentavos: Math.max(0, (card.creditCardDetails?.creditLimitCentavos ?? 0) - point.availableCreditCentavos) })) }));
@@ -93,7 +84,7 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
       return { id: card.id, name: card.name, subtitle, debtCentavos: Math.max(0, (card.creditCardDetails?.creditLimitCentavos ?? 0) - (card.creditCardDetails?.availableCreditCentavos ?? 0)), strategyLabel: cardStrategyLabel(strategies.find((strategy) => strategy.accountId === card.id)?.strategy) };
     });
     const debtStatuses = new Map(debtForecasts.map(({ debt, forecast }) => [debt.id, forecast.status]));
-    return { debtBudgetCentavos, globalTrend, summary: buildDebtManagerSummary([...cardSummaryItems, ...debtSummaryItems], recordedPayments, asOfDate), allocation, surplusAllocation, creditCardBudgetCentavos, loanBudgetCentavos: nonCreditDebtReservationCentavos, surplusRecommendations, cardRows, debtStatuses };
+    return { debtBudgetCentavos, globalTrend, summary: buildDebtManagerSummary([...cardSummaryItems, ...debtSummaryItems], recordedPayments, asOfDate), allocation, surplusPlan, creditCardBudgetCentavos, loanBudgetCentavos: nonCreditDebtReservationCentavos, cardRows, debtStatuses };
   }, [cards, cycles, debtPayments, debtPriorities, debtStrategy, financialPlan, installments, payments, strategies, statements, transactions, trendDebts]);
 
   async function load() { const today = manilaToday(); const period = getCurrentFinancialPlanPeriod(today); const [accounts, activeDebts, finishedDebts, cycleRows, transactionRows, statementRows, paymentRows, installmentRows, strategyRows, allDebtPayments, plan, strategy, priorities] = await Promise.all([listFinancialAccounts(userId, { kind: "credit_card", status: "active" }), listDebtAccounts(userId, "active"), listDebtAccounts(userId, "finished"), listCreditCardCycles(userId), listCreditCardCycleTransactions(userId), listCreditCardStatements(userId), listCreditCardPayments(userId), listCreditCardInstallments(userId), listCreditCardStrategies(userId), listAllDebtPayments(userId), getAcceptedFinancialPlanForPeriod(userId, period.start, period.end), getDebtStrategy(userId), listDebtPriorities(userId)]); setCards(accounts); setTrendDebts([...activeDebts, ...finishedDebts]); setDebtPayments(allDebtPayments); setCycles(cycleRows); setTransactions(transactionRows); setStatements(statementRows); setPayments(paymentRows); setInstallments(installmentRows); setStrategies(strategyRows); setFinancialPlan(plan); setDebtStrategy(strategy); setDebtPriorities(priorities); }
@@ -111,7 +102,7 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
 
   return <View style={{ gap: 14 }}>
     <DebtOverviewSummary summary={overview.summary} payoffDate={payoffDate} />
-    <DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusCentavos={overview.surplusAllocation.surplusCentavos} repayments={financialPlanRepayments} surplusRecommendations={overview.surplusRecommendations} />
+    <DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusPlan={overview.surplusPlan} repayments={financialPlanRepayments} />
 
     <SectionHeader title="Credit cards" actionLabel="Manage" accessibilityLabel="Open Credit Cards" onAction={onOpenCreditCards} />
     <List>{overview.cardRows.length === 0

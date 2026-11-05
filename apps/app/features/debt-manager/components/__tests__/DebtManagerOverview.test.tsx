@@ -237,3 +237,37 @@ beforeEach(() => {
     expect(view.getByText("₱40.00")).toBeTruthy();
     expect(view.queryByText("Budget remaining this month")).toBeNull();
   });
+
+describe("DebtManagerOverview debt surplus", () => {
+  it("sizes surplus after the plan's required payment and shows what no debt can take", async () => {
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ recommendation: { debtReservations: [{ debtAccountId: "debt-1", amountCentavos: 500 }], debtSurplusCentavos: 5_000 } });
+
+    const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
+
+    await waitFor(() => expect(view.getByText("Recommended surplus allocation")).toBeTruthy());
+    expect(view.getByLabelText("Loan, ₱15.00")).toBeTruthy();
+    expect(view.getByLabelText("Not assigned to a debt, ₱35.00. We suggest adding it to your savings goals.")).toBeTruthy();
+  });
+
+  it("shows a plan shortfall without hiding the strategy surplus", async () => {
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ recommendation: { debtReservations: [{ debtAccountId: "debt-1", amountCentavos: 100 }], debtSurplusCentavos: 1_000 } });
+
+    const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
+
+    await waitFor(() => expect(view.getByText("Plan shortfall")).toBeTruthy());
+    expect(view.getByText("Strategy surplus")).toBeTruthy();
+    expect(view.getByLabelText("Loan, ₱10.00")).toBeTruthy();
+  });
+
+  it("counts this month's payments above the required payment toward the surplus", async () => {
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ recommendation: { debtReservations: [{ debtAccountId: "debt-1", amountCentavos: 500 }], debtSurplusCentavos: 1_000 } });
+    mockListAllDebtPayments.mockResolvedValue([{ debt_account_id: "debt-1", payment_date: "2026-10-05", amount_centavos: 1_000, principal_centavos: 1_000, interest_centavos: 0 }]);
+
+    const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
+
+    await waitFor(() => expect(view.getByText("Surplus left to pay")).toBeTruthy());
+    expect(view.getByLabelText("Loan, ₱10.00, Partially paid, paid ₱5.00 of ₱10.00")).toBeTruthy();
+    expect(view.queryByText(/Not assigned to a debt/)).toBeNull();
+  });
+});
+
