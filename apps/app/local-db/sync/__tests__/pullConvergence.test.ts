@@ -1,5 +1,6 @@
 import { jest } from "@jest/globals";
-import { applyPullRow, normalizePullRow } from "../pullConvergence";
+import { applyPullRow, normalizePullRow, SYNCED_TABLES } from "../pullConvergence";
+import { createSqliteHarness } from "../../repositories/__tests__/sqliteHarness";
 
 describe("recurring spending confirmation pull convergence", () => {
   it.each([null, 1])("maps server IQR fields when the local evaluation version is %s", async (version) => {
@@ -150,4 +151,16 @@ it("serializes optional savings interest reference metadata without changing cal
   expect(row.interest_reference_json).toBe(JSON.stringify(interest_reference));
   expect(row.interest_calculation_basis).toBeNull();
   expect(normalizePullRow("savings_account_details", { account_id: "account-1", user_id: "user-1", interest_reference: null }, "user-1").interest_reference_json).toBeNull();
+});
+
+describe("pull column lists", () => {
+  it("only write columns that exist in the local schema", async () => {
+    const harness = createSqliteHarness();
+    await harness.migrateAll();
+    const missing = SYNCED_TABLES.flatMap((table) => {
+      const local = new Set((harness.sqlite.prepare(`SELECT name FROM pragma_table_info('${table}')`).all() as { name: string }[]).map((column) => column.name));
+      return Object.keys(normalizePullRow(table, {}, "user-1")).filter((column) => !local.has(column)).map((column) => `${table}.${column}`);
+    });
+    expect(missing).toEqual([]);
+  });
 });
