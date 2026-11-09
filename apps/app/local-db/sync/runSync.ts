@@ -1,5 +1,6 @@
 import * as SQLite from "expo-sqlite";
 import { authorizeLocalRequest } from "../../lib/localAccess";
+import { usePracticeModeStore } from "../../services/practiceMode";
 import { initDatabase } from "../client";
 import {
   normalizePullRow,
@@ -48,6 +49,8 @@ export async function runSync(
   accessToken: string,
   options: SyncOptions = {},
 ): Promise<SyncResult> {
+  // Tour practice data is never synced; the user's queue waits until Practice Mode ends.
+  if (usePracticeModeStore.getState().active) return { pushed: 0, pulled: 0, errors: 0, pendingPushes: 0, awaitingUser: 0, successful: true, hasMore: false };
   const pull = options.pull ?? true;
   accessToken = await authorizeLocalRequest(userId, accessToken);
   const syncKey = `${userId}:${deviceId}`;
@@ -66,6 +69,13 @@ export async function runSync(
     return await syncPromise;
   } finally {
     if (syncPromises.get(syncKey)?.promise === syncPromise) syncPromises.delete(syncKey);
+  }
+}
+
+// Resolves once no sync run is in flight, so Practice Mode never swaps the database under a running sync.
+export async function waitForSyncIdle(): Promise<void> {
+  while (syncPromises.size > 0) {
+    await Promise.allSettled([...syncPromises.values()].map((run) => run.promise));
   }
 }
 

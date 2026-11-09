@@ -1,6 +1,7 @@
 import * as SQLite from "expo-sqlite";
 import { getDatabaseCredentials } from "./databaseAccess";
 import { tracePinStep } from "../lib/helpers/pinSetupTrace";
+import { usePracticeModeStore } from "../services/practiceMode";
 
 export type Migration = {
   version: number;
@@ -20,6 +21,9 @@ export async function getDatabase(
   migrations: Migration[],
 ): Promise<SQLite.SQLiteDatabase> {
   const credentials = getDatabaseCredentials();
+  // The unlock check above still applies; then the tour's practice data stands in for the user's.
+  const practice = usePracticeModeStore.getState().database;
+  if (practice) return practice;
   if (db) return db;
   if (!dbPromise) {
     dbPromise = (async () => {
@@ -188,6 +192,19 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   // An open handle needs no migrations; getDatabase still enforces the unlock check.
   if (db) return getDatabase([]);
   return getDatabase(await tracePinStep("database.load-migrations", loadMigrations));
+}
+
+// A separate database with the full schema, e.g. the tour's in-memory practice data. Never the user's handle.
+export async function openMigratedDatabase(name: string, migrations: Migration[]): Promise<SQLite.SQLiteDatabase> {
+  const opened = await SQLite.openDatabaseAsync(name);
+  try {
+    await opened.execAsync(MIGRATIONS_TABLE);
+    await runMigrations(opened, migrations);
+    return opened;
+  } catch (error) {
+    await opened.closeAsync();
+    throw error;
+  }
 }
 
 export async function closeDatabase(): Promise<void> {

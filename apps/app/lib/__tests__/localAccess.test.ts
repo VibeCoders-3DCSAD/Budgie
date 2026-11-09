@@ -1,4 +1,5 @@
 import { authorizedFetch, configureTokenResolver } from "../localAccess";
+import { startPracticeMode, stopPracticeMode } from "../../services/practiceMode";
 
 describe("authorizedFetch", () => {
   const fetchMock = jest.fn();
@@ -42,5 +43,18 @@ describe("authorizedFetch", () => {
     fetchMock.mockResolvedValue(response(200));
     await authorizedFetch("https://odin.test/x");
     expect(resolver).not.toHaveBeenCalled();
+  });
+
+  it("answers from the practice responder without reaching the network", async () => {
+    const reply = response(200);
+    const respond = jest.fn().mockResolvedValue(reply);
+    startPracticeMode({} as never, respond);
+    try {
+      await expect(authorizedFetch("https://odin.test/x", { headers: { Authorization: "Bearer t" } })).resolves.toBe(reply);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(resolver).not.toHaveBeenCalled();
+    } finally {
+      stopPracticeMode();
+    }
   });
 });

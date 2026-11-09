@@ -1,3 +1,5 @@
+import { practiceFetch, usePracticeModeStore } from "../services/practiceMode";
+
 // Installed by the native auth controller. Web retains its existing session flow.
 type AccessGuard = (userId: string) => Promise<string>;
 // Returns the token to send; `rejected` means the server refused `usedToken`.
@@ -24,6 +26,12 @@ export function configureTokenResolver(next: TokenResolver | null): void {
 
 /** fetch with a current bearer token: refreshed ahead of expiry, and once more if the server rejects it. */
 export async function authorizedFetch(url: string, init: RequestInit = {}): Promise<Response> {
+  if (usePracticeModeStore.getState().active) return practiceFetch(url, init);
+  return authorizedServerFetch(url, init);
+}
+
+/** authorizedFetch without the Practice Mode check, for the few reads the tour passes through to the server. */
+export async function authorizedServerFetch(url: string, init: RequestInit = {}): Promise<Response> {
   const headers = new Headers(init.headers);
   const supplied = headers.get("Authorization")?.replace(/^Bearer /, "");
   const resolve = resolveToken;
