@@ -6,6 +6,7 @@ import { endPracticeMode, startPracticeMode, usePracticeModeStore } from "../../
 import { resetShellState } from "../../shell/helpers/resetShellState";
 import { applyPracticeSeed } from "../practice/applyPracticeSeed";
 import { createPracticeResponder } from "../practice/respond";
+import { withPastPlans } from "../practice/pastPlans";
 import { buildPracticeSeed } from "../practice/seed";
 import { readTaxonomy, subcategoryLookup } from "../practice/taxonomy";
 
@@ -30,7 +31,8 @@ export async function exitPracticeMode(): Promise<void> {
 async function openPractice(userId: string): Promise<void> {
   const today = manilaToday();
   const taxonomy = await readTaxonomy(await initDatabase(), userId);
-  const seed = buildPracticeSeed({ userId, today, subcategoryId: subcategoryLookup(taxonomy) });
+  const ctx = { userId, today, subcategoryId: subcategoryLookup(taxonomy) };
+  const seed = withPastPlans(buildPracticeSeed(ctx), taxonomy, ctx);
   const database = await openMigratedDatabase(":memory:", await loadMigrations());
   try {
     await applyPracticeSeed(database, userId, taxonomy, seed);

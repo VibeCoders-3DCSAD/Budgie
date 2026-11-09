@@ -15,7 +15,7 @@ export const PRACTICE_TABLE_ORDER = [
   "financial_accounts", "savings_account_details", "credit_card_details", "credit_card_repayment_preferences",
   "income_sources", "scheduled_payments", "savings_goals", "debt_accounts", "debt_strategy_preferences",
   "transactions", "credit_card_cycles", "credit_card_transactions", "credit_card_statements", "credit_card_payments",
-  "scheduled_payment_records", "savings_goal_activities", "debt_payments",
+  "scheduled_payment_records", "savings_goal_activities", "debt_payments", "financial_plans",
 ] as const;
 
 export type PracticeTable = typeof PRACTICE_TABLE_ORDER[number];

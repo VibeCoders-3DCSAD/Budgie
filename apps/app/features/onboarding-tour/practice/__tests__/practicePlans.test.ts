@@ -2,6 +2,7 @@ import { jest } from "@jest/globals";
 import { createSqliteHarness } from "../../../../local-db/repositories/__tests__/sqliteHarness";
 import { applyPracticeSeed } from "../applyPracticeSeed";
 import { practiceRecommendation } from "../fixtures/recommendation";
+import { withPastPlans } from "../pastPlans";
 import { buildPracticeSeed } from "../seed";
 import { subcategoryLookup } from "../taxonomy";
 import { PRACTICE_USER, practiceTaxonomy } from "./practiceTaxonomy";
@@ -23,7 +24,7 @@ beforeEach(async () => {
 afterEach(() => harness.sqlite.close());
 
 async function seeded() {
-  const seed = buildPracticeSeed(ctx);
+  const seed = withPastPlans(buildPracticeSeed(ctx), taxonomy, ctx);
   await applyPracticeSeed(harness.db as never, PRACTICE_USER, taxonomy, seed);
   return seed;
 }
@@ -43,4 +44,15 @@ it("saves the tour's plan the way Accept and save plan does", async () => {
     recommendation: { ...plan.recommendation, allocations, debtReservations, savingsReservations }, allocations, debtReservations, savingsReservations,
   } as never);
   expect(await getFinancialPlan(PRACTICE_USER, id)).toMatchObject({ id });
+});
+
+it("lists two past accepted plans in plan history, each with its category budgets", async () => {
+  const seed = await seeded();
+  expect(seed.financial_plans.map((row) => row.period_start)).toEqual(["2026-09-01", "2026-10-01"]);
+  const { listCompletedFinancialPlans } = await import("../../../../local-db/repositories/financial-plans/financialPlans");
+  const history = await listCompletedFinancialPlans(PRACTICE_USER, today);
+  expect(history.map((plan) => plan.periodStart)).toEqual(["2026-10-01", "2026-09-01"]);
+  expect(history.every((plan) => plan.plannedTotalCentavos > 0)).toBe(true);
+  // Each month reserves both loan payments and that month's card statement.
+  expect(harness.sqlite.prepare("SELECT COUNT(debt_account_id) AS loans, COUNT(credit_card_statement_id) AS statements FROM financial_plan_debt_reservations").get()).toEqual({ loans: 4, statements: 2 });
 });
