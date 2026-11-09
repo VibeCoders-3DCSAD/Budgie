@@ -16,6 +16,7 @@ import { PIN_LOCKOUT_MS } from "../helpers/pinPolicy";
 import { readAccount, readEnvelope, writeAccount, writeSecret } from "../services/authStorage";
 import { unwrapKey } from "../services/pinCrypto";
 import { enrollPin, lockVault, unlockWithPin } from "../services/pinVault";
+import { startPracticeMode, usePracticeModeStore } from "../../../services/practiceMode";
 import { accountFixture, anotherUserId, dataKey, userId } from "./fixtures";
 
 describe("persistent PIN vault", () => {
@@ -87,5 +88,13 @@ describe("persistent PIN vault", () => {
     await writeSecret(userId, "pin.v1", "{}");
     await expect(readEnvelope(userId)).rejects.toThrow();
     await expect(enrollPin(userId, "123456")).rejects.toThrow();
+  });
+
+  it("ends a running tour and closes its practice database when the app locks", async () => {
+    const practice = { closeAsync: jest.fn(async () => {}) };
+    startPracticeMode(practice as never, jest.fn());
+    await lockVault();
+    expect(usePracticeModeStore.getState().active).toBe(false);
+    expect(practice.closeAsync).toHaveBeenCalledTimes(1);
   });
 });

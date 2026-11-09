@@ -9,8 +9,11 @@ import { withAuthLock } from "./authMutex";
 import type { PinResult } from "../types";
 import { accessNow } from "../helpers/accessClock";
 import { tracePinStep } from "../../../lib/helpers/pinSetupTrace";
+import { endPracticeMode } from "../../../services/practiceMode";
 
 export async function lockVault(): Promise<void> {
+  // Locking ends a running tour too, so unlocking always returns to the user's own data.
+  await endPracticeMode();
   setDatabaseCredentials(null);
   await closeDatabase();
 }
