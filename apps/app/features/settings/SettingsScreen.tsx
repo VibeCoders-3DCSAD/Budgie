@@ -20,7 +20,7 @@ export default function SettingsScreen({ accessToken, userId, deviceId, onLock }
     <View>
       <PrivacySettingsScreen accessToken={accessToken} userId={userId} deviceId={deviceId} onBackToLogin={confirmLogout}
         onSubPageChange={setSubPage}
-        beforeDangerZone={subPage ? null : <SettingsShellSection />} />
+        beforeDangerZone={subPage ? null : <SettingsShellSection userId={userId} />} />
       {subPage ? null : <AccountActions onLock={onLock} />}
     </View>
   );

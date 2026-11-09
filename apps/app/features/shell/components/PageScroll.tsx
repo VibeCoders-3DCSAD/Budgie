@@ -23,6 +23,11 @@ export type ShellPageValue = {
 
 const ShellPageContext = createContext<ShellPageValue | null>(null);
 
+// For components that also render outside a shell page (the tour's targets), where there is nothing to scroll.
+export function useOptionalShellPage() {
+  return useContext(ShellPageContext);
+}
+
 export function useShellPage() {
   const value = useContext(ShellPageContext);
   if (!value) throw new Error("useShellPage must be used inside a shell page.");

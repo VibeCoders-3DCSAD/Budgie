@@ -1,11 +1,14 @@
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { shellPalette as palette } from "../../shell/theme";
 import { useLogout } from "../../sync/SyncProvider";
+import { usePracticeModeStore } from "../../../services/practiceMode";
 
 // Lock and Log out, below the settings list.
 export function AccountActions({ onLock }: { onLock: () => void }) {
   const { online, isLoggingOut, logoutError, confirmLogout } = useLogout();
-  const logoutDisabled = !online || isLoggingOut;
+  // The tour shows practice data; logging out from it would leave the account half switched.
+  const practice = usePracticeModeStore((state) => state.active);
+  const logoutDisabled = !online || isLoggingOut || practice;
   return (
     <View style={{ marginTop: 20 }}>
       <Pressable accessibilityRole="button" accessibilityLabel="Lock app" onPress={onLock}

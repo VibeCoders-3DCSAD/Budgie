@@ -1,0 +1,18 @@
+import { useToast } from "../../../components/Toast";
+import { TOUR_MESSAGES } from "../messages";
+import { startTour } from "../services/tourRunner";
+import { useTourStore } from "../stores/useTourStore";
+
+// Settings → Help and About: Resume tutorial (only with unfinished progress) and Replay tutorial.
+export function useTutorialEntry(userId: string) {
+  const canResume = useTourStore((state) => state.progress?.status === "paused" && state.progress.stepId !== null);
+  const busy = useTourStore((state) => state.phase !== "idle");
+  const { showToast } = useToast();
+  const run = (from: "resume" | "replay") => {
+    void startTour(userId, from).then((started) => {
+      if (!started) showToast(TOUR_MESSAGES.error, "danger");
+      else if (from === "resume") showToast(TOUR_MESSAGES.resume);
+    });
+  };
+  return { canResume, busy, resume: () => run("resume"), replay: () => run("replay") };
+}

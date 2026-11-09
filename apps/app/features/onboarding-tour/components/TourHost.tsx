@@ -1,0 +1,54 @@
+import { type ReactNode, useEffect, useMemo, useRef } from "react";
+import { View } from "react-native";
+import { SpotlightTourProvider, type SpotlightTour, type TourStep } from "react-native-spotlight-tour";
+import { attachTourHandle, notifyTargetPress, prepareStep } from "../services/tourRunner";
+import { readTourProgress } from "../services/tourProgress";
+import { TOUR_STEPS } from "../steps";
+import { resetTourStore, useTourStore } from "../stores/useTourStore";
+import { setTargetPressListener } from "../stores/useTourTargets";
+import { CENTER_TARGET, TourTarget } from "./TourTarget";
+import { TapHint } from "./TapHint";
+import { TourOffer } from "./TourOffer";
+import { TourTooltip } from "./TourTooltip";
+
+// Hosts the guided tour around the signed-in screens. It sits outside the screen stack, so it survives the
+// stack reloading onto practice data.
+export function TourHost({ userId, children }: { userId: string; children: ReactNode }) {
+  const tour = useRef<SpotlightTour>(null);
+  useEffect(() => attachTourHandle(() => tour.current), []);
+  useEffect(() => {
+    setTargetPressListener(notifyTargetPress);
+    return () => setTargetPressListener(null);
+  }, []);
+  useEffect(() => {
+    let active = true;
+    readTourProgress(userId)
+      .then((progress) => { if (active) useTourStore.setState({ progress }); })
+      .catch(() => { if (active) useTourStore.setState({ loadFailed: true }); });
+    return () => { active = false; resetTourStore(); };
+  }, [userId]);
+
+  const steps = useMemo((): TourStep[] => TOUR_STEPS.map((step, index) => ({
+    before: () => prepareStep(step, index),
+    render: (props) => <TourTooltip {...props} step={step} userId={userId} />,
+  })), [userId]);
+
+  return (
+    <SpotlightTourProvider ref={tour} steps={steps} overlayColor="#0B1F16" overlayOpacity={0.6} motion="fade"
+      shape={{ type: "rectangle", padding: 8 }} placement="bottom" offset={12} shift={{ padding: 16 }} flip>
+      {children}
+      <CenterAnchor />
+      <TapHint />
+      <TourOffer userId={userId} />
+    </SpotlightTourProvider>
+  );
+}
+
+// A point in the middle of the screen for steps with nothing to highlight.
+function CenterAnchor() {
+  return (
+    <View pointerEvents="none" style={{ position: "absolute", top: "40%", left: "50%" }}>
+      <TourTarget id={CENTER_TARGET}><View style={{ width: 1, height: 1 }} /></TourTarget>
+    </View>
+  );
+}

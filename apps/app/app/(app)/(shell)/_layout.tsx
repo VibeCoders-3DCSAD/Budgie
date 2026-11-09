@@ -4,6 +4,7 @@ import { useSession } from "../../../features/auth/components/AccessProvider";
 import { signOutGoogle } from "../../../features/auth/services/googleSignIn";
 import { useAuthStore } from "../../../features/auth/stores/useAuthStore";
 import { PracticeBanner } from "../../../features/onboarding-tour/components/PracticeBanner";
+import { TourHost } from "../../../features/onboarding-tour/components/TourHost";
 import { exitPracticeMode } from "../../../features/onboarding-tour/services/practiceSession";
 import { resetShellState } from "../../../features/shell/helpers/resetShellState";
 import { usePracticeModeStore } from "../../../services/practiceMode";
@@ -30,8 +31,10 @@ export default function ShellLayout() {
 
   return <InitialSyncGate key={userId} accessToken={accessToken} userId={userId} deviceId={deviceId}>
     <SyncProvider userId={userId} deviceId={deviceId} accessToken={accessToken} onLoggedOut={finishLogout} signOut={signOutGoogle}>
-      <Stack key={practice ? "practice" : "own"} screenOptions={{ headerShown: false }} />
-      <PracticeBanner />
+      <TourHost userId={userId}>
+        <Stack key={practice ? "practice" : "own"} screenOptions={{ headerShown: false }} />
+        <PracticeBanner />
+      </TourHost>
     </SyncProvider>
   </InitialSyncGate>;
 }
