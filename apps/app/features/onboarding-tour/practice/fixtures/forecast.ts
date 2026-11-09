@@ -2,7 +2,8 @@ import type { ForecastPayload, ForecastRequest, QuarterlyForecastPayload } from 
 import { addMonths } from "../../../../lib/dates";
 import { categorySlugBySubcategory, monthlySpendBySubcategory, planPeriod, type PracticeData } from "./practiceData";
 
-const MODEL_VERSION = "practice-tour-v1";
+export const PRACTICE_MODEL_VERSION = "practice-tour-v1";
+const MODEL_VERSION = PRACTICE_MODEL_VERSION;
 
 // This month's expected spending per parent category, from the practice history.
 export function planCategoryForecasts(data: PracticeData): { category: string; amountCentavos: number }[] {

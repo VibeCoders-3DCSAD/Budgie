@@ -4,9 +4,9 @@ import type { ManualPlanAllocation } from "../../../financial-plan/api";
 import { DEBT_IDS } from "../seed/debts";
 import { practiceAssessment } from "./classification";
 import { practiceCommitments } from "./commitments";
-import { planCategoryForecasts } from "./forecast";
 import { monthlySpendBySubcategory, type PracticeData } from "./practiceData";
 import { planExplanations } from "./explanations";
+import { PRACTICE_MODEL_VERSION } from "./forecast";
 
 export type RecommendationInput = {
   includedSubcategoryIds: string[]; includedCategoryIds: string[]; plannedAmountCentavos: number; manualAllocations: ManualPlanAllocation[];
@@ -41,7 +41,8 @@ export function practiceRecommendation(data: PracticeData, input: Recommendation
     inputSnapshot: {
       commitmentSelection: { debtRepayments: !input.skipDebtRepayments, savingsContributions: !input.skipSavingsContributions, scheduledPayments: !input.skipScheduledPayments },
       plannedAmountCentavos: input.plannedAmountCentavos,
-      forecast: { month: preview.period.start.slice(0, 7), categoryForecasts: planCategoryForecasts(data), quality: "PERSONALIZED" },
+      // The same snapshot shape the server sends: createFinancialPlan rejects a plan without it.
+      forecast: planForecastSnapshot(data, preview.period.start, targets),
       restrictions: { allocations: targets.map((target) => ({ id: target.id, target: target.target, forecastCentavos: target.forecast })) },
       obligations: { reservations: obligations, requirements: preview.obligations ?? [] },
       debtRequirements: { reservations: preview.debtReservations, surplusCentavos: 0 },
@@ -59,6 +60,15 @@ export function practiceRecommendation(data: PracticeData, input: Recommendation
     },
     explanations,
     explanationRequest: { practice: true, explanations },
+  };
+}
+
+function planForecastSnapshot(data: PracticeData, periodStart: string, targets: Target[]) {
+  const categoryForecasts = targets.map((target) => ({ category: target.id, amountCentavos: target.forecast }));
+  return {
+    month: periodStart.slice(0, 7), categoryForecasts, quality: "PERSONALIZED",
+    totalAmountCentavos: categoryForecasts.reduce((sum, point) => sum + point.amountCentavos, 0),
+    modelVersion: PRACTICE_MODEL_VERSION, generatedAt: `${data.today}T00:00:00.000Z`,
   };
 }
 
