@@ -6,7 +6,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  ScrollView,
   Text,
   TextInput,
   View,
@@ -24,6 +23,8 @@ import AccountSelectionSheet from "../../components/AccountSelectionSheet";
 import BalanceWarningModal from "./components/BalanceWarningModal";
 import CreditCardPurchaseCard from "./components/CreditCardPurchaseCard";
 import DebtPaymentCard from "./components/DebtPaymentCard";
+import { TourScrollArea } from "../onboarding-tour/components/TourScrollArea";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 import TransactionAccountFields from "./components/TransactionAccountFields";
 import TransactionCategoryPicker from "./components/TransactionCategoryPicker";
 import TransactionDateSheet from "./components/TransactionDateSheet";
@@ -120,7 +121,7 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
             onSelect={category.selectCategory}
           />
         ) : (
-          <ScrollView contentContainerStyle={{ paddingBottom: 28, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <TourScrollArea contentContainerStyle={{ paddingBottom: 28, gap: 14 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             {savingsActivityContext ? (
               <FormCard title={savingsActivityContext.kind === "contribution" ? "Savings contribution" : "Savings withdrawal"}>
                 <Note>{contributionGoalId ? "Use available money in the linked account, or transfer money from another account." : "This transfer is linked to the selected savings goal."}</Note>
@@ -132,6 +133,7 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
               </FormCard>
             ) : null}
 
+            <TourTarget id="form-amount" fill>
             <AmountHero>
               <View style={{ flexDirection: "row", alignItems: "center", gap: 8, marginTop: 5 }}>
                 <Text style={{ fontFamily: v4Font, fontWeight: "800", fontSize: 30, letterSpacing: -0.6, color: "#FFFFFF" }}>₱</Text>
@@ -147,7 +149,9 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
                 />
               </View>
             </AmountHero>
+            </TourTarget>
 
+            <TourTarget id="form-details" fill>
             <FormCard>
               {!isEdit && !isStatementPayment && !savingsActivityContext ? <TransactionTypeSelector value={txType} onChange={fields.changeType} /> : null}
 
@@ -175,12 +179,14 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
 
               <TransactionAccountFields userId={userId} transactionId={transaction?.id} accounts={accounts} fields={fields} onPickAccount={setAccountPickerMode} />
             </FormCard>
+            </TourTarget>
 
             {card.isCreditCardExpense && !isStatementPayment ? (
               <CreditCardPurchaseCard card={card} isEdit={isEdit} onPickPostingDate={() => setShowPostingDatePicker(true)} />
             ) : null}
 
             {!isEdit && !isStatementPayment && !savingsActivityContext && !debtPaymentDebtId && !debtPaymentContext ? (
+              <TourTarget id="form-savings" fill>
               <FormCard title="This is a savings contribution" right={<Switch value={fields.isSavingsContribution} accessibilityLabel="This is a savings contribution" onToggle={() => {
                 fields.toggleSavingsContribution();
                 debt.setIsDebtPayment(false);
@@ -188,10 +194,12 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
                 <Note>Use available money in the linked account, or transfer money from another account.</Note>
                 {fields.isSavingsContribution ? <SavingsContributionGoalPicker userId={userId} goalId={fields.selectedSavingsGoalId} onChange={fields.selectSavingsGoal} /> : null}
               </FormCard>
+              </TourTarget>
             ) : null}
 
-            {txType === "expense" && !isStatementPayment && !card.isCreditCardExpense ? <DebtPaymentCard debt={debt} /> : null}
+            {txType === "expense" && !isStatementPayment && !card.isCreditCardExpense ? <TourTarget id="form-debt" fill><DebtPaymentCard debt={debt} /></TourTarget> : null}
 
+            <TourTarget id="form-category" fill>
             <FormCard>
               {needsCategory ? (
                 <View>
@@ -221,10 +229,12 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
                 numberOfLines={3}
               />
             </FormCard>
+            </TourTarget>
 
 
             {formError ? <Banner tone="error">{formError}</Banner> : null}
 
+            <TourTarget id="form-save" fill>
             <Pressable
               onPress={() => handleSave()}
               disabled={saving}
@@ -235,7 +245,8 @@ export default function NewTransactionScreen({ userId, deviceId, accessToken, on
             >
               {saving ? <ActivityIndicator color="#fff" size="small" /> : <Text style={ui.buttonText}>{isEdit ? "Save Changes" : "Save"}</Text>}
             </Pressable>
-          </ScrollView>
+            </TourTarget>
+          </TourScrollArea>
         )}
 
         <TransactionDateSheet visible={showDatePicker} title="Select date" value={fields.date} onClose={() => setShowDatePicker(false)} onSelect={fields.setDate} />

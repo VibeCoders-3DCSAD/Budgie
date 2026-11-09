@@ -12,6 +12,7 @@ import {
   SavingsProgressSection,
 } from "./ReportSections";
 import { rangeFor, type ReportPeriod } from "./reportRange";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = {
   userId: string;
@@ -47,11 +48,11 @@ export default function FinancialReportsScreen({ userId, deviceId, accessToken, 
     </Text>
 
     <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 13, fontWeight: "800", marginTop: 20 }}>Reporting period</Text>
-    <View accessibilityRole="tablist" style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
+    <TourTarget id="reports-period" fill><View accessibilityRole="tablist" style={{ flexDirection: "row", gap: 8, marginTop: 8 }}>
       {PERIODS.map((option) => <Pressable key={option.value} accessibilityRole="tab" accessibilityState={{ selected: period === option.value }} onPress={() => setPeriod(option.value)} style={{ flex: 1, alignItems: "center", backgroundColor: period === option.value ? P.brand : P.tint, borderRadius: 10, paddingVertical: 9 }}>
         <Text style={{ color: period === option.value ? "#FFFFFF" : P.brand, fontFamily: "Manrope", fontSize: 11, fontWeight: "800" }}>{option.label}</Text>
       </Pressable>)}
-    </View>
+    </View></TourTarget>
     <View style={{ alignItems: "center", flexDirection: "row", justifyContent: "space-between", marginTop: 7 }}>
       <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11 }}>{range.startDate} to {range.endDate}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Refresh financial report" onPress={() => setManualRefreshKey((value) => value + 1)} hitSlop={8}>
@@ -60,16 +61,16 @@ export default function FinancialReportsScreen({ userId, deviceId, accessToken, 
     </View>
 
     <View style={{ gap: 14, marginTop: 20 }}>
-      <ExpenseDistributionSection userId={userId} range={range} refreshKey={refreshKey} />
-      <ForecastActualSection userId={userId} accessToken={accessToken} refreshKey={refreshKey} />
-      <BudgetActualSection userId={userId} range={range} refreshKey={refreshKey} />
+      <TourTarget id="reports-distribution" fill><ExpenseDistributionSection userId={userId} range={range} refreshKey={refreshKey} /></TourTarget>
+      <TourTarget id="reports-forecast-actual" fill><ForecastActualSection userId={userId} accessToken={accessToken} refreshKey={refreshKey} /></TourTarget>
+      <TourTarget id="reports-budget-actual" fill><BudgetActualSection userId={userId} range={range} refreshKey={refreshKey} /></TourTarget>
       <SavingsProgressSection userId={userId} refreshKey={refreshKey} />
       <DebtSummarySection userId={userId} refreshKey={refreshKey} />
       <CategoryBreakdownSection userId={userId} range={range} refreshKey={refreshKey} />
       <AllocationSummarySection userId={userId} range={range} refreshKey={refreshKey} />
     </View>
 
-    <View onLayout={({ nativeEvent }) => { forecastY.current = nativeEvent.layout.y; reportForecastLayout(); }} style={{ marginTop: 32 }}><SpendingForecastScreen userId={userId} accessToken={accessToken} refreshKey={refreshKey} embedded /></View>
-    <View style={{ marginTop: 32 }}><AnomalyAlertsScreen userId={userId} deviceId={deviceId} /></View>
+    <View onLayout={({ nativeEvent }) => { forecastY.current = nativeEvent.layout.y; reportForecastLayout(); }} style={{ marginTop: 32 }}><TourTarget id="reports-outlook" fill><SpendingForecastScreen userId={userId} accessToken={accessToken} refreshKey={refreshKey} embedded /></TourTarget></View>
+    <View style={{ marginTop: 32 }}><TourTarget id="reports-unusual" fill><AnomalyAlertsScreen userId={userId} deviceId={deviceId} /></TourTarget></View>
   </View>;
 }

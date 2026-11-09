@@ -15,6 +15,7 @@ import { useCreditCardForecast } from "./credit-cards/hooks/useCreditCardForecas
 import { useCycleEditor } from "./hooks/useCycleEditor";
 import { useDebtManagerData } from "./hooks/useDebtManagerData";
 import { Button, CARD_TINT, CardIcon, InfoRow, LinkButton, ProgressBar, SectionHeader, formatPeso } from "./components/debtUi";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = { userId: string; deviceId: string; accountId?: string; onBack?: () => void; onOpenCard?: (accountId: string) => void; onPayStatement?: (context: StatementPaymentContext) => void; onEditPayment?: (payment: CreditCardPayment) => void };
 
@@ -56,7 +57,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
     return <View style={{ gap: 10 }}><SectionHeader title="Credit Cards" /><Note>No credit cards are recorded yet. Add a credit card to track billing cycles and payments.</Note></View>;
   }
 
-  if (!accountId) return <CreditCardListScreen accounts={accounts} cycles={cycles} onOpenCard={onOpenCard ?? (() => {})} />;
+  if (!accountId) return <TourTarget id="cards-list" fill><CreditCardListScreen accounts={accounts} cycles={cycles} onOpenCard={onOpenCard ?? (() => {})} /></TourTarget>;
 
   if (!selectedAccount) return <View style={{ gap: 12 }}><Banner tone="error">This credit card is unavailable.</Banner><Button variant="ghost" label="Back to Credit Cards" onPress={() => onBack?.()} /></View>;
   const latestStatement = statements
@@ -70,6 +71,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
 
   return (
     <View style={{ gap: 14 }}>
+      <TourTarget id="card-summary" fill>
       <FormCard>
         <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}>
           <View style={[ui.listTile, { backgroundColor: CARD_TINT.bg, width: 40, height: 40, borderRadius: 12 }]}><CardIcon /></View>
@@ -86,10 +88,12 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
         <InfoRow label="Credit limit" term="credit-limit" value={formatPeso(creditLimitCentavos)} />
         <CreditCardAvailableCreditReconciliation userId={userId} deviceId={deviceId} accountId={selectedAccount.id} creditLimitCentavos={creditLimitCentavos} onSaved={load} />
       </FormCard>
+      </TourTarget>
       {stale ? <Banner tone="warn">Credit-card information may be out of date. Refresh or reconcile it with the latest issuer records.</Banner> : null}
       {error && !stale ? <Banner tone="error">Your credit-card information could not be loaded or saved. Check your connection and try again.</Banner> : null}
       {cycleEditor.notice ? <Banner tone="info">{cycleEditor.notice}</Banner> : null}
       <CreditCardCycleEditor editor={cycleEditor} today={today} />
+      <TourTarget id="card-cycles" fill>
       <CreditCardCycleList
         key={`${userId}:${selectedAccount.id}`}
         userId={userId}
@@ -107,8 +111,9 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
         onPayStatement={onPayStatement}
         onEditPayment={onEditPayment}
       />
-      <CreditCardRepaymentStrategy key={accountId} userId={userId} deviceId={deviceId} accountId={accountId} statement={latestStatement} strategy={strategy} onPreviewChange={setPreviewStrategy} onSaved={async () => { await load(); setPreviewStrategy(null); }} />
-      <CreditCardForecastSection forecast={forecast.forecast} isLoading={forecast.isLoading} creditLimitCentavos={creditLimitCentavos} reconciliationAt={selectedAccount.creditCardDetails?.availableCreditReconciledAt} />
+      </TourTarget>
+      <TourTarget id="card-strategy" fill><CreditCardRepaymentStrategy key={accountId} userId={userId} deviceId={deviceId} accountId={accountId} statement={latestStatement} strategy={strategy} onPreviewChange={setPreviewStrategy} onSaved={async () => { await load(); setPreviewStrategy(null); }} /></TourTarget>
+      <TourTarget id="card-forecast" fill><CreditCardForecastSection forecast={forecast.forecast} isLoading={forecast.isLoading} creditLimitCentavos={creditLimitCentavos} reconciliationAt={selectedAccount.creditCardDetails?.availableCreditReconciledAt} /></TourTarget>
       <CreditCardInstallmentList userId={userId} deviceId={deviceId} installments={installments.filter((installment) => installment.account_id === accountId)} settlements={settlements} onSaved={load} />
     </View>
   );

@@ -2,6 +2,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { shellPalette as palette } from "../../shell/theme";
 import { useLogout } from "../../sync/SyncProvider";
 import { usePracticeModeStore } from "../../../services/practiceMode";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 // Lock and Log out, below the settings list.
 export function AccountActions({ onLock }: { onLock: () => void }) {
@@ -10,6 +11,7 @@ export function AccountActions({ onLock }: { onLock: () => void }) {
   const practice = usePracticeModeStore((state) => state.active);
   const logoutDisabled = !online || isLoggingOut || practice;
   return (
+    <TourTarget id="settings-account-actions" fill>
     <View style={{ marginTop: 20 }}>
       <Pressable accessibilityRole="button" accessibilityLabel="Lock app" onPress={onLock}
         className="min-h-[54px] rounded-[14px] bg-[#013220] items-center justify-center mb-3">
@@ -34,5 +36,6 @@ export function AccountActions({ onLock }: { onLock: () => void }) {
         )}
       </Pressable>
     </View>
+    </TourTarget>
   );
 }

@@ -10,6 +10,7 @@ import type { SavingsActivity } from "./types";
 import SavingsAllocationReview from "./components/SavingsAllocationReview";
 import type { SavingsAllocationProposal } from "./helpers/savingsEnvelopeAllocation";
 import { formatPeso } from "../../lib/format/money";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 const P = { card: "#F1F0EB", ink: "#1B1C1A", muted: "#6B7A6F", brand: "#013220", line: "#EAEAE6", error: "#D9001F", white: "#FFFFFF", soft: "#E8F3EC", warn: "#8A4B00" } as const;
 type Props = { userId: string; deviceId: string; syncVersion?: number; initialGoalId?: string; onRecordActivity?: (goalId: string, kind: "contribution" | "withdrawal", amountCentavos?: number) => void; onOpenTransaction?: (transactionId: string) => void };
@@ -86,14 +87,16 @@ function SavingsGoalsOverview({ userId, deviceId, syncVersion, goals, proposals,
   const targetCentavos = goals.reduce((total, goal) => total + goal.targetAmountCentavos, 0);
   return <View style={{ gap: 16 }}>
     {errorBanner}
+    <TourTarget id="savings-total" fill>
     <View style={{ backgroundColor: P.brand, borderRadius: 16, padding: 16 }}>
       <Text style={{ color: "#D7EEE2", fontFamily: "Manrope", fontSize: 11, fontWeight: "700", letterSpacing: 0.6 }}>SAVED ACROSS {goals.length} {goals.length === 1 ? "GOAL" : "GOALS"}</Text>
       <Text style={{ color: P.white, fontFamily: "Manrope", fontSize: 28, fontWeight: "800", marginTop: 4 }}>{money(savedCentavos)}</Text>
       <Text style={{ color: "#D7EEE2", fontFamily: "Manrope", fontSize: 12, marginTop: 2 }}>{money(targetCentavos)} target</Text>
     </View>
-    <SavingsAllocationReview userId={userId} deviceId={deviceId} syncVersion={syncVersion} onAllocationChange={onProposalsChange} />
+    </TourTarget>
+    <TourTarget id="savings-allocation" fill><SavingsAllocationReview userId={userId} deviceId={deviceId} syncVersion={syncVersion} onAllocationChange={onProposalsChange} /></TourTarget>
     <View style={{ gap: 8 }}>
-      <SectionHeader title="Your goals" actionLabel="Add goal" accessibilityLabel="Add savings goal" onAction={onCreate} />
+      <TourTarget id="savings-add" fill><SectionHeader title="Your goals" actionLabel="Add goal" accessibilityLabel="Add savings goal" onAction={onCreate} /></TourTarget>
       <GoalList goals={goals} proposalsByGoalId={proposalsByGoalId} onOpenGoal={onOpenGoal} />
     </View>
     <ArchivedLink onPress={() => onViewChange("archived")} />
@@ -102,7 +105,7 @@ function SavingsGoalsOverview({ userId, deviceId, syncVersion, goals, proposals,
 
 function GoalList({ goals, proposalsByGoalId, onOpenGoal }: { goals: SavingsGoal[]; proposalsByGoalId?: Map<string, SavingsAllocationProposal>; onOpenGoal: (id: string) => void }) {
   return <View style={{ backgroundColor: P.white, borderColor: P.line, borderRadius: 14, borderWidth: 1, paddingHorizontal: 12 }}>
-    {goals.map((goal, index) => <GoalRow key={goal.id} goal={goal} plannedCentavos={proposalsByGoalId?.get(goal.id)?.plannedTotalCentavos ?? proposalsByGoalId?.get(goal.id)?.proposedTotalCentavos ?? 0} divider={index > 0} onPress={() => onOpenGoal(goal.id)} />)}
+    {goals.map((goal, index) => <TourTarget key={goal.id} id={`savings-goal-${goal.id}`} fill><GoalRow goal={goal} plannedCentavos={proposalsByGoalId?.get(goal.id)?.plannedTotalCentavos ?? proposalsByGoalId?.get(goal.id)?.proposedTotalCentavos ?? 0} divider={index > 0} onPress={() => onOpenGoal(goal.id)} /></TourTarget>)}
   </View>;
 }
 

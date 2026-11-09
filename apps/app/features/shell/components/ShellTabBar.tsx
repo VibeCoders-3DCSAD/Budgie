@@ -7,6 +7,7 @@ import { isTabBarVisible, shellTabs, type ShellTab } from "../helpers/shellNavig
 import { shellPageColor } from "../helpers/shellColors";
 import { useShellChromeStore } from "../stores/useShellChromeStore";
 import { shellPalette as palette } from "../theme";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 const TOOLBAR_MAX_WIDTH = 430;
 
@@ -26,8 +27,8 @@ export function ShellTabBar({ focusedTab }: { focusedTab: string | undefined }) 
         {shellTabs.flatMap(({ tab, href, label, Icon }, index) => {
           const selected = focusedTab === tab;
           const button = (
+            <TourTarget key={tab} id={`tab-${tab}`}>
             <Pressable
-              key={tab}
               onPress={() => router.navigate(href)}
               accessibilityRole="tab"
               accessibilityLabel={label}
@@ -41,11 +42,12 @@ export function ShellTabBar({ focusedTab }: { focusedTab: string | undefined }) 
                 {label}
               </Text>
             </Pressable>
+            </TourTarget>
           );
           if (index !== 2) return [button];
           return [
+            <TourTarget key="add" id="tab-add">
             <Pressable
-              key="add"
               onPress={() => router.push(ROUTES.transactionForm)}
               accessibilityRole="button"
               accessibilityLabel="Add transaction"
@@ -60,7 +62,8 @@ export function ShellTabBar({ focusedTab }: { focusedTab: string | undefined }) 
               }}
             >
               <Plus size={23} color="white" weight="bold" />
-            </Pressable>,
+            </Pressable>
+            </TourTarget>,
             button,
           ];
         })}

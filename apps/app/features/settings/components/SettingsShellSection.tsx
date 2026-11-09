@@ -6,6 +6,7 @@ import { SyncStatusIcon } from "../../shell/components/SyncButton";
 import { shellPalette as palette } from "../../shell/theme";
 import { useSync } from "../../sync/SyncProvider";
 import { useTutorialEntry } from "../../onboarding-tour/hooks/useTutorialEntry";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 const sectionLabel = { fontSize: 11, fontWeight: "700", color: palette.mut, textTransform: "uppercase", letterSpacing: 0.55, marginBottom: 9 } as const;
 
@@ -40,10 +41,11 @@ export function SettingsShellSection({ userId }: { userId: string }) {
     <View>
       <Text style={sectionLabel}>Manage</Text>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
-        <ManageRow label="Categories" icon="tag-outline" onPress={() => router.push(ROUTES.categories)} />
-        <ManageRow label="Definition of terms" icon="book-open-variant" divider onPress={() => router.push(ROUTES.glossary)} />
+        <TourTarget id="settings-categories" fill><ManageRow label="Categories" icon="tag-outline" onPress={() => router.push(ROUTES.categories)} /></TourTarget>
+        <TourTarget id="settings-glossary" fill><ManageRow label="Definition of terms" icon="book-open-variant" divider onPress={() => router.push(ROUTES.glossary)} /></TourTarget>
       </View>
       <Text style={sectionLabel}>Sync</Text>
+      <TourTarget id="settings-sync" fill>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden", marginBottom: 20 }}>
         <Pressable
           accessibilityRole="button"
@@ -66,11 +68,12 @@ export function SettingsShellSection({ userId }: { userId: string }) {
           <MaterialCommunityIcons color={palette.mut} name="chevron-right" size={20} />
         </Pressable>
       </View>
+      </TourTarget>
       <Text style={sectionLabel}>Help and About</Text>
       <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>
         {tutorial.canResume ? <ManageRow label="Resume tutorial" icon="play-circle-outline" disabled={tutorial.busy} onPress={tutorial.resume} /> : null}
-        <ManageRow label="Replay tutorial" icon="replay" divider={tutorial.canResume} disabled={tutorial.busy} onPress={tutorial.replay} />
-        <ManageRow label="Terms & Conditions" icon="file-document-outline" divider onPress={() => router.push(ROUTES.terms)} />
+        <TourTarget id="settings-replay" fill><ManageRow label="Replay tutorial" icon="replay" divider={tutorial.canResume} disabled={tutorial.busy} onPress={tutorial.replay} /></TourTarget>
+        <TourTarget id="settings-terms" fill><ManageRow label="Terms & Conditions" icon="file-document-outline" divider onPress={() => router.push(ROUTES.terms)} /></TourTarget>
       </View>
     </View>
   );

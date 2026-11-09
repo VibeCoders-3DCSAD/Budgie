@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import type { Hub } from "../helpers/shellNavigation";
 import { CONTENT_GUTTER, shellPalette as palette } from "../theme";
 import { useShellPage } from "./PageScroll";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 export function HubTitle({ title }: { title: string }) {
   return (
@@ -22,8 +23,8 @@ export function HubSegments({ hub, pathname }: { hub: Hub; pathname: string }) {
         {hub.segments.map((segment) => {
           const selected = pathname === segment.href;
           return (
+            <TourTarget key={segment.href} id={`hub-${String(segment.href)}`} style={{ flex: 1 }}>
             <Pressable
-              key={segment.href}
               accessibilityRole="tab"
               accessibilityLabel={segment.label.replace("\n", " ")}
               accessibilityState={{ selected }}
@@ -37,6 +38,7 @@ export function HubSegments({ hub, pathname }: { hub: Hub; pathname: string }) {
                 {segment.label}
               </Text>
             </Pressable>
+            </TourTarget>
           );
         })}
       </View>

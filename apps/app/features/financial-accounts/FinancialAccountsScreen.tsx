@@ -11,6 +11,7 @@ import { AccountsList } from "./components/AccountsList";
 import SavingsGoalInvitation from "./components/SavingsGoalInvitation";
 import { totalCashPosition } from "./helpers/accountDisplay";
 import { useFinancialAccounts } from "./hooks/useFinancialAccounts";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = {
   userId: string;
@@ -50,6 +51,7 @@ export default function FinancialAccountsScreen({ userId, deviceId, onBack, onSy
 
   return (
     <>
+      <TourTarget id="money-accounts-total" fill>
       <View style={{ marginBottom: 14 }}>
         <AmountHero
           label="TOTAL CASH POSITION"
@@ -57,10 +59,11 @@ export default function FinancialAccountsScreen({ userId, deviceId, onBack, onSy
           detail={`Across ${accounts.length} ${accounts.length === 1 ? "account" : "accounts"}`}
         />
       </View>
+      </TourTarget>
       {loading ? null : accounts.length === 0 ? (
         <AccountsEmptyState onAdd={openCreateSheet} />
       ) : (
-        <AccountsList accounts={accounts} onAdd={openCreateSheet} onSelect={setAccountActionsTarget} />
+        <TourTarget id="money-accounts-list" fill><AccountsList accounts={accounts} onAdd={openCreateSheet} onSelect={setAccountActionsTarget} /></TourTarget>
       )}
       <AccountActionsSheet
         account={accountActionsTarget}

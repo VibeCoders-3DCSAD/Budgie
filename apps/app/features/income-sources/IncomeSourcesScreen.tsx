@@ -10,6 +10,7 @@ import { AmountHero } from "../../components/BudgieForm";
 import IncomeSourceActions from "./IncomeSourceActions";
 import { incomeScheduleLabel } from "./presentation";
 import { formatPeso } from "../../lib/format/money";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = { userId: string; deviceId: string; onBack: () => void; onAdd: () => void; onEdit: (id: string) => void; onSyncRequested?: () => void };
 
@@ -59,12 +60,12 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
 
   return (
     <View style={{ gap: 11 }}>
-      <AmountHero label="ESTIMATED MONTHLY INCOME AFTER DEBT DEDUCTIONS" amountCentavos={loading ? undefined : summary.netMonthlyCentavos} detail={loading ? "Loading income sources…" : sourceCount} />
+      <TourTarget id="money-income-total" fill><AmountHero label="ESTIMATED MONTHLY INCOME AFTER DEBT DEDUCTIONS" amountCentavos={loading ? undefined : summary.netMonthlyCentavos} detail={loading ? "Loading income sources…" : sourceCount} /></TourTarget>
       {!loading && sources.length > 0 ? <Text style={s.detail}>{`${formatPeso(summary.grossMonthlyCentavos)} after taxes, before ${formatPeso(summary.salaryLoanDeductionsCentavos)} in salary-loan deductions`}</Text> : null}
       {loading || sources.length > 0 ? (
         <View style={s.sectionHead}>
           <Text style={s.sectionTitle}>Income sources</Text>
-          <Pressable onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add income source" hitSlop={8}><Text style={s.add}>Add</Text></Pressable>
+          <TourTarget id="money-income-add"><Pressable onPress={onAdd} accessibilityRole="button" accessibilityLabel="Add income source" hitSlop={8}><Text style={s.add}>Add</Text></Pressable></TourTarget>
         </View>
       ) : null}
       {error ? <Banner tone="error">{error}</Banner> : null}
@@ -79,6 +80,7 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
           <Pressable onPress={onAdd} accessibilityRole="button" style={[ui.button, { alignSelf: "stretch", marginTop: 6 }]}><Text style={ui.buttonText}>Add an income source</Text></Pressable>
         </View>
       ) : sources.length > 0 ? (
+        <TourTarget id="money-income-list" fill>
         <View style={s.list}>
           {sources.map((source, index) => (
             <Pressable key={source.id} onPress={() => { setSelected(source); setConfirming(false); }} accessibilityRole="button" accessibilityLabel={`Actions for ${source.name}`} disabled={deletingId === source.id} style={[s.row, index > 0 ? s.divider : null]}>
@@ -92,6 +94,7 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
             </Pressable>
           ))}
         </View>
+        </TourTarget>
       ) : null}
       <IncomeSourceActions name={selected?.name ?? null} confirming={confirming} busy={deletingId === selected?.id} onClose={closeActions} onEdit={() => { if (selected) { const id = selected.id; closeActions(); onEdit(id); } }} onRequestDelete={() => setConfirming(true)} onConfirmDelete={() => { void confirmDelete(); }} />
     </View>

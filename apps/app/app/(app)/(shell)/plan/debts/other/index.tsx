@@ -4,12 +4,13 @@ import NonCreditDebtListScreen from "../../../../../../features/debt-manager/Non
 import { InnerPage } from "../../../../../../features/shell/components/InnerPage";
 import { useShellPage } from "../../../../../../features/shell/components/PageScroll";
 import { ROUTES } from "../../../../../../routes";
+import { TourTarget } from "../../../../../../features/onboarding-tour/components/TourTarget";
 
 function OtherDebts() {
   const { userId, deviceId } = useSession();
   const { goBack } = useShellPage();
-  return <NonCreditDebtListScreen userId={userId} deviceId={deviceId} onBack={goBack}
-    onOpenDebt={(id) => router.push({ pathname: ROUTES.planOtherDebt, params: { id } })} />;
+  return <TourTarget id="loans-list" fill><NonCreditDebtListScreen userId={userId} deviceId={deviceId} onBack={goBack}
+    onOpenDebt={(id) => router.push({ pathname: ROUTES.planOtherDebt, params: { id } })} /></TourTarget>;
 }
 
 export default function OtherDebtsRoute() {

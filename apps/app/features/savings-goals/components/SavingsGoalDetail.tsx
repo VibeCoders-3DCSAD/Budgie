@@ -10,6 +10,7 @@ import type { SavingsActivity } from "../types";
 import { SavingsForecastSection } from "../forecast/components/SavingsForecastSection";
 import { formatPeso } from "../../../lib/format/money";
 import { GoalProgressBar } from "./GoalProgressBar";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 const P = { card: "#F1F0EB", ink: "#1B1C1A", muted: "#6B7A6F", brand: "#013220", line: "#EAEAE6", error: "#D9001F", white: "#FFFFFF", soft: "#E8F3EC", warn: "#8A4B00" } as const;
 const money = formatPeso;
@@ -58,6 +59,7 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
     </View>
     {message ? <Text accessibilityRole="alert" style={{ color: P.error, fontFamily: "Manrope", fontSize: 12 }}>{message}</Text> : null}
 
+    <TourTarget id="goal-progress" fill>
     <View style={{ backgroundColor: P.card, borderColor: P.line, borderRadius: 16, borderWidth: 1, gap: 10, padding: 16 }}>
       <StatusPill goal={goal} reached={reached} />
       <View>
@@ -70,16 +72,18 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
         <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12 }}>{reached ? "Target reached" : `${money(goal.remainingAmountCentavos)} to go`}</Text>
       </View>
     </View>
+    </TourTarget>
 
-    {active ? <View style={{ flexDirection: "row", gap: 10 }}>
+    {active ? <TourTarget id="goal-actions" fill><View style={{ flexDirection: "row", gap: 10 }}>
       {!reached ? <View style={{ flex: 1 }}><Button label="Add money" onPress={() => onRecordActivity?.(goal.id, "contribution", plannedContributionCentavos > 0 ? plannedContributionCentavos : undefined)} /></View> : null}
       <View style={{ flex: 1 }}><Button label="Withdraw" secondary onPress={() => onRecordActivity?.(goal.id, "withdrawal")} /></View>
-    </View> : null}
+    </View></TourTarget> : null}
 
     {active && plannedContributionCentavos > 0 ? <View style={{ backgroundColor: P.soft, borderRadius: 12, padding: 12 }}>
       <Text style={{ color: P.brand, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>Remaining to contribute this cycle: {money(plannedContributionCentavos)}.</Text>
     </View> : null}
 
+    <TourTarget id="goal-details" fill>
     <Section title="Details">
       <DetailRow label="Type" value={`${savingsGoalKindLabel(goal.isEmergencyFund)} · ${SAVINGS_GOAL_PRIORITY_LABELS[goal.priority]} priority`} />
       <DetailRow label="Account" value={goal.linkedAccountName ?? (goal.linkedAccountId ? "Unavailable" : "Not linked")} />
@@ -87,9 +91,11 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
       {minimum !== null ? <DetailRow label="Minimum each time" value={money(minimum)} /> : null}
       {goal.notes ? <DetailRow label="Notes" value={goal.notes} /> : null}
     </Section>
+    </TourTarget>
 
-    <SavingsForecastSection currentBalanceCentavos={goal.currentAmountCentavos} startingBalanceCentavos={goal.startingAmountCentavos} targetAmountCentavos={goal.targetAmountCentavos} targetDate={goal.targetDate} schedule={goal} interestRateBps={goal.interestRateBps} activities={activities} />
+    <TourTarget id="goal-forecast" fill><SavingsForecastSection currentBalanceCentavos={goal.currentAmountCentavos} startingBalanceCentavos={goal.startingAmountCentavos} targetAmountCentavos={goal.targetAmountCentavos} targetDate={goal.targetDate} schedule={goal} interestRateBps={goal.interestRateBps} activities={activities} /></TourTarget>
 
+    <TourTarget id="goal-activity" fill>
     <Section title="Activity" trailing={activities.length > 0 ? `${activities.length} ${activities.length === 1 ? "entry" : "entries"}` : undefined}>
       {activities.length === 0
         ? <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12, paddingVertical: 4 }}>No money added or withdrawn yet.</Text>
@@ -98,6 +104,7 @@ export default function SavingsGoalDetail({ goal, activities, plannedContributio
         <Text style={{ color: P.brand, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>{showAllActivity ? "Show less" : `Show all ${activities.length}`}</Text>
       </Pressable> : null}
     </Section>
+    </TourTarget>
 
     <ConfirmDialog
       confirmation={confirmation}

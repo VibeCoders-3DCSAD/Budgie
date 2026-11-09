@@ -9,6 +9,7 @@ import NonCreditDebtForecastSection from "./non-credit/components/NonCreditDebtF
 import NonCreditDebtForm from "./non-credit/components/NonCreditDebtForm";
 import { getDebtTypeLabel } from "./debtTypes";
 import { Button, DebtTypeIcon, debtTypeTint } from "./components/debtUi";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = { userId: string; deviceId: string; debtId: string; onBack: () => void; onRecordPayment: (debtId: string) => void; onEditPayment: (payment: DebtPayment) => void };
 
@@ -46,6 +47,6 @@ export default function NonCreditDebtDetailScreen({ userId, deviceId, debtId, on
       </View>
     </View>
     <NonCreditDebtCard userId={userId} deviceId={deviceId} debt={debt} onEdit={() => setEditing(true)} onRecordPayment={onRecordPayment} onEditPayment={onEditPayment} onChanged={() => load().catch(() => {})} />
-    <NonCreditDebtForecastSection debt={debt} payments={payments} projectedContributionCentavos={projectedContributionCentavos} />
+    <TourTarget id="debt-forecast" fill><NonCreditDebtForecastSection debt={debt} payments={payments} projectedContributionCentavos={projectedContributionCentavos} /></TourTarget>
   </View>;
 }

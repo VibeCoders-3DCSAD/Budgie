@@ -8,6 +8,7 @@ import { formatPeso } from "../helpers/financialPlanPresentation";
 import type { CommitmentPreview } from "../helpers/commitmentBudget";
 import { recommendPlanAmount } from "../helpers/planAmountRecommendation";
 import { PlanCategoryRuleEditor, type PlanCategoryRuleUpdate } from "./PlanCategoryRuleEditor";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 type Props = {
   topLevelCategories: Category[];
@@ -174,10 +175,12 @@ export function PlanCategorySelection({ topLevelCategories, subcategories, inclu
     const highlighted = selected || selectedChildren > 0;
     return <View key={category.id} style={{ marginTop: 8, borderRadius: 14, borderWidth: 1, borderColor: highlighted ? "#9FCDB5" : "#EAEAE6", backgroundColor: "#FFFFFF", overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingRight: 4, backgroundColor: selected ? "#EEFFF8" : "#FFFFFF" }}>
+        <TourTarget id={`plan-category-${category.slug}`} style={{ flex: 1 }}>
         <Pressable accessibilityRole="checkbox" accessibilityState={{ checked: selected, disabled: locked }} accessibilityLabel={`Include ${category.label} in Financial Plan`} disabled={locked} onPress={() => onToggleCategory(category.id)} style={{ flex: 1, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 13, paddingLeft: 12, opacity: locked ? 0.8 : 1 }}>
           {checkbox(selected)}
           <View style={{ flex: 1 }}><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 14, color: "#1B1C1A" }}>{category.label}</Text><Text style={{ fontFamily: "Manrope", fontSize: 11, color: highlighted || locked ? "#416153" : "#8A938C", marginTop: 2 }}>{summary}</Text></View>
         </Pressable>
+        </TourTarget>
         <Pressable accessibilityRole="button" accessibilityLabel={`${expanded ? "Hide" : "Show"} subcategories for ${category.label}`} accessibilityState={{ expanded, disabled: pinnedOpen }} disabled={pinnedOpen} onPress={() => toggleExpanded(category.id)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 3, height: 32, paddingHorizontal: 8, opacity: pinnedOpen ? 0.4 : 1 }}>
           <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11, color: "#6B7A6F" }}>{children.length}</Text>
           <CaretDown size={14} color="#6B7A6F" weight="bold" style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }} />
@@ -198,6 +201,7 @@ export function PlanCategorySelection({ topLevelCategories, subcategories, inclu
       <Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: "#1B1C1A" }}>Financial Plan</Text>
       <Text style={{ fontFamily: "Manrope", fontSize: 12, color: "#6B7A6F", marginTop: 4, lineHeight: 18 }}>Set an amount, then pick what to budget. Fixed and minimum categories are always included.</Text>
 
+      <TourTarget id="plan-amount" fill>
       <View style={{ marginTop: 16, borderRadius: 16, borderWidth: 1, borderColor: "#EAEAE6", backgroundColor: "#FFFFFF", padding: 14 }}>
         <Text style={{ color: "#1B1C1A", fontFamily: "Manrope", fontSize: 13, fontWeight: "800" }}>How much should we plan?</Text>
         <TextInput accessibilityLabel="How much should we plan in pesos" value={plannedAmount} onChangeText={onPlannedAmountChange} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#8A938C" style={{ backgroundColor: "#FCF8F0", borderColor: planningAmountError ? "#D9001F" : "#D7DDD8", borderRadius: 12, borderWidth: 1, color: "#1B1C1A", fontFamily: "Manrope", fontSize: 18, fontWeight: "700", marginTop: 8, paddingHorizontal: 13, paddingVertical: 11 }} />
@@ -206,12 +210,13 @@ export function PlanCategorySelection({ topLevelCategories, subcategories, inclu
         {recommendation && recommendation.totalCentavos > 0 ? <View style={{ marginTop: 10, borderRadius: 11, backgroundColor: "#F0F7F3", paddingVertical: 9, paddingLeft: 11, paddingRight: 4 }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
             <Text style={{ flex: 1, color: "#1B1C1A", fontFamily: "Manrope", fontSize: 12, fontWeight: "800" }}>Recommended Minimum: {formatPeso(recommendedCentavos)}</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Use the recommended minimum planning amount" onPress={() => onPlannedAmountChange((recommendedCentavos / 100).toFixed(2))} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#0E6D46", fontFamily: "Manrope", fontSize: 12, fontWeight: "800" }}>Use this</Text></Pressable>
+            <TourTarget id="plan-use-recommended"><Pressable accessibilityRole="button" accessibilityLabel="Use the recommended minimum planning amount" onPress={() => onPlannedAmountChange((recommendedCentavos / 100).toFixed(2))} style={{ paddingHorizontal: 10, paddingVertical: 4 }}><Text style={{ color: "#0E6D46", fontFamily: "Manrope", fontSize: 12, fontWeight: "800" }}>Use this</Text></Pressable></TourTarget>
           </View>
           <Text style={{ color: "#6B7A6F", fontFamily: "Manrope", fontSize: 11, marginTop: 1 }}>{formatPeso(recommendation.commitmentsCentavos)} commitments + {formatPeso(recommendation.spendingCentavos)} expected spending</Text>
           {recommendation.totalCentavos > availableMoneyCentavos ? <Text style={{ color: "#B45309", fontFamily: "Manrope", fontSize: 11, marginTop: 2 }}>Your available money is {formatPeso(recommendation.totalCentavos - availableMoneyCentavos)} short of this month's needs.</Text> : null}
         </View> : null}
       </View>
+      </TourTarget>
 
       {commitmentSection}
 
@@ -227,7 +232,7 @@ export function PlanCategorySelection({ topLevelCategories, subcategories, inclu
       <View style={{ marginTop: 22, borderTopWidth: 1, borderTopColor: "#EAEAE6", paddingTop: 14 }}>
         <Text style={{ fontFamily: "Manrope", fontSize: 12, color: "#6B7A6F", textAlign: "center" }}>{includedCount} {includedCount === 1 ? "category" : "categories"} included</Text>
         {hasInvalidManualAmount ? <Text accessibilityRole="alert" style={{ color: "#D9001F", fontFamily: "Manrope", fontSize: 11, marginTop: 6, textAlign: "center" }}>Enter an amount greater than zero for each new category.</Text> : null}
-        <Pressable accessibilityRole="button" accessibilityLabel="Continue to Plan" disabled={cannotContinue} onPress={() => onContinue(manualAllocations())} style={{ backgroundColor: "#013220", borderRadius: 14, padding: 14, marginTop: 10, opacity: cannotContinue ? 0.5 : 1 }}><Text style={{ fontFamily: "Manrope", fontWeight: "800", color: "#FFFFFF", textAlign: "center" }}>Continue to Plan</Text></Pressable>
+        <TourTarget id="plan-continue" fill><Pressable accessibilityRole="button" accessibilityLabel="Continue to Plan" disabled={cannotContinue} onPress={() => onContinue(manualAllocations())} style={{ backgroundColor: "#013220", borderRadius: 14, padding: 14, marginTop: 10, opacity: cannotContinue ? 0.5 : 1 }}><Text style={{ fontFamily: "Manrope", fontWeight: "800", color: "#FFFFFF", textAlign: "center" }}>Continue to Plan</Text></Pressable></TourTarget>
       </View>
 
       {editingCategory ? <PlanCategoryRuleEditor visible={editorOpen} category={editingCategory} onClose={closeEditor} onSave={async (update) => { await onSaveCategoryRule(editingCategory, update); closeEditor(); }} /> : null}

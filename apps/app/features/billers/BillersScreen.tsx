@@ -13,6 +13,7 @@ import { listCategories, listSubcategories } from "../../local-db/repositories/l
 import { AutoPostSheet, DeleteConfirmDialog, RowMenuSheet } from "./components/ScheduledPaymentActions";
 import { dueThisMonthCentavos, formatPeso, isDueSoon, rowSubtitle } from "./presentation";
 import { manilaToday } from "../../lib/dates";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Filter = "all" | "due_soon" | "auto_post" | "archived";
 type Props = { userId: string; deviceId: string; syncVersion: number; onAdd: () => void; onEdit: (id: string) => void; onOpen: (id: string) => void; onSyncRequested: () => void };
@@ -159,10 +160,12 @@ export default function BillersScreen({ userId, deviceId, syncVersion, onAdd, on
 
   return (
     <View style={{ gap: 14 }}>
-      {header}
+      <TourTarget id="money-billers-total" fill>{header}</TourTarget>
+      <TourTarget id="money-billers-filters" fill>
       <View style={ui.card}>
         <View style={ui.chips}>{FILTERS.map((option) => <Chip key={option.key} label={option.label} selected={filter === option.key} onPress={() => setFilter(option.key)} />)}</View>
       </View>
+      </TourTarget>
       {visible.length === 0 ? emptyState(...FILTERED_EMPTY[filter as Exclude<Filter, "all">]) : (
         <View style={ui.list}>
           {visible.map((payment, index) => {

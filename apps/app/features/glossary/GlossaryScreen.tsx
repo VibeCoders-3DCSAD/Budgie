@@ -5,6 +5,7 @@ import { GlossaryToolbar } from "./components/GlossaryToolbar";
 import { TermList } from "./components/TermList";
 import { searchGlossary } from "./helpers/glossarySearch";
 import { GLOSSARY_TERMS, type GlossaryLanguage, type GlossaryTermId } from "./terms";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 const SORTED_TERMS = [...GLOSSARY_TERMS].sort((a, b) => a.term.localeCompare(b.term));
 
@@ -18,7 +19,7 @@ export default function GlossaryScreen({ initialTermId }: { initialTermId?: Glos
     <InnerPage
       title="Definition of terms"
       fallbackHref={ROUTES.settings}
-      header={<GlossaryToolbar query={query} onQuery={setQuery} language={language} onLanguage={setLanguage} />}
+      header={<TourTarget id="glossary-toolbar" fill><GlossaryToolbar query={query} onQuery={setQuery} language={language} onLanguage={setLanguage} /></TourTarget>}
     >
       <TermList results={results} query={query} language={language} initialTermId={initialTermId} />
     </InnerPage>

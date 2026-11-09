@@ -13,6 +13,7 @@ import { TransactionListBody } from "./history/components/TransactionListBody";
 import { TransactionFiltersSheet } from "./history/components/TransactionFiltersSheet";
 import { DeleteTransactionModal, InstallmentDeleteBlockedModal } from "./history/components/DeleteTransactionModals";
 import { UnusualSpendingModal } from "./history/components/UnusualSpendingModal";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = {
   userId: string;
@@ -71,6 +72,7 @@ export default function TransactionHistoryScreen({ userId, deviceId, accessToken
         Activity
       </Text>
 
+      <TourTarget id="activity-search" fill>
       <HistorySearchCard
         search={filters.state.search}
         onSearchChange={filters.setSearch}
@@ -78,13 +80,16 @@ export default function TransactionHistoryScreen({ userId, deviceId, accessToken
         activeFilterCount={filters.activeFilterCount}
         onOpenFilters={() => filters.setShowFilters(true)}
       />
+      </TourTarget>
 
       {/* The totals wait for the rows rather than printing a zero that is about to change. A type filter shows only its own total. */}
       {list.loading ? null : (
+        <TourTarget id="activity-totals" fill>
         <View style={{ flexDirection: "row", gap: 12, opacity: list.stale ? 0.5 : 1 }}>
           {typeFilter !== "expense" ? <StatCard kind="income" centavos={list.totals.income_centavos} /> : null}
           {typeFilter !== "income" ? <StatCard kind="expense" centavos={list.totals.expense_centavos} /> : null}
         </View>
+        </TourTarget>
       )}
 
       <TransactionListBody

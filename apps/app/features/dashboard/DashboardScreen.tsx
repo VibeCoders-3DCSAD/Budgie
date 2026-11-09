@@ -22,6 +22,7 @@ import { groupSpendingCategories } from "./helpers/spendingGroups";
 import { DEFAULT_TAXONOMY_COLOR, TaxonomyIcon } from "../taxonomy/taxonomyVisuals";
 import { dashboardColors as P, dashboardStyles } from "./dashboardAppearance";
 import { WithTermInfo } from "../../components/TermInfo";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Props = {
   userId: string;
@@ -94,6 +95,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
         </Pressable>
       ) : null}
       {/* Balance card */}
+      <TourTarget id="dash-balance" fill>
       <AmountHero label="AVAILABLE BALANCE" amountCentavos={s.currentBalanceCentavos} detail={showBalanceDelta ? undefined : balanceDetail}>
         {showBalanceDelta ? (
           <View style={{ flexDirection: "row", alignItems: "center", gap: 4, marginTop: 10, paddingVertical: 3, paddingHorizontal: 10, borderRadius: 999, backgroundColor: P.brand, alignSelf: "flex-start" }}>
@@ -102,8 +104,10 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           </View>
         ) : null}
       </AmountHero>
+      </TourTarget>
 
       {/* Income / Expense cards */}
+      <TourTarget id="dash-income-expense" fill>
       <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
         <View style={{ flex: 1, minWidth: 0, padding: 14, borderRadius: 12, backgroundColor: P.mint }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
@@ -141,15 +145,16 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           )}
         </View>
       </View>
-      {reminders}
+      </TourTarget>
+      <TourTarget id="dash-attention" fill>{reminders}</TourTarget>
 
-      <View style={[dashboardStyles.card, { marginTop: 12 }]}><WithTermInfo term="cash-flow"><Text style={{ fontFamily: "Manrope", fontSize: 14, color: P.secondary }}>Net monthly cash flow</Text></WithTermInfo><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos >= 0 ? P.green : P.error, marginTop: 4 }}>{formatPeso(s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos)}</Text></View>
+      <TourTarget id="dash-cashflow" fill><View style={[dashboardStyles.card, { marginTop: 12 }]}><WithTermInfo term="cash-flow"><Text style={{ fontFamily: "Manrope", fontSize: 14, color: P.secondary }}>Net monthly cash flow</Text></WithTermInfo><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos >= 0 ? P.green : P.error, marginTop: 4 }}>{formatPeso(s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos)}</Text></View></TourTarget>
 
       <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
         <SnapshotCard title="Savings goals" stale={staleSnapshot(savingsSnap)} unavailable={savingsUnavailable} onRefresh={refresh} onNavigate={() => onNavigate("savings-goals")} actionLabel={!savingsSnap || savingsCount === 0 ? "Create a goal" : undefined} copy={savingsText ?? (savingsUnavailable ? "Savings goal information is unavailable." : !savingsSnap || savingsCount === 0 ? "No savings goals yet. Create one when you're ready." : savingsCount === null ? "Savings goal summary is unavailable. Refresh to try again." : `${savingsCount} savings goal${savingsCount === 1 ? "" : "s"} in progress${savingsCentavos === null ? "." : ` · ${formatPeso(savingsCentavos)} saved.`}`)} />
       </View>
 
-      <FinancialHealthCard accessToken={accessToken} />
+      <TourTarget id="dash-profile" fill><FinancialHealthCard accessToken={accessToken} /></TourTarget>
 
       {s.incomeSourceCount === 0 ? (
         <Pressable accessibilityRole="button" accessibilityLabel="Add an income source" onPress={() => onNavigate("income-sources")} style={[dashboardStyles.card, { marginTop: 20, backgroundColor: P.mint }]}>
@@ -163,6 +168,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
         <Text style={dashboardStyles.sectionTitle}>Trends</Text>
         {trends.length === 0 ? <Text style={{ fontFamily: "Manrope", fontWeight: "600", fontSize: 12.5, color: P.secondary }}>No chart data</Text> : <Text style={{ fontFamily: "Manrope", fontWeight: "600", fontSize: 12.5, color: P.green }}>This month</Text>}
       </View>
+      <TourTarget id="dash-trends" fill>
       <View style={[dashboardStyles.card, { borderRadius: 12, padding: 14 }]}>
         <TrendChart data={trends} startingBalance={s.currentBalanceCentavos - (s.currentMonthIncomeCentavos - s.currentMonthExpenseCentavos)} colors={{ line: P.divider, income: P.green, expense: P.error, muted: P.secondary }} />
         <View style={{ flexDirection: "row", justifyContent: "center", gap: 18, paddingTop: 8 }}>
@@ -176,6 +182,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           </View>
         </View>
       </View>
+      </TourTarget>
 
       {/* Spending */}
       <View style={dashboardStyles.sectionHeading}>
@@ -184,6 +191,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           <Text style={dashboardStyles.action}>View all</Text>
         </Pressable>
       </View>
+      <TourTarget id="dash-spending" fill>
       <View style={[dashboardStyles.card, { flexDirection: "row", alignItems: "center", gap: 14, backgroundColor: P.mint }]}>
         <SpendingPie
           segments={spendingGroups.map((c) => ({
@@ -216,6 +224,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           )}
         </View>
       </View>
+      </TourTarget>
 
       {/* Recent */}
       <View style={dashboardStyles.sectionHeading}>
@@ -224,6 +233,7 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
           <Text style={dashboardStyles.action}>View all</Text>
         </Pressable>
       </View>
+      <TourTarget id="dash-recent" fill>
       <View style={[dashboardStyles.card, { padding: 0, overflow: "hidden" }]}>
         {s.recentTransactions.map((tx, index) => {
           const isIncome = tx.transaction_type === "income";
@@ -254,8 +264,9 @@ function DashboardContent({ userId, deviceId, accessToken, onNavigate, syncVersi
         )}
         {s.recentTransactions.length === 0 && s.transactionCount > 0 && <Text style={{ paddingVertical: 20, textAlign: "center", fontFamily: "Manrope", fontSize: 13, color: P.secondary }}>No expenses recorded yet</Text>}
       </View>
+      </TourTarget>
 
-      <SafeToSpendCard userId={userId} reloadKey={s} onNavigate={onNavigate} />
+      <TourTarget id="dash-safe-to-spend" fill><SafeToSpendCard userId={userId} reloadKey={s} onNavigate={onNavigate} /></TourTarget>
 
       {refreshing ? <View style={{ alignItems: "center", marginTop: 12 }}><ActivityIndicator size="small" color={P.green} /></View> : null}
     </View>

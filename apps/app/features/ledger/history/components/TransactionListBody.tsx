@@ -4,6 +4,7 @@ import { dashboardColors as P } from "../../../dashboard/dashboardAppearance";
 import { sectionLabel } from "../constants";
 import type { TransactionDateGroup } from "../helpers/historyFormat";
 import { TransactionRow } from "./TransactionRow";
+import { TourTarget } from "../../../onboarding-tour/components/TourTarget";
 
 type Props = {
   loading: boolean;
@@ -55,18 +56,22 @@ export function TransactionListBody({ loading, stale, empty, filtered, grouped, 
   return (
     <View style={{ opacity: stale ? 0.5 : 1, gap: 11 }}>
       {stale ? <ActivityIndicator color={P.brand} /> : null}
-      {grouped.map((group) => (
-        <View key={`${group.date}-${group.items[0]!.id}`} style={{ gap: 8 }}>
-          <Text style={sectionLabel}>
-            {group.date.toUpperCase()}
-          </Text>
-          <View style={{ backgroundColor: P.surface, borderWidth: 1, borderColor: P.border, borderRadius: 16, overflow: "hidden" }}>
-            {group.items.map((tx, index) => (
-              <TransactionRow key={tx.id} tx={tx} last={index === group.items.length - 1} onEdit={onEdit} onDelete={onDelete} />
-            ))}
+      {grouped.map((group, groupIndex) => {
+        const day = (
+          <View key={`${group.date}-${group.items[0]!.id}`} style={{ gap: 8 }}>
+            <Text style={sectionLabel}>
+              {group.date.toUpperCase()}
+            </Text>
+            <View style={{ backgroundColor: P.surface, borderWidth: 1, borderColor: P.border, borderRadius: 16, overflow: "hidden" }}>
+              {group.items.map((tx, index) => (
+                <TransactionRow key={tx.id} tx={tx} last={index === group.items.length - 1} onEdit={onEdit} onDelete={onDelete} />
+              ))}
+            </View>
           </View>
-        </View>
-      ))}
+        );
+        // Only the newest day is a tour target, so a long history registers one target, not one per day.
+        return groupIndex === 0 ? <TourTarget key="first-day" id="activity-first-day" fill>{day}</TourTarget> : day;
+      })}
     </View>
   );
 }

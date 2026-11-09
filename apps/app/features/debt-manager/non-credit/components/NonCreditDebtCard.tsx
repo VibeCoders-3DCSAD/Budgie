@@ -8,6 +8,7 @@ import { deleteTransactionDebtPayment, listDebtPayments, type DebtPayment } from
 import { getDebtPaymentProgress, getDebtRepaymentForecast } from "../../forecast/helpers/debtForecast";
 import { INTEREST_PERIOD_OPTIONS } from "../../debtTypes";
 import { Button, FLUSH_LIST, InfoRow, LinkButton, Pill, Pills, ProgressBar, formatPeso as money, formatShortDate, type Tone } from "../../components/debtUi";
+import { TourTarget } from "../../../onboarding-tour/components/TourTarget";
 
 const PAYMENT_LIMIT = 3;
 
@@ -82,8 +83,9 @@ export default function NonCreditDebtCard({ userId, deviceId, debt, onEdit, onRe
   ];
 
   return <View style={{ gap: 14 }}>
-    <AmountHero label="BALANCE LEFT" amountCentavos={debt.currentBalanceCentavos} detail={debt.lenderName ?? "No lender listed"} />
+    <TourTarget id="debt-balance" fill><AmountHero label="BALANCE LEFT" amountCentavos={debt.currentBalanceCentavos} detail={debt.lenderName ?? "No lender listed"} /></TourTarget>
 
+    <TourTarget id="debt-summary" fill>
     <FormCard>
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <View style={{ flex: 1 }}><Pills><Pill label={status.label} tone={status.tone} />{progress ? <Pill label={progress.label} tone={progress.tone} /> : null}</Pills></View>
@@ -104,10 +106,12 @@ export default function NonCreditDebtCard({ userId, deviceId, debt, onEdit, onRe
         </View>
       </View> : null}
     </FormCard>
+    </TourTarget>
 
     {archived ? <Button label="Restore to active planning" accessibilityLabel={`Restore ${debt.name} to active planning`} icon={<ArrowCounterClockwise size={17} color="#FFFFFF" weight="bold" />} onPress={() => { changeDebt("restore").catch(() => {}); }} /> : null}
-    {!finished && !archived && !deleted ? <Button label="Record payment" accessibilityLabel={`Record payment for ${debt.name}`} icon={<Plus size={17} color="#FFFFFF" weight="bold" />} onPress={() => onRecordPayment(debt.id)} /> : null}
+    {!finished && !archived && !deleted ? <TourTarget id="debt-record-payment" fill><Button label="Record payment" accessibilityLabel={`Record payment for ${debt.name}`} icon={<Plus size={17} color="#FFFFFF" weight="bold" />} onPress={() => onRecordPayment(debt.id)} /></TourTarget> : null}
 
+    <TourTarget id="debt-payments" fill>
     <FormCard title="Payments" right={<Note>{payments === null ? "Loading..." : `${payments.length} recorded`}</Note>}>
       {payments !== null && payments.length === 0 ? <Note>No payments recorded yet.</Note> : null}
       {visiblePayments?.length ? <View style={FLUSH_LIST}>{visiblePayments.map((payment, index) => <View key={payment.id} style={index > 0 ? ui.listRowDivider : null}>
@@ -134,5 +138,6 @@ export default function NonCreditDebtCard({ userId, deviceId, debt, onEdit, onRe
       </View>)}</View> : null}
       {payments !== null && payments.length > PAYMENT_LIMIT ? <LinkButton label={showAllPayments ? "Show fewer payments" : `Load ${payments.length - PAYMENT_LIMIT} more payment${payments.length - PAYMENT_LIMIT === 1 ? "" : "s"}`} accessibilityLabel={`Show ${showAllPayments ? "fewer" : "all"} payments for ${debt.name}`} onPress={() => setShowAllPayments((current) => !current)} /> : null}
     </FormCard>
+    </TourTarget>
   </View>;
 }

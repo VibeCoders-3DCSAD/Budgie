@@ -26,6 +26,7 @@ import CategoryFormScreen from "./CategoryFormScreen";
 import SubcategoryFormScreen from "./SubcategoryFormScreen";
 import KebabTooltip from "../../components/KebabTooltip";
 import { DEFAULT_TAXONOMY_COLOR, TaxonomyIcon } from "./taxonomyVisuals";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type Subcategory = RepoSubcategory;
 type Category = RepoCategory & { subcategories?: Subcategory[] };
@@ -450,14 +451,16 @@ export default function TaxonomyScreen({ userId, deviceId, syncVersion = 0, onBa
         <Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: palette.ink }}>
           Categories
         </Text>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Create category"
-          onPress={openCategoryCreate}
-          style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}
-        >
-          <Plus size={18} color="#fff" weight="bold" />
-        </Pressable>
+        <TourTarget id="taxonomy-create">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Create category"
+            onPress={openCategoryCreate}
+            style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: palette.brand, alignItems: "center", justifyContent: "center" }}
+          >
+            <Plus size={18} color="#fff" weight="bold" />
+          </Pressable>
+        </TourTarget>
       </View>
 
       <View style={{ paddingTop: 16 }}>

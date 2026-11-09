@@ -13,6 +13,7 @@ import { useToast } from "../../components/Toast";
 import PreferencesScreen from "./PreferencesScreen";
 import { router } from "expo-router";
 import { ROUTES } from "../../routes";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 
 type PrivacySettingsScreenProps = {
   accessToken: string;
@@ -185,6 +186,7 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
   return (
     <View>
       <SectionHeader label="Account" />
+      <TourTarget id="settings-account" fill>
       <BorderedGroup>
         <NavRow icon={<User size={18} color={MUTED} />} label="Personal information" />
         <Divider />
@@ -192,11 +194,13 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
         <Divider />
         <NavRow icon={<ClockAfternoon size={18} color={MUTED} />} label="Preferences" subtitle="Seasonal preferences and custom events" onPress={() => setSubPage("preferences")} />
       </BorderedGroup>
+      </TourTarget>
 
       <View style={{ height: 20 }} />
 
       {beforeDangerZone ? <View style={{ marginBottom: 20 }}>{beforeDangerZone}</View> : null}
 
+      <TourTarget id="settings-export" fill>
       <View style={{ marginBottom: 12 }}>
         <BorderedGroup>
           <NavRow
@@ -207,6 +211,7 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
           />
         </BorderedGroup>
       </View>
+      </TourTarget>
 
       <Pressable
         onPress={() => {
