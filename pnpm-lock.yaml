@@ -177,6 +177,9 @@ importers:
       react-native-screens:
         specifier: ~4.23.0
         version: 4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+      react-native-spotlight-tour:
+        specifier: 4.0.0
+        version: 4.0.0(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       react-native-svg:
         specifier: 15.15.5
         version: 15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
@@ -1419,6 +1422,18 @@ packages:
   '@expo/xcpretty@4.4.3':
     resolution: {integrity: sha512-wC562eD3gS6vO2tWHToFhlFnmHKfKHgF1oyvojeSkLK/ZYop1bMU+7cOMiF9Sq70CzcsLy/EMRy/uRc76QmNRw==}
     hasBin: true
+
+  '@floating-ui/core@1.8.0':
+    resolution: {integrity: sha512-0CIZ5itps/8x7BG8dEIhs53BvCUH2PCoogtakwRTut+Arm58sJooJ0AuZhLw2HJYIR5cMLNPBSS728sPho2khQ==}
+
+  '@floating-ui/react-native@0.10.10':
+    resolution: {integrity: sha512-7twhZ6DDw+7YLQyMnzLW3RMn5Y8o8yjHr6PhodwlRoH1sXtrMMiZvEdVt4MEFM3rV2xS01oMi/cRUwfS6XLZmg==}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-native: '>=0.64.0'
+
+  '@floating-ui/utils@0.2.12':
+    resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -4732,6 +4747,11 @@ packages:
       react-native: '*'
       react-native-worklets: '>=0.7.0'
 
+  react-native-responsive-dimensions@3.1.1:
+    resolution: {integrity: sha512-Vo2OhWsphq0HgKsmeZOeyW+c+vsFn1ZaCFkGDgdeCEEiLriT76jGA1JlUjtrj27hvyo/xzeTlBZ+vBso1A84fw==}
+    peerDependencies:
+      react-native: '>=0.44.1'
+
   react-native-safe-area-context@5.6.2:
     resolution: {integrity: sha512-4XGqMNj5qjUTYywJqpdWZ9IG8jgkS3h06sfVjfw5yZQZfWnRFXczi0GnYyFyCc2EBps/qFmoCH8fez//WumdVg==}
     peerDependencies:
@@ -4743,6 +4763,18 @@ packages:
     peerDependencies:
       react: '*'
       react-native: '*'
+
+  react-native-spotlight-tour@4.0.0:
+    resolution: {integrity: sha512-mrbIbOvA9YnalIQLyHVHgtpYXodYsigf69MOtE7thw+MwyC8HZkgZYf9eXDasYJi7R4QlVBK6ix3rdMnExdm7A==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: '>=16.8.0'
+      react-dom: '>=16.8.0'
+      react-native: '>=0.50.0'
+      react-native-svg: '>=12.1.0'
+    peerDependenciesMeta:
+      react-dom:
+        optional: true
 
   react-native-svg@15.15.5:
     resolution: {integrity: sha512-L4go5jA+GWutdJ/JucuN20cjAbMg1HmMtAP+wZ+3JLCf6Jd0bhXQHxciRP/AQm/FlrIEZwkMcHNZP+FXAiic0w==}
@@ -7018,6 +7050,18 @@ snapshots:
       '@babel/code-frame': 7.29.7
       chalk: 4.1.2
       js-yaml: 4.1.1
+
+  '@floating-ui/core@1.8.0':
+    dependencies:
+      '@floating-ui/utils': 0.2.12
+
+  '@floating-ui/react-native@0.10.10(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)':
+    dependencies:
+      '@floating-ui/core': 1.8.0
+      react: 19.2.0
+      react-native: 0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)
+
+  '@floating-ui/utils@0.2.12': {}
 
   '@isaacs/cliui@8.0.2':
     dependencies:
@@ -11304,6 +11348,10 @@ snapshots:
       react-native-worklets: 0.7.4(@babel/core@7.29.7)(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       semver: 7.7.3
 
+  react-native-responsive-dimensions@3.1.1(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)):
+    dependencies:
+      react-native: 0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)
+
   react-native-safe-area-context@5.6.2(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0):
     dependencies:
       react: 19.2.0
@@ -11315,6 +11363,17 @@ snapshots:
       react-freeze: 1.0.4(react@19.2.0)
       react-native: 0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)
       warn-once: 0.1.1
+
+  react-native-spotlight-tour@4.0.0(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      '@floating-ui/react-native': 0.10.10(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+      react: 19.2.0
+      react-fast-compare: 3.2.2
+      react-native: 0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)
+      react-native-responsive-dimensions: 3.1.1(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))
+      react-native-svg: 15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+    optionalDependencies:
+      react-dom: 19.2.0(react@19.2.0)
 
   react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0):
     dependencies:
