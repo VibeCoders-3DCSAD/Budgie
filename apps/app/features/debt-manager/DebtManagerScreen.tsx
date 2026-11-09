@@ -114,7 +114,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
       </TourTarget>
       <TourTarget id="card-strategy" fill><CreditCardRepaymentStrategy key={accountId} userId={userId} deviceId={deviceId} accountId={accountId} statement={latestStatement} strategy={strategy} onPreviewChange={setPreviewStrategy} onSaved={async () => { await load(); setPreviewStrategy(null); }} /></TourTarget>
       <TourTarget id="card-forecast" fill><CreditCardForecastSection forecast={forecast.forecast} isLoading={forecast.isLoading} creditLimitCentavos={creditLimitCentavos} reconciliationAt={selectedAccount.creditCardDetails?.availableCreditReconciledAt} /></TourTarget>
-      <CreditCardInstallmentList userId={userId} deviceId={deviceId} installments={installments.filter((installment) => installment.account_id === accountId)} settlements={settlements} onSaved={load} />
+      <TourTarget id="card-installments" fill><CreditCardInstallmentList userId={userId} deviceId={deviceId} installments={installments.filter((installment) => installment.account_id === accountId)} settlements={settlements} onSaved={load} /></TourTarget>
     </View>
   );
 }

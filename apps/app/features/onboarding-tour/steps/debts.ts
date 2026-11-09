@@ -13,6 +13,7 @@ export const debtSteps: TourStepDef[] = [
   { id: "card-summary", stage, route: card, target: "card-summary", title: "Credit used", body: "How much of her limit is used and how much is still available. Tap the (i) for what each term means." },
   { id: "card-cycles", stage, route: card, target: "card-cycles", title: "Billing cycles and statements", body: "Purchases land in the cycle they were made in. Each closed cycle has a statement with its amount and due date, and her payments." },
   { id: "card-strategy", stage, route: card, target: "card-strategy", title: "How to repay", body: "Andrea pays in full. She could pay the minimum or a set amount instead; the Financial Plan reserves whatever she chooses." },
+  { id: "card-installments", stage, route: card, target: "card-installments", title: "Installments", body: "Her phone upgrade is a 0% plan: the full price is owed now, billed in six equal parts, one per statement. She can record an early settlement here." },
   { id: "card-forecast", stage, route: card, target: "card-forecast", title: "Card outlook", body: "What her next statement is likely to be, based on how she uses the card." },
   { id: "loans-list", stage, route: ROUTES.planOtherDebts, target: "loans-list", title: "Loans", body: "Her motorcycle loan and SSS salary loan." },
   { id: "debt-balance", stage, route: loan, target: "debt-balance", title: "Balance left", body: "What Andrea still owes on the motorcycle." },

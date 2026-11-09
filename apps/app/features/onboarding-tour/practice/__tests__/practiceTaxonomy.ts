@@ -6,7 +6,7 @@ export const PRACTICE_USER = "5b0c6f0e-1d2a-4c3b-8e4f-9a0b1c2d3e4f";
 const SLUGS = [
   "income_salary", "income_freelance", "housing_rent", "housing_electricity", "housing_internet", "communication_mobile_postpaid",
   "misc_other", "food_groceries", "transport_public", "restaurants_fast_food", "clothing_womens", "restaurants_casual_dining",
-  "household_kitchenware", "recreation_streaming", "clothing_accessories", "transport_ride_hailing",
+  "household_kitchenware", "recreation_streaming", "clothing_accessories", "transport_ride_hailing", "communication_device",
 ];
 
 export function practiceTaxonomy(): Taxonomy {

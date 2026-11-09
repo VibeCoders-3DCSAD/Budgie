@@ -4,6 +4,7 @@ import { applyPracticeSeed } from "../applyPracticeSeed";
 import { practiceRecommendation } from "../fixtures/recommendation";
 import { withPastPlans } from "../pastPlans";
 import { buildPracticeSeed } from "../seed";
+import { ACCOUNT_IDS } from "../seed/accounts";
 import { subcategoryLookup } from "../taxonomy";
 import { PRACTICE_USER, practiceTaxonomy } from "./practiceTaxonomy";
 
@@ -55,4 +56,16 @@ it("lists two past accepted plans in plan history, each with its category budget
   expect(history.every((plan) => plan.plannedTotalCentavos > 0)).toBe(true);
   // Each month reserves both loan payments and that month's card statement.
   expect(harness.sqlite.prepare("SELECT COUNT(debt_account_id) AS loans, COUNT(credit_card_statement_id) AS statements FROM financial_plan_debt_reservations").get()).toEqual({ loans: 4, statements: 2 });
+});
+
+it("puts a 0% installment on the card, owed in full and not yet on a statement", async () => {
+  const seed = await seeded();
+  const [installment] = seed.credit_card_installments;
+  expect(installment).toMatchObject({ term_months: 6, remaining_months: 6, monthly_amortization_centavos: 500_000, interest_type: "zero_interest" });
+  const purchase = seed.credit_card_transactions.find((row) => row.purchase_type === "installment")!;
+  const openCycle = seed.credit_card_cycles.at(-1)!;
+  expect(purchase.cycle_id).toBe(openCycle.id);
+  expect(openCycle.statement_date).toBeNull();
+  const card = seed.financial_accounts.find((row) => row.id === ACCOUNT_IDS.card)!;
+  expect(Number(card.current_balance_centavos)).toBeLessThanOrEqual(-3_000_000);
 });

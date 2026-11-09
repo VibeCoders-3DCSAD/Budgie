@@ -15,6 +15,10 @@ const PURCHASES = [
   { key: "grab", slug: "transport_ride_hailing", pesos: 420, offset: 20, merchant: "Grab" },
 ];
 
+// A 0% phone upgrade bought a few days ago: the card owes its full price, billed in six monthly parts
+// starting with the open cycle, so no statement on record includes it yet.
+const INSTALLMENT = { key: "phone", description: "Phone upgrade · 0% for 6 months", pesos: 30_000, months: 6, slug: "communication_device", merchant: "Power Mac Center", daysAgo: 3 };
+
 // One card paid in full every month: closed cycles with statements and payments, then the open cycle.
 export function creditCardPart(ctx: SeedContext, months: [string, ...string[]]): SeedPart {
   const cycles: Row[] = [];
@@ -22,6 +26,7 @@ export function creditCardPart(ctx: SeedContext, months: [string, ...string[]]):
   const statements: Row[] = [];
   const payments: Row[] = [];
   const transactions: Transaction[] = [];
+  const installments: Row[] = [];
   let outstanding = 0;
   for (let index = 0; index <= months.length; index += 1) {
     const cutoff = monthDay(addMonths(months[0], index), CUTOFF_DAY);
@@ -41,6 +46,13 @@ export function creditCardPart(ctx: SeedContext, months: [string, ...string[]]):
       cycleTotal += row.amount_centavos;
     }
     outstanding += cycleTotal;
+    if (!closed) {
+      const purchase = installmentPurchase(ctx, cycleId, start);
+      transactions.push(purchase.transaction);
+      cardTransactions.push(purchase.cardTransaction);
+      installments.push(purchase.installment);
+      outstanding += purchase.transaction.amount_centavos;
+    }
     if (!closed || cycleTotal === 0) continue;
     const statementId = practiceId(`card-statement:${cutoff}`);
     const dueDate = addDays(statementDate, DUE_DELAY_DAYS);
@@ -59,11 +71,24 @@ export function creditCardPart(ctx: SeedContext, months: [string, ...string[]]):
       credit_card_details: [details],
       credit_card_repayment_preferences: [{ ...synced(ctx), account_id: CARD, strategy: "pay_in_full" }],
       credit_card_cycles: cycles,
+      credit_card_installments: installments,
       credit_card_transactions: cardTransactions,
       credit_card_statements: statements,
       credit_card_payments: payments,
     },
     transactions,
     balances: { [CARD]: -outstanding },
+  };
+}
+
+function installmentPurchase(ctx: SeedContext, cycleId: string, cycleStart: string) {
+  const date = [cycleStart, addDays(ctx.today, -INSTALLMENT.daysAgo)].sort().at(-1)!;
+  const installmentId = practiceId(`card-installment:${INSTALLMENT.key}`);
+  const purchase = transaction(ctx, { key: `card-installment:${INSTALLMENT.key}`, date, type: "expense", pesos: INSTALLMENT.pesos, slug: INSTALLMENT.slug, source: CARD, merchant: INSTALLMENT.merchant, extra: { credit_card_posting_date: date } });
+  const principal = purchase.amount_centavos;
+  return {
+    transaction: purchase,
+    cardTransaction: { ...synced(ctx), transaction_id: purchase.id, account_id: CARD, cycle_id: cycleId, purchase_type: "installment", installment_id: installmentId, client_mutation_id: purchase.id, applied_credit_centavos: 0 },
+    installment: { ...synced(ctx), id: installmentId, account_id: CARD, transaction_id: purchase.id, description: INSTALLMENT.description, original_principal_centavos: principal, remaining_principal_centavos: principal, term_months: INSTALLMENT.months, remaining_months: INSTALLMENT.months, monthly_amortization_centavos: Math.round(principal / INSTALLMENT.months), interest_rate_bps: 0, interest_type: "zero_interest", settlement_status: "active" },
   };
 }
