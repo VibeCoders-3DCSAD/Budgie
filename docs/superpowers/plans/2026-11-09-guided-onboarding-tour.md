@@ -61,7 +61,9 @@ Persona: Andrea Cruz ("healthy-worker", `apps/api/scripts/seed/personas.ts`): PH
 - [x] `practice/fixtures/`: commitments, plan forecast, recommendation (reserves commitments, allocates picked categories at usual spending, scales to fit, INFEASIBLE when short, surplus advice to the motorcycle loan), explanations, monthly and quarterly forecast, Savings & Debt Profile. All computed from the seed, never hardcoded amounts.
 - [x] `practice/respond.ts`: routes each request to its fixture; passes the user's own settings reads (`/me`, seasonal preferences, deletion status) to the server via `authorizedServerFetch`; refuses everything else (logout, consent, export, deletion, preference changes, sync) with 403.
 - [x] Tests: every `/odin/api` path in the app source is answered or refused on purpose; plan scenarios (fits, scaled, infeasible, manual, skipped); refusals never reach the server.
-- [ ] Follow-ups: a credit-card installment purchase; past accepted plans for plan history.
+- [x] A 0% credit-card installment (phone upgrade, 6 months) in the open cycle, owed in full and not yet billed.
+- [x] Past accepted plans for the last two completed months (`practice/pastPlans.ts`), built by the same recommendation fixture as of each month, so plan history has entries.
+- [x] The practice recommendation sends the full forecast snapshot (`totalAmountCentavos`, `modelVersion`, `generatedAt`); without it `createFinancialPlan` rejected Accept. A test saves the practice plan the way Accept does.
 
 ### Layer 3 — Practice lifecycle
 - [x] `features/onboarding-tour/services/practiceSession.ts`: `enterPracticeMode(userId)` copies the user's categories → builds the seed → opens and seeds an in-memory database → waits for sync to go idle → turns Practice Mode on → clears shell state. `exitPracticeMode()` waits for a start in progress, closes the practice database, clears shell state. Concurrent starts share one database; a failed start closes it and stays on the user's data.
@@ -90,13 +92,13 @@ Engine additions:
 - [x] Scroll into view: targets inside a shell page use `PageScroll`'s scroll position (`useOptionalShellPage`); screens with their own scroll view use `TourScrollArea` (the transaction form).
 - [x] Lazy routes (`route: () => Href`) for links that depend on today's practice data.
 
-Screen map (targets per stage; 86 steps, 15 of them taps):
+Screen map (targets per stage; 89 steps, 15 of them taps):
 1. Dashboard (11): balance, income/expense, Needs Attention & Upcoming, cash flow, Savings & Debt Profile, trends, spending, recent, Safe to Spend, tab bar.
 2. Money (10): tap Money → accounts total and list → tap Income → total, list, add → tap Billers and Remittances → due this month, filters.
 3. Transactions (13): tap Activity → search, totals, newest day → tap + → amount, type and account, **This is a savings contribution**, **This is a debt payment**, category, save → Edit (this month's salary in the form) → Delete (row ⋮ menu, confirmation explained). Highlight only.
 4. Savings (11): tap Plan → tap Savings Goals → total, allocation strategy, goals → tap House deposit → progress, Add money / Withdraw (links to the savings switch), details, projection, activity.
-5. Debts (12): overview → credit cards list → Rewards Visa: credit used, cycles and statements, repayment strategy, outlook → loans list → motorcycle loan: balance, on-track summary, Record payment (links to the debt switch), payments, payoff date.
-6. Financial Plan (8): amount → tap Use this → Food and Transport (already ticked from history, explained, not tapped, since a tap would untick them) → tap Continue to Plan → plan summary, category budgets → tap Accept and save plan → accepted.
+5. Debts (13): overview → credit cards list → Rewards Visa: credit used, cycles and statements, repayment strategy, installments, outlook → loans list → motorcycle loan: balance, on-track summary, Record payment (links to the debt switch), payments, payoff date.
+6. Financial Plan (10): amount → past plans link → plan history → tap Use this → Food and Transport (already ticked from history, explained, not tapped, since a tap would untick them) → tap Continue to Plan → plan summary, category budgets → tap Accept and save plan → accepted.
 7. Financial Reports (7): tap chart icon → period, distribution, forecast vs actual, plan vs actual, outlook, unusual spending.
 8. Settings (9): tap profile icon → account → tap Categories → taxonomy → tap Definition of terms → glossary → Terms & Conditions → export and delete → lock and log out.
 9. Offline & Sync (3): offline records, sync states and retry, online-only actions.
@@ -111,5 +113,5 @@ Files whose uncommitted changes belong to the user were not edited: the Debts ov
 
 ### Layer 6 — Guards and docs
 - [ ] Drift test: render each step's screen with seed data and assert its anchor exists.
-- [ ] Update `04-user-onboarding.md` (order, highlight-only transactions, accepting a practice plan) and the index entry.
+- [x] Update `04-user-onboarding.md` (order, highlight-only transactions, practice data, accepting a practice plan), spec 14, and the index entry.
 - [ ] Focused Jest, `tsc`, `graphify update`.
