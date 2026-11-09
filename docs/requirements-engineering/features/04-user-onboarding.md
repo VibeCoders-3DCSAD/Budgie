@@ -2,8 +2,8 @@
 
 User Onboarding is an interactive mobile application tour. It teaches navigation
 and common actions through highlighted controls, short explanations, and guided
-taps across screens. It does not collect questionnaire answers or require users
-to create real financial records.
+taps across the real screens, filled with sample practice data. It does not
+collect questionnaire answers or require users to create real financial records.
 
 ### 4.1 Tour Entry and Controls
 
@@ -13,33 +13,40 @@ The first-use sequence is Account Registration →
 terms consent precede the questionnaire. Enter the tour after questionnaire
 submission and its results screen, including when classification is unavailable.
 
-- Offer Start tour and Skip for now after the user completes the questionnaire
-  and continues from its results, after sign-in is complete
+- Offer Start tour and Skip for now on the first visit to the application after
+  the user completes the questionnaire and continues from its results; users who
+  have never answered the offer see it once
 - Divide the tour into stages and display the current stage and progress
 - Allow users to continue, return to an earlier step, or choose Continue later
-- Save progress separately for each signed-in user and resume
-  from the last unfinished step after returning to the application
+- Save progress separately for each signed-in user on the device and resume
+  from the last unfinished step after returning to the application; a tour
+  interrupted by locking or closing the application resumes as paused
 - Treat skipping or pausing separately from completing the tour
 - Make the tour available offline after the application is accessible locally
 
 ### 4.2 Guided Tour Flow
 
+Taps marked *Tap* wait for the user's own tap on the highlighted control.
+
 | Stage | Route and interactions | Guidance |
 | --- | --- | --- |
-| 1. Dashboard | Home → Dashboard → bottom navigation | Introduce financial summaries, recent transactions, forecasts, plan health, savings, debts, and unusual expenses. Explain Home, Money, Activity, and Plan. |
-| 2. Money | Money → Accounts → Income → Billers & Remittances | Explain accounts and balances, income sources, and scheduled financial commitments. Highlight each section and its add action without requiring setup. |
-| 3. Transactions | Activity → Transactions → Add Transaction → Edit → Delete | Explain transaction history and categories. Practice creating, reviewing, editing, and deleting a tour example, including explicit deletion confirmation. |
-| 4. Planning | Plan → Savings Goals → Debts → Budget / Financial Planning | Explain goal targets and contributions, debt balances and repayments, and how these inform a Financial Plan. Explain classification and data prerequisites without opening a questionnaire or accepting a plan during the tour. |
-| 5. Financial Reports | Header chart icon → Financial Reports | Explain period and category reports, personalized spending forecasts, unusual expenses, and forecast availability. |
-| 6. Settings | Return to Home → profile icon → Settings | Introduce profile, preferences, privacy and consent, help, and the tutorial entry. Explain where settings live without requiring users to change them. |
-| 7. Offline & Sync | Settings → sync status and details; highlight the sync indicator when visible | Explain supported offline actions, locally queued changes, synchronization, retry, and connectivity requirements. |
-| 8. Replay and Finish | Settings → Help and About → Replay tutorial | Show the exact path for starting the tutorial again. Explain Resume tutorial for unfinished progress, then offer Finish and return to Dashboard. |
+| 1. Dashboard | Home → Dashboard | Introduce available balance, monthly income and expenses, Needs Attention & Upcoming, cash flow, the Savings & Debt Profile, trends, spending distribution, recent transactions, and Safe to Spend. Explain Home, Money, Activity, Plan, and the add-transaction button. |
+| 2. Money | *Tap* Money → Accounts → *Tap* Income → *Tap* Billers & Remittances | Explain accounts and cash position, income sources and paydays, and scheduled bills and remittances. Highlight each section and its add action without requiring setup. |
+| 3. Transactions | *Tap* Activity → *Tap* + → Add Transaction → Edit Transaction → Delete Transaction | Explain search, filters, totals, and the daily list. In the form, highlight the amount, type and account, This is a savings contribution, This is a debt payment, category, and Save. Show a practice transaction in the edit form, and explain deletion and its confirmation from the row menu. Highlight only: no transaction is created, changed, or deleted. |
+| 4. Savings | *Tap* Plan → *Tap* Savings Goals → *Tap* a goal | Explain total saved, the extra-savings split, the goal list, and a goal's progress, Add money and Withdraw (which open Add Transaction with the savings contribution on), details, projected completion, and activity. |
+| 5. Debts | Debts overview → Credit Cards → a card → Loans → a loan | Explain the debt overview; a card's credit used, billing cycles and statements, repayment strategy, and outlook; and a loan's balance, on-track summary, Record payment (which opens Add Transaction with the debt payment on), payment history, and payoff date. |
+| 6. Financial Plan | Budget → *Tap* Use this → *Tap* Continue to Plan → *Tap* Accept and save plan | Explain the planning amount and why categories with recent spending, such as Food and Transport, start selected. Show the plan summary and category budgets, then accept the practice plan and explain Safe to Spend and plan-versus-actual reports. |
+| 7. Financial Reports | *Tap* header chart icon → Financial Reports | Explain the reporting period, cash outflow by category, last month's forecast versus actual, accepted-plan budgets versus actual, spending outlooks and forecast availability, and unusual spending. |
+| 8. Settings | *Tap* profile icon → Settings → *Tap* Categories → *Tap* Definition of Terms | Introduce account and preferences, categories, Definition of Terms, Terms & Conditions, export and account deletion, and Lock and Log out. Explain where settings live without requiring users to change them. |
+| 9. Offline & Sync | Settings → sync status; highlight the sync indicator | Explain supported offline actions, locally queued changes, synchronization, retry, and connectivity requirements. |
+| 10. Replay and Finish | Settings → Help and About → Replay tutorial | Show the exact path for starting the tutorial again. Explain Resume tutorial for unfinished progress, then offer Finish and return to the user's own Dashboard. |
 
 ### 4.3 Navigation and Highlight Behavior
 
 - Highlight one target and explain one action at a time
 - Teach users how to reach each destination through visible navigation controls
-- Advance interaction steps only after the expected tap or action succeeds
+- Advance tap steps only after the user's own tap on the highlighted control;
+  the tap performs its normal action
 - Show guidance once the destination screen and highlighted control are ready
 - Scroll the target into view and position guidance within the visible screen
 - Restore the relevant screen when users return to an earlier step
@@ -47,19 +54,22 @@ submission and its results screen, including when classification is unavailable.
   without leaving the user blocked behind an overlay
 - Support readable text, screen-reader labels, and accessible navigation controls
 
-### 4.4 Practice and Empty Screens
+### 4.4 Practice Data
 
-- Use a clearly labelled tour example for transaction practice without changing
-  actual balances, reports, or pending financial changes
-- Practice add → review → edit → delete using only the tour example
-- Explain the consequences of deletion and require explicit confirmation even
-  when deleting the example
-- Clear the practice example when the tour ends or is paused, and provide it
-  again when the practice step is resumed
-- On empty accounts, income, billers, savings, or debt screens, explain the empty
-  state and highlight the relevant add control without requiring real records
-- Do not modify existing user records, submit real forms, change consent, accept
-  Financial Plans, log out, or delete the user's account during the tour
+- Run the tour on sample practice data: a sample person's accounts, income,
+  bills and remittances, three months of transactions, savings goals, loans, and
+  a credit card, built fresh each time the tour starts
+- Show the user's own categories, so practice transactions use their taxonomy
+- Keep practice data on the device only: never write it to the user's records,
+  never synchronize it, and discard it when the tour ends, is paused, or the
+  application locks
+- Mark practice screens with `Tutorial data — your records are not changed`
+- Answer forecasts, Financial Plan recommendations, and the Savings & Debt Profile
+  from the practice data; read the user's consents and preferences unchanged
+- Allow accepting the practice Financial Plan, which changes practice data only
+- Do not modify existing user records, submit real forms, change consent, change
+  preferences, export data, log out, or delete the user's account during the tour;
+  Log out is unavailable while practice data is shown, and Lock ends the tour
 
 ### 4.5 Offline and Sync Guidance
 
@@ -72,8 +82,8 @@ submission and its results screen, including when classification is unavailable.
   refreshing forecasts requires connectivity
 - Explain that unsynced changes must be synchronized before logout and that
   account deletion requires synchronization
-- Teach sync states with explanations or labelled examples; do not require users
-  to disconnect, generate failures, discard changes, or perform account actions
+- Teach sync states with explanations; do not require users to disconnect,
+  generate failures, discard changes, or perform account actions
 
 ### 4.6 Scope Boundary
 
@@ -82,6 +92,7 @@ submission and its results screen, including when classification is unavailable.
 - [Savings and Debt Profile Questionnaire](03-savings-and-debt-profile-questionnaire.md)
   defines questionnaire inputs, drafts, and initial assessment results
 - Completing the tour does not mean financial setup or classification is complete
+- Accepting the practice Financial Plan does not create or accept a plan for the user
 - [User Settings](14-user-settings.md) provides Resume tutorial and Replay tutorial
   under Help and About
 - Replay starts at the Dashboard stage with fresh tour progress and does not
@@ -90,22 +101,23 @@ submission and its results screen, including when classification is unavailable.
 ### 4.7 Tour States
 
 - Initial state: the user can start the tour or skip it for now
-- Loading state: tour progress or the destination screen is loading
+- Loading state: practice data, tour progress, or the destination screen is loading
 - Active state: the current target and guidance are displayed
-- Waiting-for-action state: the expected navigation or practice action is pending
-- Practice state: a labelled transaction example is available for guided actions
+- Waiting-for-tap state: the expected tap on the highlighted control is pending
+- Practice state: practice data replaces the user's data on screen
 - Paused state: progress is saved for later continuation
 - Skipped state: the user chose not to start the tour
 - Resume state: unfinished progress is restored for continued guidance
 - Replay state: the tour starts again from Dashboard
 - Target-unavailable state: the target cannot be shown and recovery is available
-- Complete state: the user finished the tour
-- Error state: guidance or progress could not be loaded or saved
+- Complete state: the user finished the tour and returned to their own data
+- Error state: practice data, guidance, or progress could not be loaded or saved
 
 ### 4.8 Tour Messages
 
 - Initial state: `Welcome to Budgie. Take a guided tour to learn where things are and how to use them.`
 - Practice state: `This is a tutorial example. It will not change your balances or financial records.`
+- Practice banner: `Tutorial data — your records are not changed`
 - Paused state: `Continue whenever you are ready. Open Settings → Help and About → Resume tutorial.`
 - Skipped state: `You can start the tour anytime from Settings → Help and About → Replay tutorial.`
 - Resume state: `Continue your tutorial from where you left off.`

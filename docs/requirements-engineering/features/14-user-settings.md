@@ -139,6 +139,8 @@
   and Debt Profile Questionnaire
 - Allow users to replay or resume the tour offline after the application is
   accessible locally
+- Disable Log out while the tour shows practice data; Lock ends the tour and
+  returns to the user's own data
 
 - View frequently asked questions
 - View offline help content

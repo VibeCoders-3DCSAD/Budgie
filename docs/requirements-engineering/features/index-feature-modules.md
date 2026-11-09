@@ -11,7 +11,7 @@ empty states.
 | 1 | [Account Registration](01-account-registration.md) | Allows users to securely create an account and verify their email address. |
 | 2 | [Login](02-login.md) | Allows registered users to securely log in and recover their accounts. |
 | 3 | [Savings and Debt Profile Questionnaire](03-savings-and-debt-profile-questionnaire.md) | Allows users to complete a financial questionnaire after registration and before the interactive onboarding tour, and receive savings and debt classifications that inform the Financial Plan and update as financial data changes. |
-| 4 | [User Onboarding](04-user-onboarding.md) | Guides users through an interactive mobile tour of the Dashboard, Money, Transactions, Savings Goals, Debts, Financial Planning, Financial Reports, Settings, and Offline & Sync, then explains how to replay the tutorial from Settings. Does not collect questionnaire answers. |
+| 4 | [User Onboarding](04-user-onboarding.md) | Guides users through an interactive mobile tour of the real screens filled with sample practice data, in ten stages: Dashboard, Money, Transactions, Savings, Debts, Financial Plan, Financial Reports, Settings, Offline & Sync, and Replay and Finish. Users tap highlighted controls to move between screens and accept a practice Financial Plan; transactions are explained, not changed. Practice data never touches or syncs with the user's records. Explains how to resume or replay the tutorial from Settings. Does not collect questionnaire answers. |
 | 5 | [Dashboard](05-dashboard.md) | Provides an overview of available balance, monthly income and expenses, cash flow, spending trends and distribution, recent expenses, savings goals, savings and debt profile classification, Safe to Spend allocations, and a spending forecast summary. Includes Needs Attention & Upcoming for failed biller and remittance auto-posts due to insufficient funds, unusual-spending observations with a frequent-spending prompt, and reminders starting seven days before expected income, debt repayments, savings contributions, and unpaid credit-card payment deadlines. |
 | 6 | [Income Sources and Accounts Management](06-income-sources-and-accounts-management.md) | Allows users to manage salaries, allowances, side income, and other sources of earnings, while organizing associated cash, bank accounts, and e-wallets based on recorded transactions and balances. |
 | 7 | [Savings Goals Management](07-savings-goals-management.md) | Allows users to define targets such as emergency funds, tuition, rent, medical expenses, or planned purchases; record contributions; monitor cumulative progress; and project goal completion. |
@@ -27,7 +27,8 @@ empty states.
 Account Registration and Login have separate specifications.
 
 First-use flow: Account Registration → Savings and Debt Profile Questionnaire →
-interactive User Onboarding. Email verification, authenticated access, and
+interactive User Onboarding, offered as Start tour or Skip for now on the first
+visit after the questionnaire. Email verification, authenticated access, and
 required terms consent precede the questionnaire.
 
 Budgeting will not be a standalone module. Intelligent Financial Planning owns
