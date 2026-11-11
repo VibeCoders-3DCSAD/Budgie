@@ -1,7 +1,7 @@
 import { router, useFocusEffect, type Href } from "expo-router";
 import { useCallback, useRef, type ReactNode } from "react";
 import { BackHandler } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaFrame } from "../../../components/SafeAreaFrame";
 import { ROUTES } from "../../../routes";
 import { useRefocusKey } from "../hooks/useRefocusKey";
 import { goBackOr } from "../helpers/shellNavigation";
@@ -42,12 +42,12 @@ export function InnerPage({ title, fallbackHref = ROUTES.dashboard, onScrollBegi
   const visit = useRefocusKey();
 
   return (
-    <SafeAreaView style={{ backgroundColor: shellPalette.shell }} className="flex-1">
+    <SafeAreaFrame style={{ backgroundColor: shellPalette.shell }} className="flex-1">
       <InnerHeader title={title} onBack={goBack} />
       {header}
       <PageScroll scrollKey={String(visit)} tabBarShown={false} onScrollBeginDrag={onScrollBeginDrag} back={{ setBackIntercept, goBack }}>
         {children}
       </PageScroll>
-    </SafeAreaView>
+    </SafeAreaFrame>
   );
 }

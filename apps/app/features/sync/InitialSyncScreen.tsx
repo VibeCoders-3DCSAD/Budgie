@@ -1,5 +1,5 @@
 import { Image, Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaFrame } from "../../components/SafeAreaFrame";
 import { dashboardColors as P } from "../dashboard/dashboardAppearance";
 import type { PullProgress } from "../../local-db/sync/runSync";
 
@@ -24,7 +24,7 @@ export function InitialSyncScreen({ progress, failed, onRetry, onSkip }: Props) 
   const percent = Math.round(ratio * 100);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: initialSyncBackground, alignItems: "center", justifyContent: "center", padding: 24 }}>
+    <SafeAreaFrame style={{ flex: 1, backgroundColor: initialSyncBackground, alignItems: "center", justifyContent: "center", padding: 24 }}>
       <Image source={initialSyncArt} accessibilityIgnoresInvertColors style={{ width: 240, height: 135 }} resizeMode="contain" />
       <Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 20, color: P.ink, marginTop: 24, textAlign: "center" }}>
         {failed ? "Sync paused" : "Setting up your account"}
@@ -53,6 +53,6 @@ export function InitialSyncScreen({ progress, failed, onRetry, onSkip }: Props) 
           </Pressable>
         </View>
       ) : null}
-    </SafeAreaView>
+    </SafeAreaFrame>
   );
 }

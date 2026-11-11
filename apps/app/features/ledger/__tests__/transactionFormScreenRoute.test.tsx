@@ -2,7 +2,10 @@ jest.mock("expo-router", () => ({
   router: { back: jest.fn(), canGoBack: jest.fn(() => true), replace: jest.fn(), dismissTo: jest.fn() },
   useLocalSearchParams: jest.fn(() => ({})),
 }));
-jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("react-native").View }));
+jest.mock("react-native-safe-area-context", () => ({
+  SafeAreaView: require("react-native").View,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
 jest.mock("../../auth/components/AccessProvider", () => ({ useSession: () => ({ accessToken: "token", userId: "user-1", deviceId: "device-1" }) }));
 jest.mock("../services/loadTransactionForm", () => ({ loadTransactionForm: jest.fn() }));
 jest.mock("../NewTransactionScreen", () => {

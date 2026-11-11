@@ -2,7 +2,7 @@ import "../global.css";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { ActivityIndicator, View } from "react-native";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { initialWindowMetrics, SafeAreaProvider } from "react-native-safe-area-context";
 import { ToastProvider } from "../components/Toast";
 import { AppUpdatePrompts } from "../features/app-updates/AppUpdatePrompts";
 import { useDeepLink } from "../hooks/useDeepLink";
@@ -48,7 +48,7 @@ export default function RootLayout() {
   const links = useDeepLink();
   const deviceId = useAccessLifecycle(links);
 
-  return <SafeAreaProvider><ToastProvider>
+  return <SafeAreaProvider initialMetrics={initialWindowMetrics}><ToastProvider>
     <AccessProvider value={{ deviceId, links }}><AccessGate phase={phase} deviceId={deviceId} /></AccessProvider>
     {/* Mounted above the access gate so it checks once per launch, not on every login or unlock. */}
     <AppUpdatePrompts />

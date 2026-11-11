@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Image, KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaFrame } from "../../../components/SafeAreaFrame";
 import { Notice, type NoticeProps } from "./AuthControls";
 
 const budgieLogo = require("../../../assets/budgie-logo.png");
@@ -11,7 +11,7 @@ type Props = { title: string; subtitle: string; notice: NoticeProps | null; chil
 export function AuthScreenLayout({ title, subtitle, notice, children, overlay }: Props) {
   return (
     <View className="flex-1 bg-card">
-      <SafeAreaView className="flex-1">
+      <SafeAreaFrame className="flex-1">
         <KeyboardAvoidingView behavior="height" style={{ flex: 1 }}>
           <ScrollView contentContainerClassName="flex-grow px-7 py-10" keyboardShouldPersistTaps="handled">
             <View className="w-full max-w-[420px] self-center gap-8 pt-8">
@@ -31,7 +31,7 @@ export function AuthScreenLayout({ title, subtitle, notice, children, overlay }:
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </SafeAreaFrame>
       {overlay}
     </View>
   );

@@ -4,6 +4,8 @@ jest.mock("../stores/useAuthStore", () => ({
     verifyOnline: jest.fn(), startRecovery: jest.fn() })),
 }));
 
+jest.mock("react-native-safe-area-context", () => ({ useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }) }));
+
 import React from "react";
 import { Alert } from "react-native";
 import { act, fireEvent, render, type RenderAPI } from "@testing-library/react-native";

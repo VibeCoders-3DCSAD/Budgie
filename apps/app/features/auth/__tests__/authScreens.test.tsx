@@ -13,7 +13,10 @@ jest.mock("../../governance/api", () => ({ getCurrentTermsConsent: jest.fn(async
 jest.mock("../../governance/PrivacyConsentScreen", () => () => null);
 jest.mock("expo-router", () => ({ router: { push: jest.fn(), dismissTo: jest.fn() } }));
 jest.mock("@expo/vector-icons", () => ({ MaterialCommunityIcons: require("./routeStubs").Icon }));
-jest.mock("react-native-safe-area-context", () => ({ SafeAreaView: require("./routeStubs").SafeAreaProvider }));
+jest.mock("react-native-safe-area-context", () => ({
+  SafeAreaView: require("./routeStubs").SafeAreaProvider,
+  useSafeAreaInsets: () => ({ top: 0, right: 0, bottom: 0, left: 0 }),
+}));
 
 import React from "react";
 import { act, fireEvent, render, waitFor } from "@testing-library/react-native";

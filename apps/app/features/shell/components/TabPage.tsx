@@ -1,5 +1,5 @@
 import { useCallback, type ReactNode } from "react";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaFrame } from "../../../components/SafeAreaFrame";
 import { ROUTES } from "../../../routes";
 import { useRefocusKey } from "../hooks/useRefocusKey";
 import { goBackOr, type Hub, type ShellTab } from "../helpers/shellNavigation";
@@ -27,7 +27,7 @@ export function TabPage({ tab, hideChrome = false, hub, showScrollToEnd, childre
   const visit = useRefocusKey();
 
   return (
-    <SafeAreaView style={{ backgroundColor }} className="flex-1">
+    <SafeAreaFrame style={{ backgroundColor }} className="flex-1">
       {hideChrome ? null : <TopBar backgroundColor={backgroundColor} divider={tab === "dashboard" || tab === "activity"} />}
       <PageScroll scrollKey={`${hub?.pathname ?? tab}:${visit}`} tabBarShown={!hideChrome} showScrollToEnd={showScrollToEnd}
         stickyHeaderIndex={hub ? 1 : undefined} back={{ setBackIntercept: noIntercept, goBack }}>
@@ -35,6 +35,6 @@ export function TabPage({ tab, hideChrome = false, hub, showScrollToEnd, childre
         {hub ? <HubSegments hub={hub.hub} pathname={hub.pathname} /> : null}
         {children}
       </PageScroll>
-    </SafeAreaView>
+    </SafeAreaFrame>
   );
 }

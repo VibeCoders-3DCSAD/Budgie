@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, Animated, Image, Pressable, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaFrame } from "../../../components/SafeAreaFrame";
 import { Backspace, LockSimple, WifiHigh } from "phosphor-react-native";
 import { useAuthStore } from "../stores/useAuthStore";
 import { isValidPin } from "../helpers/pinPolicy";
@@ -82,7 +82,7 @@ export default function PinAccessScreen() {
         : "Enter your six-digit PIN.";
 
   return (
-    <SafeAreaView className="flex-1 bg-card">
+    <SafeAreaFrame className="flex-1 bg-card">
       <View className="flex-1 w-full max-w-[420px] self-center px-7 pt-6 pb-4">
         <View className="flex-1 items-center justify-center gap-7">
           <Image accessibilityLabel="Budgie mascot waving hi" resizeMode="contain" source={budgieMascot} className="w-[140px] h-[140px]" />
@@ -162,6 +162,6 @@ export default function PinAccessScreen() {
           </Pressable>
         )}
       </View>
-    </SafeAreaView>
+    </SafeAreaFrame>
   );
 }
