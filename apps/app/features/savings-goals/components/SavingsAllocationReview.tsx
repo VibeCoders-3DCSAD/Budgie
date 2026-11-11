@@ -3,7 +3,7 @@ import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { CaretDown, CaretUp } from "phosphor-react-native";
 import { getSavingsAllocationStrategy, saveSavingsAllocationStrategy, type SavingsAllocationStrategy } from "../../../local-db/repositories/savings/savingsAllocationPreferences";
 import { getCurrentSavingsEnvelopeAllocation } from "../queries/savingsEnvelopeAllocationQueries";
-import type { SavingsAllocationProposal, SavingsCycleAllocation, SavingsCycleContribution } from "../helpers/savingsEnvelopeAllocation";
+import type { SavingsAllocationProposal, SavingsCycleAllocation, SavingsCycleContribution, SavingsExtraReason } from "../helpers/savingsEnvelopeAllocation";
 import { manilaToday } from "../../../lib/dates";
 import { formatPeso } from "../../../lib/format/money";
 
@@ -13,6 +13,11 @@ const dueDateLabel = (date: string | null) => date ? `Due ${new Date(`${date}T00
 const STRATEGY_COPY: Record<SavingsAllocationStrategy, { label: string; description: string }> = {
   avalanche: { label: "Biggest need first", description: "Avalanche: goals that still need the most get extra savings first." },
   snowball: { label: "Closest to target first", description: "Snowball: goals nearest their target get extra savings first." },
+};
+const EXTRA_REASON: Record<SavingsExtraReason, string> = {
+  emergency_fund: "Extra goes here first: the Emergency Fund always comes first",
+  avalanche: "Extra goes here first: this goal still needs the most (Avalanche)",
+  snowball: "Extra goes here first: this goal is closest to its target (Snowball)",
 };
 
 type Props = {
@@ -75,6 +80,7 @@ export default function SavingsAllocationReview({ userId, deviceId, syncVersion 
       {choosingStrategy ? <CaretUp size={14} color={P.brand} /> : <CaretDown size={14} color={P.brand} />}
     </Pressable>
     {choosingStrategy ? <View style={{ gap: 6, paddingTop: 8 }}>
+      <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11 }}>Switching moves this month's extra savings to other goals right away. Extra you already saved stays with its goal, so you may end up saving more than this month's plan.</Text>
       {(["avalanche", "snowball"] as const).map((option) => <Pressable key={option} accessibilityRole="button" accessibilityLabel={`Use ${option} savings allocation`} accessibilityState={{ selected: strategy === option }} disabled={saving} onPress={() => { selectStrategy(option).then(() => setChoosingStrategy(false)).catch(() => {}); }} style={{ backgroundColor: strategy === option ? P.soft : P.card, borderColor: strategy === option ? P.brand : P.line, borderRadius: 10, borderWidth: 1, gap: 2, opacity: saving ? 0.6 : 1, padding: 10 }}>
         <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>{STRATEGY_COPY[option].label}</Text>
         <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11 }}>{STRATEGY_COPY[option].description}</Text>
@@ -87,10 +93,16 @@ function SavingsContributionRow({ contribution }: { contribution: SavingsCycleCo
   const done = contribution.recordedCentavos >= contribution.plannedCentavos;
   const status = done ? "Done" : contribution.recordedCentavos > 0 ? "Partial" : "Not done";
   const dueDate = dueDateLabel(contribution.dueDate);
-  return <View accessibilityLabel={`${contribution.name}, ${money(contribution.plannedCentavos)}, ${status}, ${dueDate}`} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 5 }}>
+  const split = contribution.extraCentavos > 0 ? `${money(contribution.scheduledCentavos)} scheduled + ${money(contribution.extraCentavos)} extra` : null;
+  const reason = contribution.extraCentavos > 0 ? EXTRA_REASON[contribution.extraReason] : null;
+  // Saved beyond this month's plan, e.g. extra deposited before switching strategy.
+  const extraSavedCentavos = Math.max(0, contribution.recordedCentavos - contribution.plannedCentavos);
+  const extraSaved = extraSavedCentavos > 0 ? `${money(extraSavedCentavos)} extra saved beyond this month's plan` : null;
+  const details = [split ? `${dueDate} · ${split}` : dueDate, reason, extraSaved].filter((line): line is string => line !== null);
+  return <View accessibilityLabel={[`${contribution.name}, ${money(contribution.plannedCentavos)}, ${status}`, ...details].join(", ")} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 5 }}>
     <View style={{ flex: 1, gap: 2 }}>
       <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 12 }}>{contribution.name}</Text>
-      <Text style={{ color: P.muted, fontFamily: "Manrope", fontSize: 11 }}>{dueDate}</Text>
+      {details.map((line) => <Text key={line} style={{ color: line === extraSaved ? P.brand : P.muted, fontFamily: "Manrope", fontSize: 11 }}>{line}</Text>)}
     </View>
     <Text style={{ color: P.ink, fontFamily: "Manrope", fontSize: 12, fontWeight: "700" }}>{money(contribution.plannedCentavos)}</Text>
     <Text style={{ color: done ? P.brand : P.muted, fontFamily: "Manrope", fontSize: 11, fontWeight: "700" }}>{status}</Text>

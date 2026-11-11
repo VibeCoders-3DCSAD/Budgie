@@ -12,6 +12,8 @@ export type AllocatableSavingsGoal = {
 
 export type SavingsAllocationProposal = AllocatableSavingsGoal & {
   plannedTotalCentavos?: number;
+  // The part of the total that came from the plan's savings surplus, split by strategy.
+  strategyExtraCentavos?: number;
   proposedRequiredCentavos: number;
   proposedSurplusCentavos: number;
   proposedTotalCentavos: number;
@@ -29,11 +31,18 @@ export type SavingsEnvelopeAllocation = {
   proposals: SavingsAllocationProposal[];
 };
 
+// Why a goal received surplus: the Emergency Fund always comes first, otherwise the strategy decides.
+export type SavingsExtraReason = "emergency_fund" | SavingsAllocationStrategy;
+
 export type SavingsCycleContribution = {
   id: string;
   name: string;
   dueDate: string | null;
   plannedCentavos: number;
+  // plannedCentavos split into the plan's scheduled contribution and the strategy's extra.
+  scheduledCentavos: number;
+  extraCentavos: number;
+  extraReason: SavingsExtraReason;
   recordedCentavos: number;
 };
 

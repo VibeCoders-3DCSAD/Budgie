@@ -99,4 +99,27 @@ describe("SavingsAllocationReview", () => {
     await waitFor(() => expect(view.getByText("Savings Budget this month")).toBeTruthy());
     expect(view.queryByText("Not assigned to a goal")).toBeNull();
   });
+
+  it("splits a goal's amount into scheduled and extra, and says why the extra goes there", async () => {
+    mockGetCurrentSavingsEnvelopeAllocation.mockResolvedValue({ envelopeCentavos: 150_000, unallocatedCentavos: 0, remainingToContributeCentavos: 150_000, contributions: [
+      { id: "goal-1", name: "Japan trip", dueDate: "2026-10-15", plannedCentavos: 150_000, scheduledCentavos: 100_000, extraCentavos: 50_000, extraReason: "avalanche", recordedCentavos: 0 },
+    ], proposals: [] });
+    const view = render(<SavingsAllocationReview userId="user-1" deviceId="device-1" />);
+
+    await waitFor(() => expect(view.getByText("Due Oct 15, 2026 · ₱1,000.00 scheduled + ₱500.00 extra")).toBeTruthy());
+    expect(view.getByText("Extra goes here first: this goal still needs the most (Avalanche)")).toBeTruthy();
+    expect(view.getByLabelText("Japan trip, ₱1,500.00, Not done, Due Oct 15, 2026 · ₱1,000.00 scheduled + ₱500.00 extra, Extra goes here first: this goal still needs the most (Avalanche)")).toBeTruthy();
+  });
+
+  it("keeps extra saved before a strategy switch on the goal it went to", async () => {
+    mockGetCurrentSavingsEnvelopeAllocation.mockResolvedValue({ envelopeCentavos: 150_000, unallocatedCentavos: 0, remainingToContributeCentavos: 50_000, contributions: [
+      { id: "goal-1", name: "Japan trip", dueDate: null, plannedCentavos: 100_000, scheduledCentavos: 100_000, extraCentavos: 0, extraReason: "snowball", recordedCentavos: 150_000 },
+      { id: "goal-2", name: "Laptop", dueDate: null, plannedCentavos: 50_000, scheduledCentavos: 0, extraCentavos: 50_000, extraReason: "snowball", recordedCentavos: 0 },
+    ], proposals: [] });
+    const view = render(<SavingsAllocationReview userId="user-1" deviceId="device-1" />);
+
+    await waitFor(() => expect(view.getByText("₱500.00 extra saved beyond this month's plan")).toBeTruthy());
+    expect(view.getByLabelText("Japan trip, ₱1,000.00, Done, No due date, ₱500.00 extra saved beyond this month's plan")).toBeTruthy();
+    expect(view.getByText("No due date · ₱0.00 scheduled + ₱500.00 extra")).toBeTruthy();
+  });
 });

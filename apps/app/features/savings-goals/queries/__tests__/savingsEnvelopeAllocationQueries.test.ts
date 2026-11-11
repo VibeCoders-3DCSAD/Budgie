@@ -185,4 +185,27 @@ describe("getCurrentSavingsEnvelopeAllocation", () => {
 
     expect(allocation).toMatchObject({ envelopeCentavos: 800_000, unallocatedCentavos: 600_000, remainingToContributeCentavos: 0 });
   });
+
+  it("splits scheduled and extra, and moves extra after a switch while keeping extra already saved", async () => {
+    mockGetRequirements.mockResolvedValue({ contributions: [] });
+    mockListSavingsGoals.mockResolvedValue([
+      { id: "big", name: "Big", isEmergencyFund: false, status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 10_000_000, contributionFrequency: "monthly", nextContributionDate: null },
+      { id: "small", name: "Small", isEmergencyFund: false, status: "active", isAchieved: false, targetDate: null, remainingAmountCentavos: 1_000_000, contributionFrequency: "monthly", nextContributionDate: null },
+    ]);
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ periodStart: "2026-10-01", periodEnd: "2026-10-31", recommendation: { savingsReservations: [{ savingsGoalId: "big", amountCentavos: 100_000 }], savingsSurplusCentavos: 50_000 } });
+
+    const avalanche = await getCurrentSavingsEnvelopeAllocation("user-1", "2026-10-15");
+    expect(avalanche?.contributions).toEqual([expect.objectContaining({ id: "big", plannedCentavos: 150_000, scheduledCentavos: 100_000, extraCentavos: 50_000, extraReason: "avalanche" })]);
+
+    // "Big" saved its ₱1,500 (₱500 extra), then the user switched to snowball.
+    mockGetPayments.mockResolvedValue({ paidCentavos: { "savings:big": 150_000 }, settledKeys: [] });
+    mockGetSavingsAllocationStrategy.mockResolvedValue("snowball");
+    const snowball = await getCurrentSavingsEnvelopeAllocation("user-1", "2026-10-15");
+
+    expect(snowball?.contributions).toEqual([
+      expect.objectContaining({ id: "small", plannedCentavos: 50_000, scheduledCentavos: 0, extraCentavos: 50_000, extraReason: "snowball" }),
+      expect.objectContaining({ id: "big", plannedCentavos: 100_000, extraCentavos: 0, recordedCentavos: 150_000 }),
+    ]);
+    expect(snowball?.remainingToContributeCentavos).toBe(50_000);
+  });
 });
