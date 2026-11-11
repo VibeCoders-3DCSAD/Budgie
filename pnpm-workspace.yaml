@@ -2,11 +2,14 @@ packages:
   - apps/*
   - packages/*
 
-overrides:
-  react-test-renderer: 19.2.0
-
 nodeLinker: hoisted
 
 onlyBuiltDependencies:
   - esbuild
   - unrs-resolver
+
+overrides:
+  react-test-renderer: 19.2.0
+
+patchedDependencies:
+  react-native-spotlight-tour@4.0.0: patches/react-native-spotlight-tour@4.0.0.patch

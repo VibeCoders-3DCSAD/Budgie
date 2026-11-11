@@ -7,6 +7,11 @@ settings:
 overrides:
   react-test-renderer: 19.2.0
 
+patchedDependencies:
+  react-native-spotlight-tour@4.0.0:
+    hash: dd6017dc1ff1745d0d44f5aac81f773571a323c0c63d8176e624d3d7ed237e9a
+    path: patches/react-native-spotlight-tour@4.0.0.patch
+
 importers:
 
   .:
@@ -179,7 +184,7 @@ importers:
         version: 4.23.0(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       react-native-spotlight-tour:
         specifier: 4.0.0
-        version: 4.0.0(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
+        version: 4.0.0(patch_hash=dd6017dc1ff1745d0d44f5aac81f773571a323c0c63d8176e624d3d7ed237e9a)(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       react-native-svg:
         specifier: 15.15.5
         version: 15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
@@ -11364,7 +11369,7 @@ snapshots:
       react-native: 0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0)
       warn-once: 0.1.1
 
-  react-native-spotlight-tour@4.0.0(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0):
+  react-native-spotlight-tour@4.0.0(patch_hash=dd6017dc1ff1745d0d44f5aac81f773571a323c0c63d8176e624d3d7ed237e9a)(react-dom@19.2.0(react@19.2.0))(react-native-svg@15.15.5(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0))(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0):
     dependencies:
       '@floating-ui/react-native': 0.10.10(react-native@0.83.6(@babel/core@7.29.7)(@react-native/metro-config@0.86.0(@babel/core@7.29.7))(@types/react@19.2.17)(react@19.2.0))(react@19.2.0)
       react: 19.2.0

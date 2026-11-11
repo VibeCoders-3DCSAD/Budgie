@@ -49,3 +49,8 @@ export function waitForTarget(id: string, timeoutMs: number): Promise<boolean> {
     });
   });
 }
+
+export function sameRect(a: TargetRect | null, b: TargetRect | null): boolean {
+  if (!a || !b) return a === b;
+  return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}

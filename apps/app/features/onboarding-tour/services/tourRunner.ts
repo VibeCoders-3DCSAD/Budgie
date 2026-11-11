@@ -8,8 +8,10 @@ import { enterPracticeMode, exitPracticeMode } from "./practiceSession";
 import { scrollTargetIntoView } from "./targetVisibility";
 import { writeTourProgress } from "./tourProgress";
 
-// How long a step waits for its screen and highlighted control before offering recovery.
-export const TARGET_TIMEOUT_MS = 4_000;
+// How long a step waits for its screen and highlighted control before offering recovery. Generous: the Financial
+// Plan rebuilds itself when the tour returns from Past plans, which can take several seconds.
+export const TARGET_TIMEOUT_MS = 10_000;
+const LAYOUT_RETRY_MS = 100;
 
 type TourHandle = Pick<SpotlightTour, "goTo" | "stop">;
 let getHandle: () => TourHandle | null = () => null;
@@ -27,11 +29,21 @@ export async function prepareStep(step: TourStepDef, index: number): Promise<voi
   try {
     if (step.route) router.navigate(typeof step.route === "function" ? step.route() : step.route);
     if (!step.target) return;
-    const ready = await waitForTarget(step.target, TARGET_TIMEOUT_MS) && await scrollTargetIntoView(step.target) !== null;
+    const deadline = Date.now() + TARGET_TIMEOUT_MS;
+    const ready = await waitForTarget(step.target, TARGET_TIMEOUT_MS) && await waitForLayout(step.target, deadline);
     if (!ready) useTourStore.setState({ unavailableIndex: index });
   } catch {
     useTourStore.setState({ unavailableIndex: index });
   }
+}
+
+// A target that has just mounted measures as nothing until its first layout, so keep trying until the deadline.
+async function waitForLayout(target: string, deadline: number): Promise<boolean> {
+  while (await scrollTargetIntoView(target) === null) {
+    if (Date.now() >= deadline) return false;
+    await new Promise((resolve) => setTimeout(resolve, LAYOUT_RETRY_MS));
+  }
+  return true;
 }
 
 // Shows a step. Explanations use the spotlight; a tap step closes it and lets the hint layer wait for the

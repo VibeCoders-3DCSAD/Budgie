@@ -201,6 +201,7 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
       {beforeDangerZone ? <View style={{ marginBottom: 20 }}>{beforeDangerZone}</View> : null}
 
       <TourTarget id="settings-export" fill>
+      <View>
       <View style={{ marginBottom: 12 }}>
         <BorderedGroup>
           <NavRow
@@ -211,7 +212,6 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
           />
         </BorderedGroup>
       </View>
-      </TourTarget>
 
       <Pressable
         onPress={() => {
@@ -238,6 +238,8 @@ export default function PrivacySettingsScreen({ accessToken, userId, deviceId, o
         </Text>
         <CaretRight size={15} color={MONZA500} weight="bold" />
       </Pressable>
+      </View>
+      </TourTarget>
 
       <Text
         style={{

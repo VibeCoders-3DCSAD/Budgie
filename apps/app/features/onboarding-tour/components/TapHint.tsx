@@ -6,12 +6,13 @@ import { TOUR_MESSAGES } from "../messages";
 import { continueLater, previousStep, recordStep, skipStep } from "../services/tourRunner";
 import { stageNumber, TOUR_STEPS } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
-import { targetHandle, type TargetRect } from "../stores/useTourTargets";
+import { sameRect, targetHandle, type TargetRect } from "../stores/useTourTargets";
 import { TOUR_STAGES } from "../types";
 import { TourButton } from "./TourButton";
 
-const PADDING = 8;
+const PADDING = 13;
 const DIM = "rgba(11, 31, 22, 0.6)";
+const REMEASURE_MS = 250;
 
 // A tap step: the screen is dimmed except for a hole over the control, which stays live, so the user's own
 // tap does the real thing. The spotlight cannot do this: its overlay is a modal that swallows every touch.
@@ -19,24 +20,33 @@ export function TapHint() {
   const index = useTourStore((state) => state.tapIndex);
   const userId = useTourStore((state) => state.userId);
   const [rect, setRect] = useState<TargetRect | null>(null);
+  // The layer's own size: on Android the window height leaves out the status bar, but this layer does not.
+  const [layer, setLayer] = useState(() => { const { width, height } = Dimensions.get("window"); return { width, height }; });
   const { showToast } = useToast();
   const step = index === null ? undefined : TOUR_STEPS[index];
 
   useEffect(() => {
     setRect(null);
     if (!step?.target) return;
+    const target = step.target;
     let active = true;
-    void targetHandle(step.target)?.measure().then((measured) => { if (active) setRect(measured); });
+    // Keeps measuring while the hint is up: the step often starts mid screen transition, so the first
+    // position can be stale.
+    const measure = () => void targetHandle(target)?.measure().then((measured) => {
+      if (active) setRect((current) => (sameRect(current, measured) ? current : measured));
+    });
+    measure();
+    const timer = setInterval(measure, REMEASURE_MS);
     if (userId) void recordStep(userId, step.id);
-    return () => { active = false; };
+    return () => { active = false; clearInterval(timer); };
   }, [step, userId]);
 
   if (!step || !rect || !userId) return null;
-  const { width, height } = Dimensions.get("window");
+  const { width, height } = layer;
   const hole = { top: rect.y - PADDING, left: rect.x - PADDING, right: rect.x + rect.width + PADDING, bottom: rect.y + rect.height + PADDING };
   const below = hole.bottom < height * 0.6;
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
+    <View pointerEvents="box-none" onLayout={({ nativeEvent: { layout } }) => setLayer({ width: layout.width, height: layout.height })} style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
       <View style={{ position: "absolute", top: 0, left: 0, right: 0, height: Math.max(0, hole.top), backgroundColor: DIM }} />
       <View style={{ position: "absolute", top: hole.bottom, left: 0, right: 0, bottom: 0, backgroundColor: DIM }} />
       <View style={{ position: "absolute", top: hole.top, height: hole.bottom - hole.top, left: 0, width: Math.max(0, hole.left), backgroundColor: DIM }} />

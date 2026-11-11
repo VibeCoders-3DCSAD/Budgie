@@ -1,0 +1,161 @@
+diff --git a/dist/helpers/shape.js b/dist/helpers/shape.js
+index 6ead757b40b86af5308e282601486b0e8825ac33..147f2699a264744fb6a51490803ad86a0a1734b9 100644
+--- a/dist/helpers/shape.js
++++ b/dist/helpers/shape.js
+@@ -27,7 +27,7 @@ export function transitionOf(options) {
+         case "fade":
+             return Animated.sequence([
+                 Animated.timing(opacity, {
+-                    duration: 400,
++                    duration: 150,
+                     toValue: 0,
+                     useNativeDriver,
+                 }),
+@@ -44,7 +44,7 @@ export function transitionOf(options) {
+                     }),
+                 ]),
+                 Animated.timing(opacity, {
+-                    duration: 400,
++                    duration: 150,
+                     toValue: 1,
+                     useNativeDriver,
+                 }),
+@@ -53,12 +53,12 @@ export function transitionOf(options) {
+             opacity.setValue(1);
+             return Animated.parallel([
+                 Animated.timing(origin, {
+-                    duration: 400,
++                    duration: 150,
+                     toValue: nextOrigin,
+                     useNativeDriver,
+                 }),
+                 Animated.timing(size, {
+-                    duration: 400,
++                    duration: 150,
+                     toValue: nextSize,
+                     useNativeDriver,
+                 }),
+diff --git a/dist/lib/components/tour-overlay/TourOverlay.component.js b/dist/lib/components/tour-overlay/TourOverlay.component.js
+index 0fbbd873b3ef6824a5f0f351cbe798da4af3f0cf..c8c97e8d995b0ffdc447b4ec22cfa5a9a9483ae4 100644
+--- a/dist/lib/components/tour-overlay/TourOverlay.component.js
++++ b/dist/lib/components/tour-overlay/TourOverlay.component.js
+@@ -68,8 +68,8 @@ export const TourOverlay = forwardRef((props, ref) => {
+         const { height, width } = spot;
+         if ([height, width].every(value => value > 0)) {
+             Animated.timing(tooltipOpacity.current, {
+-                delay: 400,
+-                duration: 400,
++                delay: 150,
++                duration: 150,
+                 toValue: 1,
+                 useNativeDriver,
+             })
+@@ -81,7 +81,7 @@ export const TourOverlay = forwardRef((props, ref) => {
+             return new Promise(resolve => {
+                 if (current !== undefined) {
+                     Animated.timing(tooltipOpacity.current, {
+-                        duration: 400,
++                        duration: 150,
+                         toValue: 0,
+                         useNativeDriver,
+                     })
+diff --git a/dist/main.d.ts b/dist/main.d.ts
+index d7c506183a8dc49277c4f5a863f98387eb783233..50f5ee328ee2d829ada39dac8b85b5fb03d0bc33 100644
+--- a/dist/main.d.ts
++++ b/dist/main.d.ts
+@@ -4,7 +4,7 @@ export { AttachStep } from "./lib/components/attach-step/AttachStep.component";
+ export type { TourBoxProps } from "./lib/components/tour-box/TourBox.component";
+ export { TourBox } from "./lib/components/tour-box/TourBox.component";
+ export type { BackdropPressBehavior, Motion, OSConfig, RenderProps, Shape, ShapeOptions, SpotlightTour, TourState, TooltipProps, TourStatus, TourStep, } from "./lib/SpotlightTour.context";
+-export { useSpotlightTour } from "./lib/SpotlightTour.context";
++export { SpotlightTourContext, useSpotlightTour } from "./lib/SpotlightTour.context";
+ export type { SpotlightTourProviderProps } from "./lib/SpotlightTour.provider";
+ export { SpotlightTourProvider } from "./lib/SpotlightTour.provider";
+ export { autoPlacement, arrow, hide, inline, flip, offset, shift, } from "@floating-ui/react-native";
+diff --git a/dist/main.js b/dist/main.js
+index a66ffd241c6b30cb0af420237fec933c669f881d..d8d529f058f78968002f70b775ce1bd2b622ece0 100644
+--- a/dist/main.js
++++ b/dist/main.js
+@@ -1,6 +1,6 @@
+ export { AttachStep } from "./lib/components/attach-step/AttachStep.component";
+ export { TourBox } from "./lib/components/tour-box/TourBox.component";
+-export { useSpotlightTour } from "./lib/SpotlightTour.context";
++export { SpotlightTourContext, useSpotlightTour } from "./lib/SpotlightTour.context";
+ export { SpotlightTourProvider } from "./lib/SpotlightTour.provider";
+ export { autoPlacement, arrow, hide, inline, flip, offset, shift, } from "@floating-ui/react-native";
+ //# sourceMappingURL=main.js.map
+\ No newline at end of file
+diff --git a/src/helpers/shape.ts b/src/helpers/shape.ts
+index 568b04b45bbbc4bff8f2fcd17438b9bcee0ba9e9..86a8b7f16c79c77cb474406458b5d46754a4100b 100644
+--- a/src/helpers/shape.ts
++++ b/src/helpers/shape.ts
+@@ -78,7 +78,7 @@ export function transitionOf(options: TransitionOptions): Animated.CompositeAnim
+     case "fade":
+       return Animated.sequence([
+         Animated.timing(opacity, {
+-          duration: 400,
++          duration: 150,
+           toValue: 0,
+           useNativeDriver,
+         }),
+@@ -95,7 +95,7 @@ export function transitionOf(options: TransitionOptions): Animated.CompositeAnim
+           }),
+         ]),
+         Animated.timing(opacity, {
+-          duration: 400,
++          duration: 150,
+           toValue: 1,
+           useNativeDriver,
+         }),
+@@ -106,12 +106,12 @@ export function transitionOf(options: TransitionOptions): Animated.CompositeAnim
+ 
+       return Animated.parallel([
+         Animated.timing(origin, {
+-          duration: 400,
++          duration: 150,
+           toValue: nextOrigin,
+           useNativeDriver,
+         }),
+         Animated.timing(size, {
+-          duration: 400,
++          duration: 150,
+           toValue: nextSize,
+           useNativeDriver,
+         }),
+diff --git a/src/lib/components/tour-overlay/TourOverlay.component.tsx b/src/lib/components/tour-overlay/TourOverlay.component.tsx
+index 127c1d66bd1278cc95e471b5116231297d567df5..ef6d4453e10c94000d9d8d8dc68123e836633d11 100644
+--- a/src/lib/components/tour-overlay/TourOverlay.component.tsx
++++ b/src/lib/components/tour-overlay/TourOverlay.component.tsx
+@@ -154,8 +154,8 @@ export const TourOverlay = forwardRef<TourOverlayRef, TourOverlayProps>((props,
+ 
+     if ([height, width].every(value => value > 0)) {
+       Animated.timing(tooltipOpacity.current, {
+-        delay: 400,
+-        duration: 400,
++        delay: 150,
++        duration: 150,
+         toValue: 1,
+         useNativeDriver,
+       })
+@@ -168,7 +168,7 @@ export const TourOverlay = forwardRef<TourOverlayRef, TourOverlayProps>((props,
+       return new Promise(resolve => {
+         if (current !== undefined) {
+           Animated.timing(tooltipOpacity.current, {
+-            duration: 400,
++            duration: 150,
+             toValue: 0,
+             useNativeDriver,
+           })
+diff --git a/src/main.ts b/src/main.ts
+index 69e99bd1c5a2c90bfeda10da44df8ea89a8f08ff..e90512356df59e45be156b2722b952521942039a 100644
+--- a/src/main.ts
++++ b/src/main.ts
+@@ -15,7 +15,7 @@ export type { BackdropPressBehavior,
+   TourStatus,
+   TourStep,
+ } from "./lib/SpotlightTour.context";
+-export { useSpotlightTour } from "./lib/SpotlightTour.context";
++export { SpotlightTourContext, useSpotlightTour } from "./lib/SpotlightTour.context";
+ export type { SpotlightTourProviderProps } from "./lib/SpotlightTour.provider";
+ export { SpotlightTourProvider } from "./lib/SpotlightTour.provider";
+ export {
