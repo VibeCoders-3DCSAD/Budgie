@@ -9,6 +9,7 @@ import { sameRect, setTargetPressListener, targetHandle, type TargetRect } from 
 import { CENTER_TARGET, SPOT_OFFSET_Y, spotTarget, TourTarget } from "./TourTarget";
 import { TapHint } from "./TapHint";
 import { TourOffer } from "./TourOffer";
+import { TourPreparing } from "./TourPreparing";
 import { TourTooltip } from "./TourTooltip";
 
 // Hosts the guided tour around the signed-in screens. It sits outside the screen stack, so it survives the
@@ -41,6 +42,7 @@ export function TourHost({ userId, children }: { userId: string; children: React
       <SpotFollower />
       <TapHint />
       <TourOffer userId={userId} />
+      <TourPreparing />
     </SpotlightTourProvider>
   );
 }

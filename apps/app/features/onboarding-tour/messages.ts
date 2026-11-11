@@ -9,5 +9,7 @@ export const TOUR_MESSAGES = {
   saveFailed: "Your tutorial progress could not be saved. You can continue, but you may need to repeat this step later.",
   replay: "To take the tour again, tap your profile icon, open Settings → Help and About, and choose Replay tutorial.",
   complete: "You're ready! Replay this tutorial anytime from Settings → Help and About → Replay tutorial.",
+  preparing: "Preparing your tutorial…",
+  preparingDetail: "Setting up practice data. Your own records are not changed.",
   error: "The tutorial could not be loaded. Try again or continue using the app.",
 } as const;

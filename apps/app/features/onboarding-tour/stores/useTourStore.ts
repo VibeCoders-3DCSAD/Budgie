@@ -7,6 +7,9 @@ interface TourState {
   progress: TourProgress | null;
   // starting: switching to practice data. running: a step is on screen.
   phase: "idle" | "starting" | "running";
+  // From Start, Resume, or Replay until the first step is on screen: practice data is seeded and the step's
+  // screen opened, which can take a few seconds, so a loading overlay covers it.
+  preparing: boolean;
   // Whose tour is running; null when none is.
   userId: string | null;
   // The step on screen. The runner owns it, since a tap step closes the spotlight while it waits.
@@ -22,6 +25,7 @@ interface TourState {
 export const useTourStore = create<TourState>(() => ({
   progress: null,
   phase: "idle",
+  preparing: false,
   userId: null,
   stepIndex: null,
   tapIndex: null,
@@ -31,5 +35,5 @@ export const useTourStore = create<TourState>(() => ({
 }));
 
 export function resetTourStore(): void {
-  useTourStore.setState({ progress: null, phase: "idle", userId: null, stepIndex: null, tapIndex: null, unavailableIndex: null, saveFailed: false, loadFailed: false });
+  useTourStore.setState({ progress: null, phase: "idle", preparing: false, userId: null, stepIndex: null, tapIndex: null, unavailableIndex: null, saveFailed: false, loadFailed: false });
 }

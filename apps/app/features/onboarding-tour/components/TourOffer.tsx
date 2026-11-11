@@ -10,7 +10,7 @@ import { TourButton } from "./TourButton";
 export function TourOffer({ userId }: { userId: string }) {
   const visible = useTourStore((state) => state.progress?.status === "not_started" && state.phase === "idle");
   const { showToast } = useToast();
-  const start = () => { void startTour(userId, "start").then((started) => { if (!started) showToast(TOUR_MESSAGES.error, "danger"); }); };
+  const start = () => { void startTour(userId, "start").then((result) => { if (result === "failed") showToast(TOUR_MESSAGES.error, "danger"); }); };
   const skip = () => { void skipTour(userId).then(() => showToast(TOUR_MESSAGES.skipped)); };
   return (
     <Modal transparent animationType="fade" visible={visible} onRequestClose={skip}>

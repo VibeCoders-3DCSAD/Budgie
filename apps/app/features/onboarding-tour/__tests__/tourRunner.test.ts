@@ -29,11 +29,11 @@ beforeEach(() => {
 afterEach(() => detach());
 
 it("switches to practice data and shows the first step", async () => {
-  await expect(runner.startTour(user, "start")).resolves.toBe(true);
+  await expect(runner.startTour(user, "start")).resolves.toBe("started");
   expect(mockEnter).toHaveBeenCalledWith(user);
   expect(handle.goTo).toHaveBeenCalledWith(0);
   expect(useTourStore.getState()).toMatchObject({ phase: "running", userId: user, stepIndex: 0 });
-  await expect(runner.startTour(user, "start")).resolves.toBe(false);
+  await expect(runner.startTour(user, "start")).resolves.toBe("failed");
 });
 
 it("resumes at the saved step", async () => {
@@ -45,9 +45,23 @@ it("resumes at the saved step", async () => {
 
 it("stays on the user's data when practice data cannot load", async () => {
   mockEnter.mockRejectedValueOnce(new Error("no database"));
-  await expect(runner.startTour(user, "start")).resolves.toBe(false);
+  await expect(runner.startTour(user, "start")).resolves.toBe("failed");
   expect(useTourStore.getState()).toMatchObject({ phase: "idle", loadFailed: true });
   expect(handle.goTo).not.toHaveBeenCalled();
+});
+
+it("cancels while practice data loads, leaving saved progress as it was", async () => {
+  let finishEntering = () => {};
+  mockEnter.mockImplementationOnce(() => new Promise<void>((resolve) => { finishEntering = resolve; }));
+  const starting = runner.startTour(user, "start");
+  expect(useTourStore.getState().preparing).toBe(true);
+  const cancelling = runner.cancelStart();
+  finishEntering();
+  await expect(starting).resolves.toBe("cancelled");
+  await cancelling;
+  expect(mockExit).toHaveBeenCalled();
+  expect(handle.goTo).not.toHaveBeenCalled();
+  expect(useTourStore.getState()).toMatchObject({ phase: "idle", preparing: false, progress: { status: "not_started" } });
 });
 
 it("pauses at the current step and returns to the user's data", async () => {
@@ -127,7 +141,7 @@ it("starts at the first step of a stage, from a tab page", async () => {
   const first = TOUR_STEPS.findIndex((step) => step.stage === "Transactions");
   const target = TOUR_STEPS[first]!.target!;
   const unregister = registerTarget(target, { measure: async () => ({ x: 0, y: 200, width: 80, height: 40 }), page: null });
-  await expect(runner.startTour(user, "replay", "Transactions")).resolves.toBe(true);
+  await expect(runner.startTour(user, "replay", "Transactions")).resolves.toBe("started");
   expect(router.navigate).toHaveBeenCalledWith("/dashboard");
   expect(useTourStore.getState()).toMatchObject({ phase: "running", stepIndex: first });
   unregister();

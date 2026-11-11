@@ -83,25 +83,39 @@ export function notifyTargetPress(id: string): void {
 
 // Switches to practice data and shows the first step (start, replay), the saved one (resume), or the first step
 // of a stage (the developer replay in Settings).
-export async function startTour(userId: string, from: "start" | "resume" | "replay", stage?: TourStage): Promise<boolean> {
+// Resolves "cancelled" when the user backs out from the preparing overlay before the first step shows.
+export async function startTour(userId: string, from: "start" | "resume" | "replay", stage?: TourStage): Promise<StartResult> {
   const { phase, progress } = useTourStore.getState();
-  if (!getHandle() || phase !== "idle") return false;
-  useTourStore.setState({ phase: "starting", loadFailed: false, saveFailed: false, unavailableIndex: null });
+  if (!getHandle() || phase !== "idle") return "failed";
+  useTourStore.setState({ phase: "starting", preparing: true, loadFailed: false, saveFailed: false, unavailableIndex: null });
   try {
     await enterPracticeMode(userId);
   } catch {
-    useTourStore.setState({ phase: "idle", loadFailed: true });
-    return false;
+    if (!useTourStore.getState().preparing) return "cancelled";
+    useTourStore.setState({ phase: "idle", preparing: false, loadFailed: true });
+    return "failed";
   }
+  if (!useTourStore.getState().preparing) return "cancelled";
   useTourStore.setState({ phase: "running", userId });
   if (stage) {
     // Some stages open with a tab-bar tap, which needs a tab page in front rather than Settings.
     router.navigate(ROUTES.dashboard);
     await showStep(firstStepOfStage(stage));
-    return true;
+  } else {
+    await showStep(from === "resume" ? stepIndex(progress?.stepId ?? null) : 0);
   }
-  await showStep(from === "resume" ? stepIndex(progress?.stepId ?? null) : 0);
-  return true;
+  return useTourStore.getState().phase === "idle" ? "cancelled" : "started";
+}
+
+export type StartResult = "started" | "cancelled" | "failed";
+
+// The preparing overlay's Cancel: back to the user's own data, with their saved progress left as it was (the
+// offer comes back for a first start; Resume stays available for a paused tour).
+export async function cancelStart(): Promise<void> {
+  if (!useTourStore.getState().preparing) return;
+  getHandle()?.stop();
+  useTourStore.setState({ phase: "idle", preparing: false, userId: null, stepIndex: null, tapIndex: null, unavailableIndex: null });
+  await exitPracticeMode();
 }
 
 // Saves the step on screen, so a lock or a closed app resumes here.
@@ -134,7 +148,7 @@ export function skipStep(userId: string): Promise<void> {
 
 async function endRun(userId: string, status: TourStatus, stepId: string | null): Promise<void> {
   getHandle()?.stop();
-  useTourStore.setState({ phase: "idle", userId: null, stepIndex: null, tapIndex: null, unavailableIndex: null });
+  useTourStore.setState({ phase: "idle", preparing: false, userId: null, stepIndex: null, tapIndex: null, unavailableIndex: null });
   await Promise.all([save(userId, status, stepId), exitPracticeMode()]);
 }
 

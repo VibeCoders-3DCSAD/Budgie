@@ -12,9 +12,9 @@ export function useTutorialEntry(userId: string) {
   const { showToast } = useToast();
   const run = (from: "resume" | "replay", stage?: TourStage) => {
     const starting = stage ? startTour(userId, from, stage) : startTour(userId, from);
-    void starting.then((started) => {
-      if (!started) showToast(TOUR_MESSAGES.error, "danger");
-      else if (from === "resume") showToast(TOUR_MESSAGES.resume);
+    void starting.then((result) => {
+      if (result === "failed") showToast(TOUR_MESSAGES.error, "danger");
+      else if (result === "started" && from === "resume") showToast(TOUR_MESSAGES.resume);
     });
   };
   return { canResume, busy, resume: () => run("resume"), replay: () => run("replay"), replayStage: (stage: TourStage) => run("replay", stage) };

@@ -1,7 +1,7 @@
 jest.mock("@expo/vector-icons", () => ({ MaterialCommunityIcons: () => null }));
 const mockShowToast = jest.fn();
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
-jest.mock("../services/tourRunner", () => ({ startTour: jest.fn(async () => true), skipTour: jest.fn(async () => {}), continueLater: jest.fn(async () => {}), finishTour: jest.fn(async () => {}), recordStep: jest.fn(async () => {}), retryStep: jest.fn(), skipStep: jest.fn(async () => {}), nextStep: jest.fn(async () => {}), previousStep: jest.fn(async () => {}) }));
+jest.mock("../services/tourRunner", () => ({ startTour: jest.fn(async () => "started"), cancelStart: jest.fn(async () => {}), skipTour: jest.fn(async () => {}), continueLater: jest.fn(async () => {}), finishTour: jest.fn(async () => {}), recordStep: jest.fn(async () => {}), retryStep: jest.fn(), skipStep: jest.fn(async () => {}), nextStep: jest.fn(async () => {}), previousStep: jest.fn(async () => {}) }));
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { TourOffer } from "../components/TourOffer";
@@ -74,4 +74,47 @@ it("offers Resume tutorial only when there is unfinished progress", async () => 
   fireEvent.press(screen.getByText("resume"));
   await waitFor(() => expect(mockShowToast).toHaveBeenCalledWith(TOUR_MESSAGES.resume));
   expect(mockRunner.startTour).toHaveBeenCalledWith(user, "resume");
+});
+
+describe("TourPreparing", () => {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { SpotlightTourContext } = require("react-native-spotlight-tour");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { TourPreparing } = require("../components/TourPreparing");
+  const stop = jest.fn();
+  const withSpot = (current?: number) => (
+    <SpotlightTourContext.Provider value={{ current, stop }}><TourPreparing /></SpotlightTourContext.Provider>
+  );
+
+  it("shows a loading message while the tour is being prepared", () => {
+    useTourStore.setState({ phase: "starting", preparing: true });
+    render(withSpot());
+    expect(screen.getByText(TOUR_MESSAGES.preparing)).toBeTruthy();
+  });
+
+  it("lifts once the first step is on screen", async () => {
+    useTourStore.setState({ phase: "running", preparing: true });
+    const view = render(withSpot());
+    view.rerender(withSpot(0));
+    await waitFor(() => expect(useTourStore.getState().preparing).toBe(false));
+    expect(screen.queryByText(TOUR_MESSAGES.preparing)).toBeNull();
+  });
+
+  it("lifts when the first step is a tap hint", async () => {
+    useTourStore.setState({ phase: "running", preparing: true, tapIndex: 3 });
+    render(withSpot());
+    await waitFor(() => expect(useTourStore.getState().preparing).toBe(false));
+  });
+
+  it("cancels from the overlay", () => {
+    useTourStore.setState({ phase: "starting", preparing: true });
+    render(withSpot());
+    fireEvent.press(screen.getByLabelText("Cancel"));
+    expect(mockRunner.cancelStart).toHaveBeenCalled();
+  });
+
+  it("closes a spotlight that opens after the tour was cancelled", () => {
+    render(withSpot(2));
+    expect(stop).toHaveBeenCalled();
+  });
 });
