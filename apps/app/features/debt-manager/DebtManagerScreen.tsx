@@ -57,7 +57,7 @@ export default function DebtManagerScreen({ userId, deviceId, accountId, onBack,
     return <View style={{ gap: 10 }}><SectionHeader title="Credit Cards" /><Note>No credit cards are recorded yet. Add a credit card to track billing cycles and payments.</Note></View>;
   }
 
-  if (!accountId) return <TourTarget id="cards-list" fill><CreditCardListScreen accounts={accounts} cycles={cycles} onOpenCard={onOpenCard ?? (() => {})} /></TourTarget>;
+  if (!accountId) return <CreditCardListScreen accounts={accounts} cycles={cycles} onOpenCard={onOpenCard ?? (() => {})} />;
 
   if (!selectedAccount) return <View style={{ gap: 12 }}><Banner tone="error">This credit card is unavailable.</Banner><Button variant="ghost" label="Back to Credit Cards" onPress={() => onBack?.()} /></View>;
   const latestStatement = statements

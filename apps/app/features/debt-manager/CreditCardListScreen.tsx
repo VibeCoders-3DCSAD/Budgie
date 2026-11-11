@@ -1,4 +1,5 @@
 import React from "react";
+import { TourTarget } from "../onboarding-tour/components/TourTarget";
 import { View } from "react-native";
 import { Note } from "../../components/BudgieForm";
 import type { FinancialAccount } from "../../local-db/repositories/foundations/financialFoundations";
@@ -15,7 +16,7 @@ export default function CreditCardListScreen({ accounts, cycles, onOpenCard }: P
   return <View style={{ gap: 12 }}>
     <SectionHeader title="Credit Cards" />
     <Note>Select a card to view its cycles, statements, and payments.</Note>
-    {accounts.length === 0 ? <Note>No credit cards are recorded yet.</Note> : <List>{accounts.map((account, index) => {
+    {accounts.length === 0 ? <Note>No credit cards are recorded yet.</Note> : <TourTarget id="cards-list" fill><List>{accounts.map((account, index) => {
       const details = account.creditCardDetails;
       const cycle = cycles.filter((item) => item.account_id === account.id).sort((a, b) => b.cutoff_date.localeCompare(a.cutoff_date))[0];
       const debtCentavos = details && details.availableCreditCentavos != null ? Math.max(0, details.creditLimitCentavos - details.availableCreditCentavos) : null;
@@ -31,6 +32,6 @@ export default function CreditCardListScreen({ accounts, cycles, onOpenCard }: P
         onPress={() => onOpenCard(account.id)}
         accessibilityLabel={`Open ${account.name}`}
       />;
-    })}</List>}
+    })}</List></TourTarget>}
   </View>;
 }
