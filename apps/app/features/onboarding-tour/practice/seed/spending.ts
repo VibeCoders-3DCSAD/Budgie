@@ -1,5 +1,5 @@
 import { ACCOUNT_IDS } from "./accounts";
-import { monthDay, transaction, type SeedContext, type SeedPart, type Transaction } from "./context";
+import { monthDay, noonManila, practiceId, synced, transaction, type Row, type SeedContext, type SeedPart, type Transaction } from "./context";
 
 // Fixed spreads instead of randomness, so the tour always shows the same believable month.
 const GROCERY_PESOS = [820, 640, 910, 700, 760, 880, 690];
@@ -32,14 +32,30 @@ export function spendingPart(ctx: SeedContext, months: [string, ...string[]]): S
       transactions.push(transaction(ctx, { key: `${spend.key}:${month}:${day}`, date, type: "expense", pesos: Math.round(spend.pesos * factor), slug: spend.slug, source: ACCOUNT_IDS.payroll, merchant: spend.name }));
     }));
   }
-  // Well above her usual home spending, so Financial Reports flags it as unusual.
-  transactions.push(transaction(ctx, { key: "unusual:air-fryer", date: monthDay(months[1]!, 22), type: "expense", pesos: 9_500, slug: "household_kitchenware", source: ACCOUNT_IDS.payroll, merchant: "Air fryer and rice cooker" }));
+  // Well above her usual home spending, so Financial Reports flags it as unusual. Its evaluation is waiting for
+  // her answer (one-time, frequent, or yearly).
+  const airFryer = transaction(ctx, { key: "unusual:air-fryer", date: monthDay(months[1]!, 22), type: "expense", pesos: 9_500, slug: "household_kitchenware", source: ACCOUNT_IDS.payroll, merchant: "Air fryer and rice cooker" });
+  transactions.push(airFryer);
+  const usualHome = transactions.filter((row) => row.subcategory_id === airFryer.subcategory_id && row.id !== airFryer.id && String(row.transaction_date) < String(airFryer.transaction_date));
   // Monthly GCash top-up from payroll for commute and meals.
   for (const month of months) {
     const date = monthDay(month, 3);
     if (date <= ctx.today) transactions.push(transaction(ctx, { key: `topup:${month}`, date, type: "transfer", pesos: 3_000, source: ACCOUNT_IDS.payroll, destination: ACCOUNT_IDS.wallet, merchant: "GCash cash-in" }));
   }
-  return { tables: {}, transactions };
+  return { tables: { anomaly_evaluations: [airFryerEvaluation(ctx, airFryer, usualHome)] }, transactions };
+}
+
+function airFryerEvaluation(ctx: SeedContext, airFryer: Transaction, history: Transaction[]): Row {
+  const amounts = history.map((row) => Number(row.amount_centavos));
+  const usual = Math.round(amounts.reduce((sum, amount) => sum + amount, 0) / Math.max(1, amounts.length));
+  const lower = Math.min(...amounts, usual);
+  const upper = Math.max(...amounts, usual);
+  return {
+    ...synced(ctx), id: practiceId("anomaly:air-fryer"), transaction_id: airFryer.id, subcategory_id: airFryer.subcategory_id,
+    amount_centavos: airFryer.amount_centavos, usable_history_count: amounts.length, usual_spending_centavos: usual,
+    lower_bound_centavos: lower, upper_bound_centavos: upper, severity: Number(((Number(airFryer.amount_centavos) - upper) / Math.max(1, upper - lower)).toFixed(2)),
+    recurrence: null, recurrence_months: null, model_version: "practice-tour-v1", evaluated_at: noonManila(String(airFryer.transaction_date)),
+  };
 }
 
 function daysInMonth(monthStart: string): number {

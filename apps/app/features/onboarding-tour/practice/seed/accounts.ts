@@ -11,7 +11,7 @@ export const ACCOUNT_IDS = {
 type AccountSpec = { id: string; name: string; kind: string; institution: string; openingPesos: number; inDashboard: boolean };
 
 const ACCOUNTS: AccountSpec[] = [
-  { id: ACCOUNT_IDS.payroll, name: "Payroll Account", kind: "bank", institution: "BPI", openingPesos: 60_000, inDashboard: true },
+  { id: ACCOUNT_IDS.payroll, name: "Payroll Account", kind: "bank", institution: "BPI", openingPesos: 70_000, inDashboard: true },
   { id: ACCOUNT_IDS.wallet, name: "GCash", kind: "e_wallet", institution: "GCash", openingPesos: 2_500, inDashboard: true },
   { id: ACCOUNT_IDS.emergency, name: "Emergency Fund", kind: "savings", institution: "BPI", openingPesos: 210_000, inDashboard: true },
   { id: ACCOUNT_IDS.house, name: "House Deposit Savings", kind: "savings", institution: "Maya", openingPesos: 60_000, inDashboard: true },

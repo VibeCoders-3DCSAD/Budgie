@@ -48,6 +48,34 @@ describe.each(["2026-11-09", "2026-03-01", "2026-02-28", "2026-12-31"])("practic
     expect(accounts.find((row) => row.id === ACCOUNT_IDS.card)!.currentBalanceCentavos).toBeLessThanOrEqual(0);
     expect((await listIncomeSources(USER)).map((source) => source.name)).toEqual(expect.arrayContaining(["Salary — Andrea Cruz", "Freelance design"]));
   });
+
+  it("gives each loan a repayment schedule its forecast can follow, on or ahead of its target", async () => {
+    const tax = taxonomy();
+    await applyPracticeSeed(harness.db as never, USER, tax, buildPracticeSeed({ userId: USER, today, subcategoryId: subcategoryLookup(tax) }));
+    const { listDebtAccounts } = await import("../../../../local-db/repositories/debts/debtAccounts");
+    const { listDebtPayments } = await import("../../../../local-db/repositories/debts/debtPayments");
+    const { buildDebtForecast, getDebtRepaymentForecast } = await import("../../../debt-manager/forecast/helpers/debtForecast");
+
+    const loans = await listDebtAccounts(USER);
+    expect(loans).toHaveLength(2);
+    for (const loan of loans) {
+      const payments = (await listDebtPayments(USER, loan.id)).map((payment) => ({ paymentDate: payment.payment_date, amountCentavos: payment.amount_centavos }));
+      const repayment = getDebtRepaymentForecast(loan);
+      const forecast = buildDebtForecast(loan, today, payments);
+      expect({ loan: loan.name, repayment: repayment.status, payoff: Boolean(repayment.estimatedPayoffDate), forecast: forecast.status })
+        .toEqual({ loan: loan.name, repayment: expect.stringMatching(/^(advanced|on_track)$/), payoff: true, forecast: expect.stringMatching(/^(ahead|on_track)$/) });
+    }
+  });
+
+  it("flags the air fryer as unusual spending waiting for an answer", async () => {
+    const tax = taxonomy();
+    await applyPracticeSeed(harness.db as never, USER, tax, buildPracticeSeed({ userId: USER, today, subcategoryId: subcategoryLookup(tax) }));
+    const { listPersistedUnusualSpendings } = await import("../../../../local-db/repositories/alerts/unusualSpending");
+    const insights = await listPersistedUnusualSpendings(USER);
+    expect(insights).toHaveLength(1);
+    expect(insights[0]).toMatchObject({ amountCentavos: 950_000, recurrence: null });
+    expect(insights[0]!.usualSpendingCentavos).toBeLessThan(100_000);
+  });
 });
 
 it("is the same data every time for the same day", () => {

@@ -9,15 +9,20 @@ export const DEBT_IDS = {
 
 type LoanSpec = {
   id: string; key: string; name: string; lender: string; preset: string; originalPesos: number; rateBps: number;
-  paymentPesos: number; day: number; termMonths: number; monthsBeforeHistory: number; presetExtra: Row;
+  paymentPesos: number; day: number; termMonths: number; monthsBeforeHistory: number; notes: string; presetExtra: Row;
 };
 
 const LOANS: LoanSpec[] = [
-  { id: DEBT_IDS.motorcycle, key: "motorcycle", name: "Honda Click motorcycle", lender: "Honda Financial", preset: "auto_loan", originalPesos: 96_000, rateBps: 1_800, paymentPesos: 4_800, day: 5, termMonths: 24, monthsBeforeHistory: 6, presetExtra: { autoLoan: { vehicleDescription: "Honda Click 125i", vehiclePurchasePriceCentavos: centavos(116_000), downpaymentCentavos: centavos(20_000), financedPrincipalCentavos: centavos(96_000) } } },
-  { id: DEBT_IDS.sss, key: "sss", name: "SSS salary loan", lender: "SSS", preset: "salary_loan", originalPesos: 40_000, rateBps: 1_000, paymentPesos: 1_850, day: 10, termMonths: 24, monthsBeforeHistory: 2, presetExtra: { salaryLoan: { provider: "sss", linkedIncomeSourceId: null, repaymentMethod: "payroll_deduction", deductionAmountCentavos: centavos(1_850), deductionSchedule: "monthly" } } },
+  { id: DEBT_IDS.motorcycle, key: "motorcycle", name: "Honda Click motorcycle", lender: "Honda Financial", preset: "auto_loan", originalPesos: 96_000, rateBps: 1_800, paymentPesos: 4_800, day: 5, termMonths: 24, monthsBeforeHistory: 6, notes: "Auto-debit from payroll on the 5th.", presetExtra: { autoLoan: { vehicleDescription: "Honda Click 125i", vehiclePurchasePriceCentavos: centavos(116_000), downpaymentCentavos: centavos(20_000), financedPrincipalCentavos: centavos(96_000) } } },
+  { id: DEBT_IDS.sss, key: "sss", name: "SSS salary loan", lender: "SSS", preset: "salary_loan", originalPesos: 40_000, rateBps: 1_000, paymentPesos: 1_850, day: 10, termMonths: 24, monthsBeforeHistory: 2, notes: "Deducted from salary every month.", presetExtra: { salaryLoan: { provider: "sss", linkedIncomeSourceId: null, repaymentMethod: "payroll_deduction", deductionAmountCentavos: centavos(1_850), deductionSchedule: "monthly" } } },
 ];
 
-// Two amortized loans on a diminishing balance, each with its monthly payments recorded from payroll.
+// Andrea's own payoff goal, a little after each loan's maturity: the app adds a year's interest at a time, which
+// puts the projected payoff about a month past maturity.
+const TARGET_SLACK_MONTHS = 3;
+
+// Two amortized loans on a diminishing balance, each with its monthly payments recorded from payroll, and a
+// target payoff date so the repayment forecast and estimated payoff have a schedule to follow.
 export function debtsPart(ctx: SeedContext, months: [string, ...string[]]): SeedPart {
   const accounts: Row[] = [];
   const payments: Row[] = [];
@@ -36,12 +41,13 @@ export function debtsPart(ctx: SeedContext, months: [string, ...string[]]): Seed
       transactions.push(row);
       payments.push({ ...synced(ctx), id: practiceId(`debt-payment:${loan.key}:${date}`), debt_account_id: loan.id, transaction_id: row.id, source: "transaction", payment_date: date, amount_centavos: row.amount_centavos, principal_centavos: principal, interest_centavos: interest });
     }
+    const maturityDate = monthDay(addMonths(startDate, loan.termMonths), loan.day);
     accounts.push({
       ...synced(ctx), id: loan.id, linked_account_id: ACCOUNT_IDS.payroll, name: loan.name, lender_name: loan.lender, preset_key: loan.preset, status: "active",
       original_balance_centavos: centavos(loan.originalPesos), current_balance_centavos: balance, annual_interest_rate_bps: loan.rateBps,
       minimum_payment_centavos: centavos(loan.paymentPesos), allows_extra_payments: true, payment_frequency: "monthly",
       payment_schedule: { dayOfMonth: loan.day }, next_due_date: nextMonthlyDate(ctx.today, loan.day),
-      maturity_date: monthDay(addMonths(startDate, loan.termMonths), loan.day), interest_period: "annual", interest_method: "diminishing_balance",
+      maturity_date: maturityDate, target_payoff_date: monthDay(addMonths(maturityDate, TARGET_SLACK_MONTHS), loan.day), interest_period: "annual", interest_method: "diminishing_balance", notes: loan.notes,
       preset_data: { startDate, feesCentavos: 0, penaltyInfo: null, termMonths: loan.termMonths, ...loan.presetExtra },
     });
   }

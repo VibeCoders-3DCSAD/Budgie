@@ -105,6 +105,14 @@ describe("practice responder", () => {
     const quarterly = await post("/odin/api/forecast/quarterly", { historicalTransactions: [] });
     expect(quarterly.body.payload.months.map((row: any) => row.month)).toEqual(["2026-11", "2026-12", "2027-01"]);
     expect(quarterly.body.payload.months[1].totalCentavos).toBeGreaterThan(quarterly.body.payload.months[0].totalCentavos);
+    // The app's quarter labels, which it parses to add scheduled payments.
+    expect(quarterly.body.payload.quarters.map((row: any) => row.quarter)).toEqual(["2026Q4", "2027Q1"]);
+  });
+
+  it("forecasts from asOf, from the history the app sends, so Reports can compare last month", async () => {
+    const historicalTransactions = ["2026-07-15", "2026-08-15", "2026-09-15"].map((date, index) => ({ transactionId: `t${index}`, date, amount: 300, category: "food", transactionType: "expense" }));
+    const quarterly = await post("/odin/api/forecast/quarterly", { asOf: "2026-10-01", historicalTransactions });
+    expect(quarterly.body.payload.months[0]).toEqual({ month: "2026-10", totalCentavos: 30_000, categories: [{ category: "food", amountCentavos: 30_000 }] });
   });
 });
 

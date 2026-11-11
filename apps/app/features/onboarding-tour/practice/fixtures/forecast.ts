@@ -1,4 +1,4 @@
-import type { ForecastPayload, ForecastRequest, QuarterlyForecastPayload } from "../../../forecast/types";
+import type { ForecastPayload, ForecastRequest, ForecastTransaction, QuarterlyForecastPayload } from "../../../forecast/types";
 import { addMonths } from "../../../../lib/dates";
 import { categorySlugBySubcategory, monthlySpendBySubcategory, planPeriod, type PracticeData } from "./practiceData";
 
@@ -29,10 +29,11 @@ export function practiceForecast(data: PracticeData, request: ForecastRequest): 
   };
 }
 
-// The quarterly outlook: the same monthly pattern for the next three months, with December's holidays added.
-export function practiceQuarterlyForecast(data: PracticeData): QuarterlyForecastPayload {
-  const base = planCategoryForecasts(data);
-  const start = planPeriod(data.today).start;
+// The quarterly outlook: the same monthly pattern for the three months from asOf (this month by default), with
+// December's holidays added. Reports asks for last month's to compare with what was spent.
+export function practiceQuarterlyForecast(data: PracticeData, request: Partial<ForecastRequest> = {}): QuarterlyForecastPayload {
+  const start = planPeriod(request.asOf ?? data.today).start;
+  const base = request.historicalTransactions?.length ? averageMonthlySpend(request.historicalTransactions, start) : planCategoryForecasts(data);
   const months = [0, 1, 2].map((offset) => {
     const month = addMonths(start, offset).slice(0, 7);
     const lift = month.endsWith("-12") ? 1.25 : 1;
@@ -47,6 +48,18 @@ export function practiceQuarterlyForecast(data: PracticeData): QuarterlyForecast
   return { quarters, months, modelVersion: MODEL_VERSION, generatedAt: `${data.today}T00:00:00.000Z`, quality: "PERSONALIZED", baselineMethod: "median_monthly", seasonalUncertainty: true, interpretation: practiceInterpretation() };
 }
 
+// What the app sent leaves out bills and unusual purchases, which it adds back itself; averaging it (over the
+// last three months before start) keeps them from being counted twice.
+function averageMonthlySpend(transactions: ForecastTransaction[], start: string): { category: string; amountCentavos: number }[] {
+  const months = [3, 2, 1].map((back) => addMonths(start, -back).slice(0, 7));
+  const totals = new Map<string, number>();
+  for (const row of transactions) {
+    if (row.transactionType !== "expense" || !months.includes(row.date.slice(0, 7))) continue;
+    totals.set(row.category, (totals.get(row.category) ?? 0) + Math.round(row.amount * 100));
+  }
+  return [...totals].map(([category, total]) => ({ category, amountCentavos: Math.round(total / months.length) })).sort((a, b) => b.amountCentavos - a.amountCentavos);
+}
+
 export function practiceInterpretation(): string[] {
   return [
     "Your spending is steady month to month, led by housing and food.",
@@ -59,5 +72,6 @@ function total(points: { amountCentavos: number }[]): number {
 }
 
 function quarterOf(month: string): string {
-  return `${month.slice(0, 4)}-Q${Math.ceil(Number(month.slice(5, 7)) / 3)}`;
+  // The app's quarter label, e.g. 2026Q4.
+  return `${month.slice(0, 4)}Q${Math.ceil(Number(month.slice(5, 7)) / 3)}`;
 }
