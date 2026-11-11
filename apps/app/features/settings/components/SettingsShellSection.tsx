@@ -7,6 +7,7 @@ import { shellPalette as palette } from "../../shell/theme";
 import { useSync } from "../../sync/SyncProvider";
 import { useTutorialEntry } from "../../onboarding-tour/hooks/useTutorialEntry";
 import { TourTarget } from "../../onboarding-tour/components/TourTarget";
+import { TOUR_STAGES } from "../../onboarding-tour/types";
 
 const sectionLabel = { fontSize: 11, fontWeight: "700", color: palette.mut, textTransform: "uppercase", letterSpacing: 0.55, marginBottom: 9 } as const;
 
@@ -34,6 +35,7 @@ function ManageRow({ label, icon, divider = false, disabled = false, onPress }: 
 }
 
 // The Manage (categories, definition of terms), Sync, and Help and About (tutorial, terms & conditions) rows Settings shows above its danger zone.
+// Dev builds add a Developer section to replay the tour from any stage.
 export function SettingsShellSection({ userId }: { userId: string }) {
   const { syncing, queueCount, syncMessage, handleSync } = useSync();
   const tutorial = useTutorialEntry(userId);
@@ -75,6 +77,16 @@ export function SettingsShellSection({ userId }: { userId: string }) {
         <TourTarget id="settings-replay" fill><ManageRow label="Replay tutorial" icon="replay" divider={tutorial.canResume} disabled={tutorial.busy} onPress={tutorial.replay} /></TourTarget>
         <TourTarget id="settings-terms" fill><ManageRow label="Terms & Conditions" icon="file-document-outline" divider onPress={() => router.push(ROUTES.terms)} /></TourTarget>
       </View>
+      {__DEV__ ? (
+        <>
+          <Text style={[sectionLabel, { marginTop: 20 }]}>Developer</Text>
+          <View style={{ borderRadius: 16, borderWidth: 1, borderColor: palette.line, overflow: "hidden" }}>
+            {TOUR_STAGES.map((stage, index) => (
+              <ManageRow key={stage} label={`Replay from ${stage}`} icon="replay" divider={index > 0} disabled={tutorial.busy} onPress={() => tutorial.replayStage(stage)} />
+            ))}
+          </View>
+        </>
+      ) : null}
     </View>
   );
 }

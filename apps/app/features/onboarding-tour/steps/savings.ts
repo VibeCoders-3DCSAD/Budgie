@@ -6,7 +6,6 @@ const stage = "Savings" as const;
 const route = ROUTES.planSavings;
 
 export const savingsSteps: TourStepDef[] = [
-  { id: "plan-tap", stage, target: "tab-plan", action: "tap", title: "Open Plan", body: "Tap Plan for savings, debts, and the Financial Plan." },
   { id: "savings-tap", stage, route: ROUTES.planDebts, target: `hub-${ROUTES.planSavings}`, action: "tap", title: "Savings Goals", body: "Tap Savings Goals." },
   { id: "savings-total", stage, route, target: "savings-total", title: "Saved so far", body: "Everything Andrea has set aside across her goals, against what she is aiming for." },
   { id: "savings-allocation", stage, route, target: "savings-allocation", title: "Where extra savings go", body: "When there is money left over, Budgie suggests how to split it between goals. She can change the strategy here." },

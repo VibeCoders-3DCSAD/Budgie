@@ -1,4 +1,4 @@
-import type { TourStepDef } from "../types";
+import type { TourStage, TourStepDef } from "../types";
 import { TOUR_STAGES } from "../types";
 import { dashboardSteps } from "./dashboard";
 import { debtSteps } from "./debts";
@@ -13,13 +13,17 @@ import { transactionSteps } from "./transactions";
 
 // Every step in order, one file per stage.
 export const TOUR_STEPS: TourStepDef[] = [
-  ...dashboardSteps, ...moneySteps, ...transactionSteps, ...savingsSteps, ...debtSteps,
+  ...dashboardSteps, ...moneySteps, ...transactionSteps, ...debtSteps, ...savingsSteps,
   ...planSteps, ...reportSteps, ...settingsSteps, ...syncSteps, ...finishSteps,
 ];
 
 export function stepIndex(id: string | null): number {
   const index = TOUR_STEPS.findIndex((step) => step.id === id);
   return index < 0 ? 0 : index;
+}
+
+export function firstStepOfStage(stage: TourStage): number {
+  return Math.max(0, TOUR_STEPS.findIndex((step) => step.stage === stage));
 }
 
 export function stageNumber(step: TourStepDef): number {

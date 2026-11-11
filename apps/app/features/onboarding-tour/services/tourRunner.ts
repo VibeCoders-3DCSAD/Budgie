@@ -1,9 +1,10 @@
 import { router } from "expo-router";
 import type { SpotlightTour } from "react-native-spotlight-tour";
-import { TOUR_STEPS, stepIndex } from "../steps";
+import { ROUTES } from "../../../routes";
+import { TOUR_STEPS, firstStepOfStage, stepIndex } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
 import { waitForTarget } from "../stores/useTourTargets";
-import type { TourProgress, TourStatus, TourStepDef } from "../types";
+import type { TourProgress, TourStage, TourStatus, TourStepDef } from "../types";
 import { enterPracticeMode, exitPracticeMode } from "./practiceSession";
 import { scrollTargetIntoView } from "./targetVisibility";
 import { writeTourProgress } from "./tourProgress";
@@ -80,8 +81,9 @@ export function notifyTargetPress(id: string): void {
   setTimeout(() => { void nextStep(userId); }, 0);
 }
 
-// Switches to practice data and shows the first step (start, replay) or the saved one (resume).
-export async function startTour(userId: string, from: "start" | "resume" | "replay"): Promise<boolean> {
+// Switches to practice data and shows the first step (start, replay), the saved one (resume), or the first step
+// of a stage (the developer replay in Settings).
+export async function startTour(userId: string, from: "start" | "resume" | "replay", stage?: TourStage): Promise<boolean> {
   const { phase, progress } = useTourStore.getState();
   if (!getHandle() || phase !== "idle") return false;
   useTourStore.setState({ phase: "starting", loadFailed: false, saveFailed: false, unavailableIndex: null });
@@ -92,6 +94,12 @@ export async function startTour(userId: string, from: "start" | "resume" | "repl
     return false;
   }
   useTourStore.setState({ phase: "running", userId });
+  if (stage) {
+    // Some stages open with a tab-bar tap, which needs a tab page in front rather than Settings.
+    router.navigate(ROUTES.dashboard);
+    await showStep(firstStepOfStage(stage));
+    return true;
+  }
   await showStep(from === "resume" ? stepIndex(progress?.stepId ?? null) : 0);
   return true;
 }

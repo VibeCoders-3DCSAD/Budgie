@@ -122,3 +122,13 @@ it("scrolls a target below the fold into view before showing it", async () => {
   expect(useTourStore.getState().unavailableIndex).toBeNull();
   unregister();
 });
+
+it("starts at the first step of a stage, from a tab page", async () => {
+  const first = TOUR_STEPS.findIndex((step) => step.stage === "Transactions");
+  const target = TOUR_STEPS[first]!.target!;
+  const unregister = registerTarget(target, { measure: async () => ({ x: 0, y: 200, width: 80, height: 40 }), page: null });
+  await expect(runner.startTour(user, "replay", "Transactions")).resolves.toBe(true);
+  expect(router.navigate).toHaveBeenCalledWith("/dashboard");
+  expect(useTourStore.getState()).toMatchObject({ phase: "running", stepIndex: first });
+  unregister();
+});

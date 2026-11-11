@@ -5,6 +5,7 @@ const stage = "Financial Plan" as const;
 const route = ROUTES.planBudgets;
 
 export const planSteps: TourStepDef[] = [
+  { id: "budget-tap", stage, route: ROUTES.planSavings, target: `hub-${ROUTES.planBudgets}`, action: "tap", title: "Budget", body: "Tap Budget." },
   { id: "plan-intro", stage, route, target: "plan-amount", title: "Create a Financial Plan", body: "Each month Budgie builds a plan from Andrea's balances, forecast, profile, bills, debts, and goals. First, how much to plan." },
   { id: "plan-history", stage, route, target: "plan-history", title: "Past plans", body: "Andrea accepted a plan in each of the last two months. Open any of them to compare the plan with what she spent." },
   { id: "plan-history-screen", stage, route: ROUTES.planPastPlans, title: "Plan history", body: "Each past month shows its plan total and whether it covered her commitments. Next, she builds this month's plan." },

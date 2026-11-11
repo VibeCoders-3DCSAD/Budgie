@@ -2,7 +2,7 @@ import type { Href } from "expo-router";
 
 // The tour's stages, in order (spec 04 §4.2, as agreed for the practice-data tour).
 export const TOUR_STAGES = [
-  "Dashboard", "Money", "Transactions", "Savings", "Debts", "Financial Plan",
+  "Dashboard", "Money", "Transactions", "Debts", "Savings", "Financial Plan",
   "Financial Reports", "Settings", "Offline & Sync", "Replay and Finish",
 ] as const;
 export type TourStage = typeof TOUR_STAGES[number];

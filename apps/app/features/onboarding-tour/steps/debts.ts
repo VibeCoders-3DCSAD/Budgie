@@ -8,6 +8,7 @@ const card = { pathname: ROUTES.planCreditCard, params: { id: ACCOUNT_IDS.card }
 const loan = { pathname: ROUTES.planOtherDebt, params: { id: DEBT_IDS.motorcycle } } as const;
 
 export const debtSteps: TourStepDef[] = [
+  { id: "plan-tap", stage, target: "tab-plan", action: "tap", title: "Open Plan", body: "Tap Plan for debts, savings goals, and the Financial Plan." },
   { id: "debts-overview", stage, route: ROUTES.planDebts, target: "debts-overview", title: "Debts", body: "Andrea's credit card and loans, with what she owes and what is due next." },
   { id: "cards-list", stage, route: ROUTES.planCreditCards, target: "cards-list", title: "Credit cards", body: "Each card with its balance and current billing cycle." },
   { id: "card-summary", stage, route: card, target: "card-summary", title: "Credit used", body: "How much of her limit is used and how much is still available. Tap the (i) for what each term means." },
