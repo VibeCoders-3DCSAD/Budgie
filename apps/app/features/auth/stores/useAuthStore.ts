@@ -10,6 +10,7 @@ import { enrollPin, lockVault, unlockWithPin } from "../services/pinVault";
 import { withAuthLock } from "../services/authMutex";
 import { tracePinStep } from "../../../lib/helpers/pinSetupTrace";
 import { clearSdkSession } from "../../../lib/sdkSessionStorage";
+import { cancelReminderNotifications } from "../../notifications/reminderNotifications";
 import type { AccessPhase, AuthenticatedState, LocalAccount, OfflineAccount } from "../types";
 
 interface AuthState {
@@ -201,6 +202,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
   finishLogout: async () => {
     await get().lock();
+    await cancelReminderNotifications().catch(() => undefined);
     await withAuthLock(clearRememberedAccount);
     recoveryRequested = false;
     set({ account: null, phase: "signed-out", error: null, recoveryVerified: false, lockoutMs: 0 });

@@ -8,6 +8,7 @@ import { TourHost } from "../../../features/onboarding-tour/components/TourHost"
 import { exitPracticeMode } from "../../../features/onboarding-tour/services/practiceSession";
 import { resetShellState } from "../../../features/shell/helpers/resetShellState";
 import { usePracticeModeStore } from "../../../services/practiceMode";
+import { ReminderNotificationRouter } from "../../../features/notifications/ReminderNotificationRouter";
 import { InitialSyncGate } from "../../../features/sync/InitialSyncGate";
 import { SyncProvider } from "../../../features/sync/SyncProvider";
 
@@ -34,6 +35,7 @@ export default function ShellLayout() {
       <TourHost userId={userId}>
         <Stack key={practice ? "practice" : "own"} screenOptions={{ headerShown: false }} />
         <PracticeBanner />
+        <ReminderNotificationRouter />
       </TourHost>
     </SyncProvider>
   </InitialSyncGate>;

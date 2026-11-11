@@ -23,6 +23,8 @@ const plugins: (string | [string, Record<string, unknown>])[] = googleIosUrlSche
   ? [["@react-native-google-signin/google-signin", { iosUrlScheme: googleIosUrlScheme }], "expo-secure-store"]
   : ["expo-secure-store"];
 plugins.push(["expo-sqlite", { useSQLCipher: true }], "./plugins/withOfflineDataProtection", "expo-router");
+// Reminders are local notifications only, so iOS does not need the push entitlement.
+plugins.push(["expo-notifications", { color: "#013220", enableRemoteNotifications: false }]);
 
 const config = {
   name: "Budgie",
