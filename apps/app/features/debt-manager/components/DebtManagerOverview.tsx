@@ -27,6 +27,7 @@ import { buildDebtSurplusCandidates, planDebtSurplus, type DebtSurplusPlan } fro
 import DebtRepaymentPlanCard from "./DebtRepaymentPlanCard";
 import UpcomingPaymentsCard from "./UpcomingPaymentsCard";
 import { buildFinancialPlanRepayments } from "../helpers/financialPlanRepayments";
+import { buildDebtPlanRows } from "../helpers/debtPlanRows";
 import { buildUpcomingDebtPayments } from "../helpers/upcomingDebtPayments";
 
 type Props = { userId: string; onOpenCreditCards: () => void; onOpenNonCreditDebts: () => void; onOpenCard?: (accountId: string) => void; onOpenDebt?: (debtId: string) => void };
@@ -102,7 +103,7 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
 
   return <View style={{ gap: 14 }}>
     <DebtOverviewSummary summary={overview.summary} payoffDate={payoffDate} />
-    <DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusPlan={overview.surplusPlan} repayments={financialPlanRepayments} />
+    <DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusPlan={overview.surplusPlan} rows={buildDebtPlanRows(financialPlanRepayments, overview.surplusPlan)} />
 
     <SectionHeader title="Credit cards" actionLabel="Manage" accessibilityLabel="Open Credit Cards" onAction={onOpenCreditCards} />
     <List>{overview.cardRows.length === 0

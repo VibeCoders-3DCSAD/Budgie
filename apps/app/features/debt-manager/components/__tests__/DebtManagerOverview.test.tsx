@@ -216,9 +216,9 @@ beforeEach(() => {
     const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
 
     await waitFor(() => {
-      expect(view.getByText("Recommended surplus allocation")).toBeTruthy();
-      expect(view.getByLabelText("Visa statement, ₱10.00")).toBeTruthy();
-      expect(view.getByLabelText("Loan, ₱20.00")).toBeTruthy();
+      expect(view.getByText("Financial Plan repayments")).toBeTruthy();
+      expect(view.getByLabelText("Visa statement, ₱10.00, Extra goes here first: highest interest (Avalanche)")).toBeTruthy();
+      expect(view.getByLabelText("Loan, ₱20.00, Extra goes here first: highest interest (Avalanche)")).toBeTruthy();
     });
   });
 
@@ -244,8 +244,8 @@ describe("DebtManagerOverview debt surplus", () => {
 
     const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
 
-    await waitFor(() => expect(view.getByText("Recommended surplus allocation")).toBeTruthy());
-    expect(view.getByLabelText("Loan, ₱15.00")).toBeTruthy();
+    await waitFor(() => expect(view.getByText("Financial Plan repayments")).toBeTruthy());
+    expect(view.getByLabelText("Loan, ₱20.00, Not paid, paid ₱0.00 of ₱20.00, ₱5.00 required + ₱15.00 extra, Extra goes here first: highest interest (Avalanche)")).toBeTruthy();
     expect(view.getByLabelText("Not assigned to a debt, ₱35.00. We suggest adding it to your savings goals.")).toBeTruthy();
   });
 
@@ -256,7 +256,7 @@ describe("DebtManagerOverview debt surplus", () => {
 
     await waitFor(() => expect(view.getByText("Plan shortfall")).toBeTruthy());
     expect(view.getByText("Strategy surplus")).toBeTruthy();
-    expect(view.getByLabelText("Loan, ₱10.00")).toBeTruthy();
+    expect(view.getByLabelText("Loan, ₱11.00, Not paid, paid ₱0.00 of ₱11.00, ₱1.00 required + ₱10.00 extra, Extra goes here first: highest interest (Avalanche)")).toBeTruthy();
   });
 
   it("counts this month's payments above the required payment toward the surplus", async () => {
@@ -266,10 +266,19 @@ describe("DebtManagerOverview debt surplus", () => {
     const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
 
     await waitFor(() => expect(view.getByText("Surplus left to pay")).toBeTruthy());
-    expect(view.getByLabelText("Loan, ₱10.00, Partially paid, paid ₱5.00 of ₱10.00")).toBeTruthy();
-    expect(view.getByText("Extra payment this month")).toBeTruthy();
-    expect(view.queryByText(/Amount due: ₱10.00/)).toBeNull();
+    expect(view.getByLabelText("Loan, ₱15.00, Partially paid, paid ₱10.00 of ₱15.00, ₱5.00 required + ₱10.00 extra, Extra goes here first: highest interest (Avalanche)")).toBeTruthy();
+    expect(view.getByText("No scheduled date · ₱5.00 required + ₱10.00 extra")).toBeTruthy();
+    expect(view.queryByText("Recommended surplus allocation")).toBeNull();
     expect(view.queryByText(/Not assigned to a debt/)).toBeNull();
   });
-});
 
+  it("keeps extra paid before a strategy switch on that debt", async () => {
+    mockGetAcceptedFinancialPlanForPeriod.mockResolvedValue({ recommendation: { debtReservations: [{ debtAccountId: "debt-1", amountCentavos: 500 }], debtSurplusCentavos: 0 } });
+    mockListAllDebtPayments.mockResolvedValue([{ debt_account_id: "debt-1", payment_date: "2026-10-05", amount_centavos: 800, principal_centavos: 800, interest_centavos: 0 }]);
+
+    const view = render(<DebtManagerOverview userId="user-1" onOpenCreditCards={jest.fn()} onOpenNonCreditDebts={jest.fn()} />);
+
+    await waitFor(() => expect(view.getByText("₱3.00 extra paid beyond this month's plan")).toBeTruthy());
+    expect(view.getByLabelText("Loan, ₱5.00, Paid, paid ₱5.00 of ₱5.00, ₱3.00 extra paid beyond this month's plan")).toBeTruthy();
+  });
+});

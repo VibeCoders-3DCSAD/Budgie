@@ -14,7 +14,7 @@ describe("planDebtSurplus", () => {
   it("sizes surplus after each debt's required payment and reports what no debt can take", () => {
     const plan = planDebtSurplus({ candidates: [loan(), statement({ reservedCentavos: 800_000 })], surplusCentavos: 1_500_000, strategy: "avalanche" });
 
-    expect(plan.recommendations).toEqual([{ id: "loan", label: "Loan", plannedCentavos: 800_000, paidCentavos: 0, remainingCentavos: 800_000 }]);
+    expect(plan.recommendations).toEqual([{ id: "loan", label: "Loan", reason: { kind: "avalanche" }, plannedCentavos: 800_000, paidCentavos: 0, remainingCentavos: 800_000 }]);
     expect(plan).toMatchObject({ surplusCentavos: 1_500_000, unassignedCentavos: 700_000, remainingSurplusCentavos: 800_000 });
   });
 
@@ -124,5 +124,21 @@ describe("buildDebtSurplusCandidates", () => {
       expect(candidate).toMatchObject({ startBalanceCentavos: 500_000, reservedCentavos: 0 });
     });
   });
-});
 
+  it("keeps extra paid before a strategy switch on that debt and gives the new order the full surplus", () => {
+    const big = loan({ id: "big", label: "Big", startBalanceCentavos: 900_000, reservedCentavos: 100_000, paidThisPeriodCentavos: 150_000 });
+    const small = loan({ id: "small", label: "Small", startBalanceCentavos: 200_000, reservedCentavos: 0 });
+
+    const plan = planDebtSurplus({ candidates: [big, small], surplusCentavos: 50_000, strategy: "snowball" });
+
+    expect(plan.recommendations).toEqual([{ id: "small", label: "Small", reason: { kind: "snowball" }, plannedCentavos: 50_000, paidCentavos: 0, remainingCentavos: 50_000 }]);
+    expect(plan.extraPaidBeyondPlan).toEqual([{ id: "big", label: "Big", amountCentavos: 50_000 }]);
+    expect(plan.remainingSurplusCentavos).toBe(50_000);
+  });
+
+  it("names the priority rank as the reason for prioritized debts", () => {
+    const plan = planDebtSurplus({ candidates: [loan({ id: "a" }), loan({ id: "b" })], surplusCentavos: 1_000_000, strategy: "avalanche", priorities: [{ debtAccountId: "b", priorityRank: 1 }] });
+
+    expect(plan.recommendations.map((row) => row.reason)).toEqual([{ kind: "priority", rank: 1 }, { kind: "avalanche" }]);
+  });
+});

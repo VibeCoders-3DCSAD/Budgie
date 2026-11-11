@@ -22,9 +22,13 @@ export type DebtSurplusCandidate = {
   paidThisPeriodCentavos: number;
 };
 
+// Why a debt receives surplus: the user's priority list first, then the strategy order.
+export type DebtExtraReason = { kind: "priority"; rank: number } | { kind: DebtStrategy };
+
 export type DebtSurplusRecommendation = {
   id: string;
   label: string;
+  reason: DebtExtraReason;
   plannedCentavos: number;
   paidCentavos: number;
   remainingCentavos: number;
@@ -37,6 +41,9 @@ export type DebtSurplusPlan = {
   // Planned surplus not yet paid this month.
   remainingSurplusCentavos: number;
   recommendations: DebtSurplusRecommendation[];
+  // Paid this month above a debt's required payment and its planned surplus,
+  // e.g. extra paid before the strategy switched. It stays with that debt.
+  extraPaidBeyondPlan: Array<{ id: string; label: string; amountCentavos: number }>;
 };
 
 type Eligible = DebtSurplusCandidate & { roomCentavos: number };
@@ -106,19 +113,29 @@ export function planDebtSurplus({ candidates, surplusCentavos, strategy, priorit
 
   let available = normalizedSurplusCentavos;
   const recommendations: DebtSurplusRecommendation[] = [];
+  const rankById = new Map(priorities.map((priority) => [priority.debtAccountId, priority.priorityRank]));
   for (const candidate of orderCandidates(eligible, strategy, priorities)) {
     if (available <= 0) break;
     const plannedCentavos = Math.min(available, candidate.roomCentavos);
     available -= plannedCentavos;
     const paidCentavos = Math.min(plannedCentavos, Math.max(0, candidate.paidThisPeriodCentavos - candidate.reservedCentavos));
-    recommendations.push({ id: candidate.id, label: candidate.label, plannedCentavos, paidCentavos, remainingCentavos: plannedCentavos - paidCentavos });
+    const rank = rankById.get(candidate.id);
+    const reason: DebtExtraReason = rank === undefined ? { kind: strategy } : { kind: "priority", rank };
+    recommendations.push({ id: candidate.id, label: candidate.label, reason, plannedCentavos, paidCentavos, remainingCentavos: plannedCentavos - paidCentavos });
   }
+  const plannedPaidById = new Map(recommendations.map((recommendation) => [recommendation.id, recommendation.paidCentavos]));
+  const extraPaidBeyondPlan = candidates.flatMap((candidate) => {
+    const extraPaid = Math.max(0, toCentavos(candidate.paidThisPeriodCentavos) - toCentavos(candidate.reservedCentavos));
+    const amountCentavos = extraPaid - (plannedPaidById.get(candidate.id) ?? 0);
+    return amountCentavos > 0 ? [{ id: candidate.id, label: candidate.label, amountCentavos }] : [];
+  });
 
   return {
     surplusCentavos: normalizedSurplusCentavos,
     unassignedCentavos: available,
     remainingSurplusCentavos: recommendations.reduce((total, recommendation) => total + recommendation.remainingCentavos, 0),
     recommendations,
+    extraPaidBeyondPlan,
   };
 }
 

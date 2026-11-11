@@ -46,6 +46,7 @@ export default function NonCreditDebtListScreen({ userId, deviceId, onOpenDebt }
       <Note>Apply surplus after required payments to active non-credit-card debts.</Note>
       <Segment options={[{ key: "snowball", label: "Snowball" }, { key: "avalanche", label: "Avalanche" }]} value={strategy} disabled={savingStrategy} onChange={(option: DebtStrategy) => { setSavingStrategy(true); saveDebtStrategy(userId, deviceId, option).then(() => setStrategy(option)).finally(() => setSavingStrategy(false)); }} />
       <Note>{strategy === "snowball" ? "Snowball pays the smallest balance first." : "Avalanche pays the highest interest rate first."}</Note>
+      <Note>Switching, or changing priorities, moves this month's extra payment to other debts right away. Extra you already paid stays with its debt, so you may pay more than this month's plan.</Note>
     </FormCard>
     <View style={ui.chips}>{FILTERS.map(({ value, label }) => <Chip key={value} label={label} accessibilityLabel={`Show ${value} debts`} selected={visibility === value} onPress={() => setVisibility(value)} />)}</View>
     {debts.length === 0 ? <List><ListRow title={`No ${visibility === "finished" ? "finished" : visibility} debts are recorded yet.`} /></List> : <List>{debts.map((debt, index) => {

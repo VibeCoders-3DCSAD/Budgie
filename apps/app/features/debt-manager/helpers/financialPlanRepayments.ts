@@ -11,6 +11,8 @@ import { commitmentPayments, type CommitmentPayment } from "../../financial-plan
 
 export type FinancialPlanRepayment = {
   id: string; label: string; amountCentavos: number; dueDate?: string | null;
+  // The debt surplus candidate this repayment belongs to: a loan id or `card:<accountId>`.
+  targetId?: string;
   payment: CommitmentPayment;
 };
 
@@ -55,6 +57,7 @@ export function buildFinancialPlanRepayments({ plan, period, today, debts, cards
     const label = debt?.name ?? (statement ? `${card?.name ?? "Credit card"} statement` : null);
     const id = commitmentKey(row);
     const payment = statuses.get(id) ?? { paidCentavos: 0, dueCentavos: 0, status: "paid" as const };
-    return label ? [{ id, label, amountCentavos: row.amountCentavos, dueDate: row.dueDate, payment }] : [];
+    const targetId = debt?.id ?? (accountId ? `card:${accountId}` : undefined);
+    return label ? [{ id, label, amountCentavos: row.amountCentavos, dueDate: row.dueDate, payment, targetId }] : [];
   });
 }
