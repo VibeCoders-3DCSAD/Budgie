@@ -5,11 +5,6 @@
 - View total money across all accounts
 - View the list of financial accounts
 - Add a financial account
-- After successfully creating a savings account, show a modal: "Congratulations
-  on your new savings account!" and "Do you want to add a goal?"
-- Offer "Yes" to open Add Savings Goal with the new account preselected, or
-  "Maybe next time" to return to Accounts. Do not show this invitation for
-  account edits, other account kinds, cancelled forms, or failed saves.
 - View financial account details
 - Edit a financial account
 - Archive a financial account with confirmation while preserving its transaction history.
@@ -21,10 +16,7 @@
 ### 6.2 Account Form
 
 - Account name
-- Account type choices: Cash / Bank / E-Wallet / Credit Card / Other. Savings is excluded from the selector. Existing savings accounts retain their stored type and remain editable.
-- Savings uses one form without a Personal Savings, HYSA, Goal Savings, or Time Deposit subtype selector. Display these accounts as Savings; preserve existing stored account details and edit them in the same account action sheet.
-- Savings interest configuration belongs entirely under Advanced Options. Offer Daily Balance/ADB and Simple/Compound/None with fixed nominal annual rates only. Exclude tiered and conditional controls. None saves a zero rate and disables interest settings while preserving history.
-- Preserve legacy savings terms and schedules when editing; do not require minimum balance.
+- Account type choices: Cash / Bank / E-Wallet / Credit Card / Other.
 - Balance
 - Institution name
 - Opening date
@@ -224,15 +216,3 @@
 #### Recovery Messages
 
 - Income source sync recovery: `Some income source changes could not be synchronized. Retry them or review the failed changes before discarding anything.`
-
-### Fixed savings interest form
-
-- All interest fields live under Advanced Options, including the rate. Rates are nominal annual percentages, not APY; the label remains Interest Rate.
-- Defaults: Daily Balance, Compound upon crediting, daily calculation, monthly credit periods, period-end posting, today as start, calendar-month ADB, Actual/365, withholding enabled at 20%, and manual entry of actual bank interest. Rates themselves have no assumed value.
-- Offer custom credit intervals in days, configurable posting day/date, an independent ADB period, optional minimum qualifying and maximum interest-bearing balances, and Actual/366 or Actual/Actual.
-- Backdating a new start requires a starting balance. None disables all interest controls, saves zero interest and preserves rate history and historical transactions.
-- Store effective-dated rate changes; existing saved rate entries are read-only in the form. Validate dates, tax percentages, intervals, bounds, increasing rate-history dates and safe integer centavos.
-- Simple interest requires independent principal accounting. The selected convention reduces deposited principal before credited interest on withdrawals. Compound behavior applies only upon crediting net interest; no invisible daily compounding.
-- Automated interest is excluded. Do not offer automatic projection or credit controls. Enter actual bank interest manually as income. Disable legacy cron/posting paths without changing historical transactions or balances. The stored compatibility flag `autoProject` always normalizes to false.
-- Visibility preference covers current balance, gross accrual, estimated tax, net interest, applicable rate, next credit date and calculation breakdown.
-- **Implementation boundary:** the current change saves and validates the revised form configuration. These bank terms do not generate transactions or balance changes. Automated credit generation has been removed; migration 20261116000009 also disables the legacy worker.

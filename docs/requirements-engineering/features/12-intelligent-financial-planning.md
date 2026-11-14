@@ -12,7 +12,7 @@
 ### 12.2 Planning Amount
 
 - Show available money from eligible financial-account balances, including cash, bank accounts, e-wallets, and other eligible accounts.
-- Exclude credit-card credit and legacy savings-account balances from the available planning amount.
+- Exclude credit-card credit from the available planning amount.
 - Allow users to choose a positive planning amount no greater than the available money.
 - Base the plan on that chosen amount without separately adding expected future income.
 - Explain when available money is insufficient to begin planning or cover the selected requirements.
