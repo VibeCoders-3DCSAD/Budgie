@@ -1,11 +1,11 @@
 import { type ReactNode, useContext, useEffect, useMemo, useRef } from "react";
 import { View } from "react-native";
 import { SpotlightTourContext, SpotlightTourProvider, type SpotlightTour, type TourStep } from "react-native-spotlight-tour";
-import { attachTourHandle, notifyTargetPress, prepareStep } from "../services/tourRunner";
+import { attachTourHandle, notifyTargetPress, notifyTourEvent, prepareStep } from "../services/tourRunner";
 import { readTourProgress } from "../services/tourProgress";
 import { TOUR_STEPS } from "../steps";
 import { resetTourStore, useTourStore } from "../stores/useTourStore";
-import { sameRect, setTargetPressListener, targetHandle, type TargetRect } from "../stores/useTourTargets";
+import { sameRect, setTargetPressListener, setTourEventListener, targetHandle, type TargetRect } from "../stores/useTourTargets";
 import { CENTER_TARGET, SPOT_OFFSET_Y, spotTarget, TourTarget } from "./TourTarget";
 import { TapHint } from "./TapHint";
 import { TourOffer } from "./TourOffer";
@@ -19,7 +19,8 @@ export function TourHost({ userId, children }: { userId: string; children: React
   useEffect(() => attachTourHandle(() => tour.current), []);
   useEffect(() => {
     setTargetPressListener(notifyTargetPress);
-    return () => setTargetPressListener(null);
+    setTourEventListener(notifyTourEvent);
+    return () => { setTargetPressListener(null); setTourEventListener(null); };
   }, []);
   useEffect(() => {
     let active = true;

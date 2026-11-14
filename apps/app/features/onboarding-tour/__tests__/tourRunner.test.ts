@@ -112,6 +112,25 @@ it("waits for the user's own tap on a tap step, then moves on", async () => {
   unregister();
 });
 
+it("moves a fill step on when the app reports its event, not when its control is pressed", async () => {
+  jest.useFakeTimers();
+  const index = TOUR_STEPS.findIndex((step) => step.until === "transaction-created");
+  const step = TOUR_STEPS[index]!;
+  const unregister = registerTarget(step.target!, { measure: async () => ({ x: 10, y: 300, width: 40, height: 40 }), page: null });
+  useTourStore.setState({ userId: user });
+  await runner.showStep(index);
+  expect(useTourStore.getState()).toMatchObject({ tapIndex: index, stepIndex: index });
+  runner.notifyTargetPress(step.target!);
+  expect(useTourStore.getState().tapIndex).toBe(index);
+  runner.notifyTourEvent("transaction-created");
+  expect(useTourStore.getState().tapIndex).toBeNull();
+  jest.runOnlyPendingTimers();
+  jest.useRealTimers();
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(useTourStore.getState().stepIndex).toBe(index + 1);
+  unregister();
+});
+
 it("opens the step's screen and flags a target that never appears, without rejecting", async () => {
   jest.useFakeTimers();
   const preparing = runner.prepareStep({ id: "x", stage: "Money", title: "", body: "", route: "/money", target: "money-tab" }, 3);

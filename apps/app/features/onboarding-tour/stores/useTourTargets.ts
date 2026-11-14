@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { TourEvent } from "../types";
 
 export type TargetRect = { x: number; y: number; width: number; height: number };
 
@@ -29,6 +30,17 @@ export function setTargetPressListener(listener: ((id: string) => void) | null):
 
 export function pressTarget(id: string): void {
   pressListener?.(id);
+}
+
+// Likewise for app events a step waits on, such as a transaction being saved.
+let eventListener: ((event: TourEvent) => void) | null = null;
+
+export function setTourEventListener(listener: ((event: TourEvent) => void) | null): void {
+  eventListener = listener;
+}
+
+export function emitTourEvent(event: TourEvent): void {
+  eventListener?.(event);
 }
 
 // The most recently mounted handle: the one on the screen in front.

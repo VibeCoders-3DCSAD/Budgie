@@ -8,13 +8,12 @@ import { planSteps } from "./plan";
 import { reportSteps } from "./reports";
 import { savingsSteps } from "./savings";
 import { settingsSteps } from "./settings";
-import { syncSteps } from "./sync";
 import { transactionSteps } from "./transactions";
 
 // Every step in order, one file per stage.
 export const TOUR_STEPS: TourStepDef[] = [
   ...dashboardSteps, ...moneySteps, ...transactionSteps, ...debtSteps, ...savingsSteps,
-  ...planSteps, ...reportSteps, ...settingsSteps, ...syncSteps, ...finishSteps,
+  ...planSteps, ...reportSteps, ...settingsSteps, ...finishSteps,
 ];
 
 export function stepIndex(id: string | null): number {

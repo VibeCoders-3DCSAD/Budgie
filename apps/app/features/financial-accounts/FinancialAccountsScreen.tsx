@@ -12,6 +12,7 @@ import SavingsGoalInvitation from "./components/SavingsGoalInvitation";
 import { totalCashPosition } from "./helpers/accountDisplay";
 import { useFinancialAccounts } from "./hooks/useFinancialAccounts";
 import { TourTarget } from "../onboarding-tour/components/TourTarget";
+import { useCloseWithTour } from "../onboarding-tour/hooks/useCloseWithTour";
 
 type Props = {
   userId: string;
@@ -29,6 +30,7 @@ export default function FinancialAccountsScreen({ userId, deviceId, onBack, onSy
   const [accountActionsTarget, setAccountActionsTarget] = useState<FinancialAccount | null>(null);
 
   const totalCash = totalCashPosition(accounts);
+  useCloseWithTour("money-accounts-menu", accountActionsTarget !== null, () => setAccountActionsTarget(null));
 
   const handleCreate = async (input: CreateFinancialAccountInput, savingsDetails: SavingsAccountDetailsInput | null) => {
     const account = await saveNewAccount(input, savingsDetails);

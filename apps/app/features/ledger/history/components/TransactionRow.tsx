@@ -23,11 +23,13 @@ function fallbackTileColor(tx: TransactionListItem): string {
   return P.error;
 }
 
-export const TransactionRow = memo(function TransactionRow({ tx, last, onEdit, onDelete }: {
+export const TransactionRow = memo(function TransactionRow({ tx, last, onEdit, onDelete, kebabTourId }: {
   tx: TransactionListItem;
   last: boolean;
   onEdit: (transactionId: string) => void;
   onDelete: (transactionId: string) => void;
+  // Set on one row only: the guided tour opens that row's menu.
+  kebabTourId?: string;
 }) {
   const prefix = tx.transaction_type === "expense" ? "-" : tx.transaction_type === "income" ? "+" : "";
   return (
@@ -46,7 +48,7 @@ export const TransactionRow = memo(function TransactionRow({ tx, last, onEdit, o
       <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 12.5, color: AMOUNT_COLORS[tx.transaction_type] ?? P.ink, fontVariant: ["tabular-nums"] }}>
         {prefix}₱{formatAmount(tx.amount_centavos)}
       </Text>
-      <KebabTooltip onEdit={() => onEdit(tx.id)} onDelete={() => onDelete(tx.id)} />
+      <KebabTooltip onEdit={() => onEdit(tx.id)} onDelete={() => onDelete(tx.id)} tourId={kebabTourId} />
     </View>
   );
 });

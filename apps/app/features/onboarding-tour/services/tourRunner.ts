@@ -4,7 +4,7 @@ import { ROUTES } from "../../../routes";
 import { TOUR_STEPS, firstStepOfStage, stepIndex } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
 import { waitForTarget } from "../stores/useTourTargets";
-import type { TourProgress, TourStage, TourStatus, TourStepDef } from "../types";
+import type { TourEvent, TourProgress, TourStage, TourStatus, TourStepDef } from "../types";
 import { enterPracticeMode, exitPracticeMode } from "./practiceSession";
 import { scrollTargetIntoView } from "./targetVisibility";
 import { writeTourProgress } from "./tourProgress";
@@ -47,13 +47,13 @@ async function waitForLayout(target: string, deadline: number): Promise<boolean>
   return true;
 }
 
-// Shows a step. Explanations use the spotlight; a tap step closes it and lets the hint layer wait for the
-// user's own tap, falling back to the spotlight's recovery card when its control cannot be shown.
+// Shows a step. Explanations use the spotlight; a tap or fill step closes it and lets the hint layer wait for
+// the user, falling back to the spotlight's recovery card when its control cannot be shown.
 export async function showStep(index: number): Promise<void> {
   const step = TOUR_STEPS[index];
   if (!step) return;
   useTourStore.setState({ stepIndex: index, tapIndex: null });
-  if (step.action !== "tap") return getHandle()?.goTo(index);
+  if (!step.action) return getHandle()?.goTo(index);
   getHandle()?.stop();
   await prepareStep(step, index);
   if (useTourStore.getState().stepIndex !== index) return;
@@ -75,8 +75,18 @@ export async function previousStep(): Promise<void> {
 // A TourTarget was pressed. When it is the control a tap step is waiting for, the tour moves on once the
 // press has had its effect (usually opening another screen).
 export function notifyTargetPress(id: string): void {
+  advanceWhen((step) => step.action === "tap" && step.target === id);
+}
+
+// The app reported an event, such as a saved transaction, that a fill step may be waiting for.
+export function notifyTourEvent(event: TourEvent): void {
+  advanceWhen((step) => step.until === event);
+}
+
+function advanceWhen(matches: (step: TourStepDef) => boolean): void {
   const { tapIndex, userId } = useTourStore.getState();
-  if (tapIndex === null || !userId || TOUR_STEPS[tapIndex]?.target !== id) return;
+  const step = tapIndex === null ? undefined : TOUR_STEPS[tapIndex];
+  if (!step || !userId || !matches(step)) return;
   useTourStore.setState({ tapIndex: null });
   setTimeout(() => { void nextStep(userId); }, 0);
 }

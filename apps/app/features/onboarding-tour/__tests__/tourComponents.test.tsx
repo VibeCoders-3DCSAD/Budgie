@@ -21,7 +21,7 @@ beforeEach(() => { resetTourStore(); jest.clearAllMocks(); });
 
 it("shows where the user is and moves on, back, or later", async () => {
   render(<TourTooltip {...renderProps} step={step} userId={user} />);
-  expect(screen.getByText("Stage 2 of 10 · Money")).toBeTruthy();
+  expect(screen.getByText("Stage 2 of 9 · Money")).toBeTruthy();
   expect(screen.getByText("Your accounts")).toBeTruthy();
   expect(mockRunner.recordStep).toHaveBeenCalledWith(user, "accounts");
   fireEvent.press(screen.getByLabelText("Next"));

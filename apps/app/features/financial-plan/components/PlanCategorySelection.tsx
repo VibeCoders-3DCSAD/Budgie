@@ -181,10 +181,10 @@ export function PlanCategorySelection({ topLevelCategories, subcategories, inclu
           <View style={{ flex: 1 }}><Text style={{ fontFamily: "Manrope", fontWeight: "800", fontSize: 14, color: "#1B1C1A" }}>{category.label}</Text><Text style={{ fontFamily: "Manrope", fontSize: 11, color: highlighted || locked ? "#416153" : "#8A938C", marginTop: 2 }}>{summary}</Text></View>
         </Pressable>
         </TourTarget>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${expanded ? "Hide" : "Show"} subcategories for ${category.label}`} accessibilityState={{ expanded, disabled: pinnedOpen }} disabled={pinnedOpen} onPress={() => toggleExpanded(category.id)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 3, height: 32, paddingHorizontal: 8, opacity: pinnedOpen ? 0.4 : 1 }}>
+        <TourTarget id={`plan-expand-${category.slug}`} style={{ alignSelf: "center" }}><Pressable accessibilityRole="button" accessibilityLabel={`${expanded ? "Hide" : "Show"} subcategories for ${category.label}`} accessibilityState={{ expanded, disabled: pinnedOpen }} disabled={pinnedOpen} onPress={() => toggleExpanded(category.id)} hitSlop={8} style={{ flexDirection: "row", alignItems: "center", gap: 3, height: 32, paddingHorizontal: 8, opacity: pinnedOpen ? 0.4 : 1 }}>
           <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 11, color: "#6B7A6F" }}>{children.length}</Text>
           <CaretDown size={14} color="#6B7A6F" weight="bold" style={{ transform: [{ rotate: expanded ? "180deg" : "0deg" }] }} />
-        </Pressable>
+        </Pressable></TourTarget>
         <RuleButton label={category.label} onPress={() => { setEditing({ target: "category", id: category.id }); setEditorOpen(true); }} />
       </View>
       {selected && !locked && categoryNeedsAmount(category.id) ? <View style={{ backgroundColor: "#EEFFF8", paddingTop: 2 }}><ManualAmountField label={category.label} amountKey={`category:${category.id}`} value={manualAmount("category", category.id)} onChange={subcategoryHandlers.onManualAmountChange} /></View> : null}

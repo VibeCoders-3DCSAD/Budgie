@@ -11,6 +11,7 @@ import IncomeSourceActions from "./IncomeSourceActions";
 import { incomeScheduleLabel } from "./presentation";
 import { formatPeso } from "../../lib/format/money";
 import { TourTarget } from "../onboarding-tour/components/TourTarget";
+import { useCloseWithTour } from "../onboarding-tour/hooks/useCloseWithTour";
 
 type Props = { userId: string; deviceId: string; onBack: () => void; onAdd: () => void; onEdit: (id: string) => void; onSyncRequested?: () => void };
 
@@ -41,6 +42,7 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
   const sourceCount = `${sources.length} income ${sources.length === 1 ? "source" : "sources"}`;
 
   function closeActions() { setSelected(null); setConfirming(false); }
+  useCloseWithTour("money-income-menu", selected !== null && !confirming, closeActions);
 
   async function confirmDelete() {
     if (!selected || deletingId) return;
@@ -82,7 +84,8 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
       ) : sources.length > 0 ? (
         <TourTarget id="money-income-list" fill>
         <View style={s.list}>
-          {sources.map((source, index) => (
+          {sources.map((source, index) => {
+            const row = (
             <Pressable key={source.id} onPress={() => { setSelected(source); setConfirming(false); }} accessibilityRole="button" accessibilityLabel={`Actions for ${source.name}`} disabled={deletingId === source.id} style={[s.row, index > 0 ? s.divider : null]}>
               <View style={s.tile}><PesoIcon size={18} color="#FFFFFF" /></View>
               <View style={{ flex: 1, minWidth: 0 }}>
@@ -92,7 +95,10 @@ export default function IncomeSourcesScreen({ userId, deviceId, onAdd, onEdit, o
               <Text style={s.amount}>{formatPeso(source.expectedAmountCentavos)}</Text>
               <CaretRight size={15} color={v4.ink2} />
             </Pressable>
-          ))}
+            );
+            // The tour opens the first source's actions.
+            return index === 0 ? <TourTarget key={source.id} id="money-income-first" fill>{row}</TourTarget> : row;
+          })}
         </View>
         </TourTarget>
       ) : null}

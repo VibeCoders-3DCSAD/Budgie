@@ -14,7 +14,7 @@ interface TourState {
   userId: string | null;
   // The step on screen. The runner owns it, since a tap step closes the spotlight while it waits.
   stepIndex: number | null;
-  // The tap step waiting for the user to press its highlighted control.
+  // The tap or fill step waiting on the user (its hint is up instead of the spotlight).
   tapIndex: number | null;
   // The step whose target could not be shown; it is offered retry, skip, or continue later.
   unavailableIndex: number | null;

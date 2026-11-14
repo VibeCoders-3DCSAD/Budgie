@@ -4,6 +4,7 @@ import type { FinancialAccount } from "../../../local-db/repositories/foundation
 import { ActionSheet } from "../../../components/ActionSheet";
 import { BottomSheetSurface } from "../../../components/BottomSheetSurface";
 import { P } from "../helpers/accountsTheme";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 type Props = { account: FinancialAccount | null; onClose: () => void; onEdit: () => void; onDelete: () => void };
 
@@ -13,9 +14,13 @@ export function AccountActionsSheet({ account, onClose, onEdit, onDelete }: Prop
         <BottomSheetSurface bottomSpacing={20} style={{ padding: 20, borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: P.white }}>
           <View style={{ width: 36, height: 4, borderRadius: 2, alignSelf: "center", marginBottom: 18, backgroundColor: P.line }} />
           <Text numberOfLines={1} style={{ marginBottom: 16, fontFamily: "Manrope", fontSize: 17, fontWeight: "800", color: P.ink }}>{account?.name}</Text>
+          <TourTarget id="money-accounts-menu" fill>
+          <View>
           <AccountAction label="Edit" onPress={onEdit} />
           <AccountAction label="Delete" destructive onPress={onDelete} />
           <AccountAction label="Cancel" onPress={onClose} />
+          </View>
+          </TourTarget>
         </BottomSheetSurface>
     </ActionSheet>
   );

@@ -6,6 +6,7 @@ import NewTransactionScreen from "../../../../features/ledger/NewTransactionScre
 import { loadTransactionForm, type TransactionFormProps } from "../../../../features/ledger/services/loadTransactionForm";
 import { useTransactionFormStore } from "../../../../features/ledger/stores/useTransactionFormStore";
 import { parseTransactionFormParams } from "../../../../features/ledger/transactionFormRoute";
+import { emitTourEvent } from "../../../../features/onboarding-tour/stores/useTourTargets";
 import { FullScreenPage } from "../../../../features/shell/components/FullScreenPage";
 import { goBackOr } from "../../../../features/shell/helpers/shellNavigation";
 import { ROUTES } from "../../../../routes";
@@ -46,6 +47,7 @@ export default function TransactionFormRoute() {
       onCreated={(unusualSpending) => {
         useTransactionFormStore.getState().recordCreated(unusualSpending);
         router.dismissTo(ROUTES.activity);
+        emitTourEvent("transaction-created");
       }} />
   </FullScreenPage>;
 }

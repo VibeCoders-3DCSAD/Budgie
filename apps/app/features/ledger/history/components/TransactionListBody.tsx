@@ -64,7 +64,7 @@ export function TransactionListBody({ loading, stale, empty, filtered, grouped, 
             </Text>
             <View style={{ backgroundColor: P.surface, borderWidth: 1, borderColor: P.border, borderRadius: 16, overflow: "hidden" }}>
               {group.items.map((tx, index) => (
-                <TransactionRow key={tx.id} tx={tx} last={index === group.items.length - 1} onEdit={onEdit} onDelete={onDelete} />
+                <TransactionRow key={tx.id} tx={tx} last={index === group.items.length - 1} onEdit={onEdit} onDelete={onDelete} kebabTourId={groupIndex === 0 && index === 0 ? "activity-kebab" : undefined} />
               ))}
             </View>
           </View>

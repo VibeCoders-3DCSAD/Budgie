@@ -95,10 +95,10 @@ function SavingsGoalsOverview({ userId, deviceId, syncVersion, goals, proposals,
     </View>
     </TourTarget>
     <TourTarget id="savings-allocation" fill><SavingsAllocationReview userId={userId} deviceId={deviceId} syncVersion={syncVersion} onAllocationChange={onProposalsChange} /></TourTarget>
-    <View style={{ gap: 8 }}>
-      <TourTarget id="savings-add" fill><SectionHeader title="Your goals" actionLabel="Add goal" accessibilityLabel="Add savings goal" onAction={onCreate} /></TourTarget>
+    <TourTarget id="savings-goals" fill><View style={{ gap: 8 }}>
+      <SectionHeader title="Your goals" actionLabel="Add goal" accessibilityLabel="Add savings goal" onAction={onCreate} />
       <GoalList goals={goals} proposalsByGoalId={proposalsByGoalId} onOpenGoal={onOpenGoal} />
-    </View>
+    </View></TourTarget>
     <ArchivedLink onPress={() => onViewChange("archived")} />
   </View>;
 }

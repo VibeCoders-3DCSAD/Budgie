@@ -17,6 +17,8 @@ function sourceTargets(root: string) {
         for (const match of text.matchAll(/<TourTarget[^>]*?\bid="([^"]+)"/g)) literal.add(match[1]!);
         for (const match of text.matchAll(/<TourTarget[^>]*?\bid=\{`([^`$]*)\$\{/g)) prefixes.add(match[1]!);
         for (const match of text.matchAll(/<TourTarget[^>]*?\bid=\{groupIndex === 0 \? "([^"]+)"/g)) literal.add(match[1]!);
+        // A kebab menu marked for the tour: its button, and its open menu.
+        for (const match of text.matchAll(/\bkebabTourId=\{[^}]*?"([^"]+)"/g)) { literal.add(match[1]!); literal.add(`${match[1]!}-menu`); }
       }
     }
   };
@@ -40,5 +42,6 @@ it("has unique step ids, a route or target for every step, and every stage in or
   expect(new Set(ids).size).toBe(ids.length);
   const stages = [...new Set(TOUR_STEPS.map((step) => step.stage))];
   expect(stages).toEqual([...TOUR_STAGES]);
-  expect(TOUR_STEPS.filter((step) => step.action === "tap" && !step.target)).toEqual([]);
+  expect(TOUR_STEPS.filter((step) => step.action && !step.target)).toEqual([]);
+  expect(TOUR_STEPS.filter((step) => step.until && step.action !== "fill")).toEqual([]);
 });

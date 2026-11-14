@@ -29,6 +29,7 @@ import UpcomingPaymentsCard from "./UpcomingPaymentsCard";
 import { buildFinancialPlanRepayments } from "../helpers/financialPlanRepayments";
 import { buildDebtPlanRows } from "../helpers/debtPlanRows";
 import { buildUpcomingDebtPayments } from "../helpers/upcomingDebtPayments";
+import { TourTarget } from "../../onboarding-tour/components/TourTarget";
 
 type Props = { userId: string; onOpenCreditCards: () => void; onOpenNonCreditDebts: () => void; onOpenCard?: (accountId: string) => void; onOpenDebt?: (debtId: string) => void };
 type CardRow = { id: string; name: string; subtitle: string; debtCentavos: number; strategyLabel: string };
@@ -102,25 +103,31 @@ export default function DebtManagerOverview({ userId, onOpenCreditCards, onOpenN
   const loans = trendDebts.filter((debt) => debt.status !== "deleted");
 
   return <View style={{ gap: 14 }}>
-    <DebtOverviewSummary summary={overview.summary} payoffDate={payoffDate} />
-    <DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusPlan={overview.surplusPlan} rows={buildDebtPlanRows(financialPlanRepayments, overview.surplusPlan)} />
+    <TourTarget id="debts-summary" fill><DebtOverviewSummary summary={overview.summary} payoffDate={payoffDate} /></TourTarget>
+    <TourTarget id="debts-plan" fill><DebtRepaymentPlanCard strategy={debtStrategy} hasPlan={financialPlan !== null} debtBudgetCentavos={overview.debtBudgetCentavos} creditCardBudgetCentavos={overview.creditCardBudgetCentavos} loanBudgetCentavos={overview.loanBudgetCentavos} shortfallCentavos={overview.allocation.shortfallCentavos} surplusPlan={overview.surplusPlan} rows={buildDebtPlanRows(financialPlanRepayments, overview.surplusPlan)} /></TourTarget>
 
+    <TourTarget id="debts-cards" fill><View style={{ gap: 14 }}>
     <SectionHeader title="Credit cards" actionLabel="Manage" accessibilityLabel="Open Credit Cards" onAction={onOpenCreditCards} />
     <List>{overview.cardRows.length === 0
       ? <ListRow title="No credit cards yet" subtitle="Add a credit card to begin tracking billing cycles." icon={<CardIcon />} tint={CARD_TINT} onPress={onOpenCreditCards} accessibilityLabel="Manage credit cards" />
-      : overview.cardRows.map((card, index) => <ListRow key={card.id} divider={index > 0} icon={<CardIcon />} tint={CARD_TINT} title={card.name} subtitle={card.subtitle} value={formatPeso(card.debtCentavos)} caption={card.strategyLabel} onPress={() => (onOpenCard ? onOpenCard(card.id) : onOpenCreditCards())} accessibilityLabel={`Open ${card.name}, ${formatPeso(card.debtCentavos)} owed`} />)}</List>
+      : overview.cardRows.map((card, index) => <TourTarget key={card.id} id={`debts-card-${card.id}`} fill><ListRow divider={index > 0} icon={<CardIcon />} tint={CARD_TINT} title={card.name} subtitle={card.subtitle} value={formatPeso(card.debtCentavos)} caption={card.strategyLabel} onPress={() => (onOpenCard ? onOpenCard(card.id) : onOpenCreditCards())} accessibilityLabel={`Open ${card.name}, ${formatPeso(card.debtCentavos)} owed`} /></TourTarget>)}</List>
+    </View></TourTarget>
 
+    <TourTarget id="debts-loans" fill><View style={{ gap: 14 }}>
     <SectionHeader title="Loans and other debts" actionLabel="Manage" accessibilityLabel="Open Non Credit Card Debts" onAction={onOpenNonCreditDebts} />
     <List>{loans.length === 0
       ? <ListRow title="No loans yet" subtitle="Manage loans and other debts, including your repayment strategy." icon={<DebtTypeIcon type="custom_debt" />} tint={debtTypeTint("custom_debt")} onPress={onOpenNonCreditDebts} accessibilityLabel="Manage non-credit-card debts" />
       : loans.map((debt, index) => {
         const status = forecastStatusLabel(overview.debtStatuses.get(debt.id) ?? "not_scheduled");
-        return <ListRow key={debt.id} divider={index > 0} icon={<DebtTypeIcon type={debt.type} />} tint={debtTypeTint(debt.type)} title={debt.name} subtitle={getDebtTypeLabel(debt.type)} value={formatPeso(debt.currentBalanceCentavos)} caption={status.label} captionTone={status.tone === "warn" ? "warn" : undefined} onPress={() => (onOpenDebt ? onOpenDebt(debt.id) : onOpenNonCreditDebts())} accessibilityLabel={`Open ${debt.name}, ${formatPeso(debt.currentBalanceCentavos)} remaining, ${status.label}`} />;
+        return <TourTarget key={debt.id} id={`debts-loan-${debt.id}`} fill><ListRow divider={index > 0} icon={<DebtTypeIcon type={debt.type} />} tint={debtTypeTint(debt.type)} title={debt.name} subtitle={getDebtTypeLabel(debt.type)} value={formatPeso(debt.currentBalanceCentavos)} caption={status.label} captionTone={status.tone === "warn" ? "warn" : undefined} onPress={() => (onOpenDebt ? onOpenDebt(debt.id) : onOpenNonCreditDebts())} accessibilityLabel={`Open ${debt.name}, ${formatPeso(debt.currentBalanceCentavos)} remaining, ${status.label}`} /></TourTarget>;
       })}</List>
+    </View></TourTarget>
 
-    <UpcomingPaymentsCard payments={upcomingPayments} today={today} />
+    <TourTarget id="debts-upcoming" fill><UpcomingPaymentsCard payments={upcomingPayments} today={today} /></TourTarget>
 
+    <TourTarget id="debts-trends" fill><View style={{ gap: 14 }}>
     <DebtPaymentTrend points={overview.summary.paymentTrend} />
     <GlobalDebtTrend points={overview.globalTrend} />
+    </View></TourTarget>
   </View>;
 }
