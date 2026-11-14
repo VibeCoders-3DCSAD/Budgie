@@ -64,15 +64,15 @@ sessions, and logout after registration.
 - Authentication service failure: `The app could not complete that request. Please try again.`
 - Registration failure: `Registration failed. Please try again.`
 - Network required: `No internet connection is available. Connect to the internet and try again.`
-- Network error: `Odin could not be reached. Check your internet connection and try again.`
+- Network error: `Budgie could not be reached. Check your internet connection and try again.`
 - Request timeout: `The request timed out. Check your connection and try again.`
 - Verification failure: `We could not verify your email yet. Open the latest verification link and try again.`
 - Verification resend failure: `The verification email could not be sent. Check your connection and try again.`
 - Verification sent: `A new verification email was sent to {email}. Check your inbox to continue.`
 - Generic failure: `Something went wrong. Please try again.`
 - Email verification complete: `Email verification completed. Return to sign in to continue.`
-- Verification-link instructions: `Check {email} for Odin's verification link. The link confirms email ownership and unlocks sign-in.`
+- Verification-link instructions: `Check {email} for Budgie's verification link. The link confirms email ownership and unlocks sign-in.`
 - Verification reminder: `Verification email sent to {email}. Tap the link there, then come back and sign in.`
-- Registration in progress: `Creating your Odin account... Please wait a moment.`
+- Registration in progress: `Creating your Budgie account... Please wait a moment.`
 - Account-created success: `Account created. One more step. Verify your email to continue.`
 - Email-verified success: `Email verified. You can now log in. Sign in to continue.`

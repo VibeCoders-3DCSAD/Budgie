@@ -104,7 +104,7 @@ email verification. Login restricts access until email verification is complete.
 #### Network and Session Error Messages
 
 - Network required: `No internet connection is available. Connect to the internet and try again.`
-- Network error: `Odin could not be reached. Check your internet connection and try again.`
+- Network error: `Budgie could not be reached. Check your internet connection and try again.`
 - Request timeout: `The request timed out. Check your connection and try again.`
 - Missing authorization token: `Your sign-in session is missing. Sign in again and retry.`
 - Missing recovery session: `Your recovery session is missing. Request a new reset link and open it on this device.`
@@ -132,4 +132,4 @@ email verification. Login restricts access until email verification is complete.
 - Logged-out success: `You are logged out. Sign in again when you are ready.`
 - Terms unread: `Scroll to the end to accept.`
 - Terms read: `By continuing you agree to these terms.`
-- Native Google logout warning: `Logged out from Odin. Google sign-out could not be completed; try again from Google later.`
+- Native Google logout warning: `Logged out from Budgie. Google sign-out could not be completed; try again from Google later.`
