@@ -29,7 +29,7 @@ plugins.push(["expo-notifications", { color: "#013220", enableRemoteNotification
 const config = {
   name: "Budgie",
   slug: "app",
-  version: "1.0.1",
+  version: "1.1.0",
   scheme: "odin",
   orientation: "portrait",
   icon: "./assets/icon.png",
@@ -48,7 +48,7 @@ const config = {
   android: {
     allowBackup: false,
     package: "com.odin.finances",
-    versionCode: 2,
+    versionCode: 3,
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#ffffff",
