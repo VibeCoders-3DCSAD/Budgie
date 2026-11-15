@@ -1,8 +1,6 @@
-import { useRef, useState, type ReactNode } from "react";
-import { Modal, Pressable, Text, View, useWindowDimensions } from "react-native";
+import { useRef, useState, type ReactElement, type ReactNode } from "react";
+import { Modal, Pressable, Text, View, useWindowDimensions, type ViewStyle } from "react-native";
 import { DotsThree, DotsThreeVertical, PencilSimple, TrashSimple } from "phosphor-react-native";
-import { TourTarget } from "../features/onboarding-tour/components/TourTarget";
-import { useCloseWithTour } from "../features/onboarding-tour/hooks/useCloseWithTour";
 
 export type KebabAction = {
   label: string;
@@ -10,19 +8,33 @@ export type KebabAction = {
   onClick: () => void;
 };
 
-type Props = {
+// The wrapped element is a pressable; wrappers may chain onto its onPress.
+type PressableElement = ReactElement<{ onPress?: (...args: unknown[]) => void }>;
+
+export type KebabMenuProps = {
   kebabDirection?: "horizontal" | "vertical";
   tooltipLocation?: "topRight" | "bottomRight" | "topLeft" | "bottomLeft";
   disabled?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
   actions?: KebabAction[];
-  // Marks the button for the guided tour, and the open menu as `${tourId}-menu`.
-  tourId?: string;
+  // Controls the menu from outside; left unset, the menu keeps its own open state.
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  // Wrap the button, or the open menu at its screen position, without this component knowing who wraps it.
+  wrapButton?: (button: PressableElement) => ReactNode;
+  wrapMenu?: (menu: PressableElement, place: ViewStyle) => ReactNode;
 };
 
-export default function KebabMenu({ kebabDirection = "vertical", tooltipLocation = "bottomRight", disabled = false, onEdit, onDelete, actions, tourId }: Props) {
-  const [open, setOpen] = useState(false);
+const defaultWrapMenu = (menu: PressableElement, place: ViewStyle) => <View style={place}>{menu}</View>;
+
+export default function KebabMenu({ kebabDirection = "vertical", tooltipLocation = "bottomRight", disabled = false, onEdit, onDelete, actions, open: openProp, onOpenChange, wrapButton, wrapMenu = defaultWrapMenu }: KebabMenuProps) {
+  const [ownOpen, setOwnOpen] = useState(false);
+  const open = openProp ?? ownOpen;
+  const setOpen = (next: boolean) => {
+    setOwnOpen(next);
+    onOpenChange?.(next);
+  };
   const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
   const buttonRef = useRef<View>(null);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
@@ -30,9 +42,6 @@ export default function KebabMenu({ kebabDirection = "vertical", tooltipLocation
     { label: "Edit", icon: <PencilSimple size={17} color="#414942" />, onClick: onEdit ?? (() => {}) },
     { label: "Delete", icon: <TrashSimple size={17} color="#D9001F" />, onClick: onDelete ?? (() => {}) },
   ];
-  const menuTourId = tourId ? `${tourId}-menu` : undefined;
-  useCloseWithTour(menuTourId, open, () => setOpen(false));
-
   const button = (
     <Pressable
       accessibilityRole="button"
@@ -83,14 +92,14 @@ export default function KebabMenu({ kebabDirection = "vertical", tooltipLocation
       ))}
     </Pressable>
   );
-  const menuPlace = { position: "absolute", top: menuPosition.top, left: menuPosition.left } as const;
+  const menuPlace: ViewStyle = { position: "absolute", top: menuPosition.top, left: menuPosition.left };
 
   return (
     <>
-      {tourId ? <TourTarget id={tourId}>{button}</TourTarget> : button}
+      {wrapButton ? wrapButton(button) : button}
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable onPress={() => setOpen(false)} style={{ flex: 1, backgroundColor: "rgba(27,28,26,0.12)" }}>
-          {menuTourId ? <TourTarget id={menuTourId} style={menuPlace}>{menu}</TourTarget> : <View style={menuPlace}>{menu}</View>}
+          {wrapMenu(menu, menuPlace)}
         </Pressable>
       </Modal>
     </>

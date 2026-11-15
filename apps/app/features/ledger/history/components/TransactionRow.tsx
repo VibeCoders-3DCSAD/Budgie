@@ -3,6 +3,7 @@ import { Text, View } from "react-native";
 import { ArrowDownLeft, ArrowsLeftRight, ArrowUpRight, CalendarCheck } from "phosphor-react-native";
 import type { TransactionListItem } from "../../../../local-db/repositories/ledger/ledger";
 import KebabTooltip from "../../../../components/KebabTooltip";
+import { TourKebabMenu } from "../../../onboarding-tour/components/TourKebabMenu";
 import { DEFAULT_TAXONOMY_COLOR, TaxonomyIcon } from "../../../taxonomy/taxonomyVisuals";
 import { dashboardColors as P } from "../../../dashboard/dashboardAppearance";
 import { AMOUNT_COLORS } from "../constants";
@@ -48,7 +49,9 @@ export const TransactionRow = memo(function TransactionRow({ tx, last, onEdit, o
       <Text style={{ fontFamily: "Manrope", fontWeight: "700", fontSize: 12.5, color: AMOUNT_COLORS[tx.transaction_type] ?? P.ink, fontVariant: ["tabular-nums"] }}>
         {prefix}₱{formatAmount(tx.amount_centavos)}
       </Text>
-      <KebabTooltip onEdit={() => onEdit(tx.id)} onDelete={() => onDelete(tx.id)} tourId={kebabTourId} />
+      {kebabTourId
+        ? <TourKebabMenu tourId={kebabTourId} onEdit={() => onEdit(tx.id)} onDelete={() => onDelete(tx.id)} />
+        : <KebabTooltip onEdit={() => onEdit(tx.id)} onDelete={() => onDelete(tx.id)} />}
     </View>
   );
 });

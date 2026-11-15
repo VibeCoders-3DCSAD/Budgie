@@ -23,6 +23,13 @@ jest.mock("../../../components/KebabTooltip", () => ({ onEdit }: { onEdit: () =>
   const { Pressable: MockPressable, Text: MockText } = require("react-native");
   return <MockPressable onPress={onEdit}><MockText>Edit</MockText></MockPressable>;
 });
+// The row the tour points at uses the tour's menu instead; stub it the same way.
+jest.mock("../../onboarding-tour/components/TourKebabMenu", () => ({
+  TourKebabMenu: ({ onEdit }: { onEdit: () => void }) => {
+    const { Pressable: MockPressable, Text: MockText } = require("react-native");
+    return <MockPressable onPress={onEdit}><MockText>Edit</MockText></MockPressable>;
+  },
+}));
 jest.mock("../NewTransactionScreen", () => ({ onClose }: { onClose: () => void }) => {
   const { Pressable: MockPressable, Text: MockText } = require("react-native");
   return <MockPressable onPress={onClose}><MockText>Close edit form</MockText></MockPressable>;
