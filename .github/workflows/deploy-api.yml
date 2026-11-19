@@ -1,8 +1,10 @@
 name: Deploy API
 
+# main deploys to production, staging to staging. Each branch only reaches its own GitHub environment,
+# which holds that target's Lightsail host, SSH key, and Supabase project.
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
     paths:
       - "apps/api/**"
       - "packages/**"
@@ -12,20 +14,48 @@ on:
       - ".node-version"
       - ".github/workflows/deploy-api.yml"
       - ".github/workflows/ci.yml"
+      - "supabase/migrations/**"
+      - "supabase/config.toml"
   workflow_dispatch:
 
 concurrency:
-  group: deploy-api
+  group: deploy-api-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   checks:
+    if: github.ref_name == 'main' || github.ref_name == 'staging'
     uses: ./.github/workflows/ci.yml
 
-  deploy:
+  # Migrations land before the new API starts, so the API never runs against a schema it predates.
+  migrate:
     needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      # Connects straight to Postgres through the session pooler (runners have no IPv6 for the direct host),
+      # so no Supabase access token is needed. Same CLI version the database CI job replays migrations with.
+      - name: Push migrations
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+          POOLER_HOST: ${{ vars.SUPABASE_POOLER_HOST }}
+        run: |
+          password=$(jq -rn --arg p "$DB_PASSWORD" '$p | @uri')
+          echo "::add-mask::$password"
+          npx --yes supabase@2.105.0 db push --yes \
+            --db-url "postgresql://postgres.$PROJECT_REF:$password@$POOLER_HOST:5432/postgres"
+
+  deploy:
+    needs: migrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ github.ref_name == 'main' && 'production' || 'staging' }}
     steps:
       - name: Configure SSH
         env:
@@ -41,14 +71,16 @@ jobs:
         env:
           HOST: ${{ secrets.LIGHTSAIL_HOST }}
           SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
         run: |
-          ssh -i ~/.ssh/lightsail -o IdentitiesOnly=yes "ubuntu@$HOST" "bash -s" -- "$SHA" <<'EOF'
+          ssh -i ~/.ssh/lightsail -o IdentitiesOnly=yes "ubuntu@$HOST" "bash -s" -- "$SHA" "$BRANCH" <<'EOF'
           set -euo pipefail
           sha="$1"
+          branch="$2"
           repo=/srv/budgie/Odin
 
           echo "==> Pull"
-          sudo -u budgie git -C "$repo" fetch --prune origin main
+          sudo -u budgie git -C "$repo" fetch --prune origin "$branch"
           sudo -u budgie git -C "$repo" merge --ff-only "$sha"
 
           echo "==> Build"
