@@ -5,14 +5,13 @@ import { TOUR_STEPS, firstStepOfStage, stepIndex } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
 import { waitForTarget } from "../stores/useTourTargets";
 import type { TourEvent, TourProgress, TourStage, TourStatus, TourStepDef } from "../types";
-import { enterPracticeMode, exitPracticeMode } from "./practiceSession";
-import { scrollTargetIntoView } from "./targetVisibility";
+import { discardPreparedPractice, enterPracticeMode, exitPracticeMode } from "./practiceSession";
+import { nextFrame, scrollTargetIntoView } from "./targetVisibility";
 import { writeTourProgress } from "./tourProgress";
 
 // How long a step waits for its screen and highlighted control before offering recovery. Generous: the Financial
 // Plan rebuilds itself when the tour returns from Past plans, which can take several seconds.
 export const TARGET_TIMEOUT_MS = 10_000;
-const LAYOUT_RETRY_MS = 100;
 
 type TourHandle = Pick<SpotlightTour, "goTo" | "stop">;
 let getHandle: () => TourHandle | null = () => null;
@@ -39,10 +38,11 @@ export async function prepareStep(step: TourStepDef, index: number): Promise<voi
 }
 
 // A target that has just mounted measures as nothing until its first layout, so keep trying until the deadline.
+// It tries again on the next frame rather than after a fixed delay, so a step shows as soon as it can.
 async function waitForLayout(target: string, deadline: number): Promise<boolean> {
   while (await scrollTargetIntoView(target) === null) {
     if (Date.now() >= deadline) return false;
-    await new Promise((resolve) => setTimeout(resolve, LAYOUT_RETRY_MS));
+    await nextFrame();
   }
   return true;
 }
@@ -53,6 +53,7 @@ export async function showStep(index: number): Promise<void> {
   const step = TOUR_STEPS[index];
   if (!step) return;
   useTourStore.setState({ stepIndex: index, tapIndex: null });
+  if (startsStage(index)) void saveCurrentStep();
   if (!step.action) return getHandle()?.goTo(index);
   getHandle()?.stop();
   await prepareStep(step, index);
@@ -128,9 +129,20 @@ export async function cancelStart(): Promise<void> {
   await exitPracticeMode();
 }
 
-// Saves the step on screen, so a lock or a closed app resumes here.
-export function recordStep(userId: string, stepId: string): Promise<void> {
-  return save(userId, "active", stepId);
+// Progress is saved when a stage is finished (as the next one opens), on pause and finish, and when the app
+// goes to the background or the tour is torn down, rather than on every step: each save is an encrypted
+// SecureStore write. A tour closed mid-stage resumes at the start of that stage.
+function startsStage(index: number): boolean {
+  const step = TOUR_STEPS[index];
+  return !!step && TOUR_STEPS[index - 1]?.stage !== step.stage;
+}
+
+// Saves the step on screen as the place to resume. Does nothing when no tour is running.
+export function saveCurrentStep(): Promise<void> {
+  const { phase, userId, stepIndex } = useTourStore.getState();
+  const step = stepIndex === null ? undefined : TOUR_STEPS[stepIndex];
+  if (phase !== "running" || !userId || !step) return Promise.resolve();
+  return save(userId, "active", step.id);
 }
 
 export async function continueLater(userId: string): Promise<void> {
@@ -143,8 +155,8 @@ export function finishTour(userId: string): Promise<void> {
 }
 
 // The offer's "Skip for now": nothing to tear down, the tour never started.
-export function skipTour(userId: string): Promise<void> {
-  return save(userId, "skipped", null);
+export async function skipTour(userId: string): Promise<void> {
+  await Promise.all([save(userId, "skipped", null), discardPreparedPractice()]);
 }
 
 export function retryStep(): void {

@@ -194,12 +194,32 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   return getDatabase(await tracePinStep("database.load-migrations", loadMigrations));
 }
 
-// A separate database with the full schema, e.g. the tour's in-memory practice data. Never the user's handle.
-export async function openMigratedDatabase(name: string, migrations: Migration[]): Promise<SQLite.SQLiteDatabase> {
-  const opened = await SQLite.openDatabaseAsync(name);
+type SchemaSource = Pick<SQLite.SQLiteDatabase, "getAllAsync">;
+type SchemaTarget = Pick<SQLite.SQLiteDatabase, "execAsync">;
+
+// The CREATE statements of an already-migrated database, in an order that recreates it: tables, then the
+// indexes, views, and triggers that refer to them. SQLite's own internal tables are left out.
+export async function readSchema(source: SchemaSource): Promise<string> {
+  const rows = await source.getAllAsync<{ sql: string }>(
+    `SELECT sql FROM sqlite_master
+     WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite_%'
+     ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'view' THEN 2 ELSE 3 END, rowid`,
+  );
+  return rows.map((row) => `${row.sql};`).join("\n");
+}
+
+export async function applySchema(target: SchemaTarget, schema: string): Promise<void> {
+  await target.execAsync(schema);
+}
+
+// An empty in-memory database with the same schema as `source` (the user's migrated database), e.g. the
+// tour's practice data. Copying the schema is one read and one write, where replaying every migration is
+// almost a hundred transactions. Migrations insert no reference rows, so the schema is all there is to copy.
+export async function openSchemaCopy(source: SchemaSource): Promise<SQLite.SQLiteDatabase> {
+  const schema = await readSchema(source);
+  const opened = await SQLite.openDatabaseAsync(":memory:");
   try {
-    await opened.execAsync(MIGRATIONS_TABLE);
-    await runMigrations(opened, migrations);
+    await applySchema(opened, schema);
     return opened;
   } catch (error) {
     await opened.closeAsync();

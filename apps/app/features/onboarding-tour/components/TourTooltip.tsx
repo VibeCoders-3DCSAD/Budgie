@@ -1,10 +1,9 @@
-import { useEffect } from "react";
 import { Text, View } from "react-native";
 import type { RenderProps } from "react-native-spotlight-tour";
 import { useToast } from "../../../components/Toast";
 import { shellPalette } from "../../shell/theme";
 import { TOUR_MESSAGES } from "../messages";
-import { continueLater, finishTour, nextStep, previousStep, recordStep, retryStep, skipStep } from "../services/tourRunner";
+import { continueLater, finishTour, nextStep, previousStep, retryStep, skipStep } from "../services/tourRunner";
 import { stageNumber } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
 import { TOUR_STAGES, type TourStepDef } from "../types";
@@ -17,7 +16,6 @@ export function TourTooltip({ step, userId, current, isFirst, isLast }: Props) {
   const unavailable = useTourStore((state) => state.unavailableIndex === current);
   const saveFailed = useTourStore((state) => state.saveFailed);
   const { showToast } = useToast();
-  useEffect(() => { if (!unavailable) void recordStep(userId, step.id); }, [unavailable, userId, step.id]);
 
   const later = () => { void continueLater(userId).then(() => showToast(TOUR_MESSAGES.paused)); };
   const finish = () => { void finishTour(userId).then(() => showToast(TOUR_MESSAGES.complete, "success")); };

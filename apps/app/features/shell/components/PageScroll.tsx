@@ -2,6 +2,7 @@ import { ArrowDown } from "phosphor-react-native";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { notifyTourLayout } from "../../onboarding-tour/stores/useTourTargets";
 import { CONTENT_GUTTER, shellPalette as palette } from "../theme";
 
 // Long pages show the scroll-to-bottom button while this much content is still below the viewport.
@@ -83,9 +84,10 @@ export function PageScroll({ scrollKey, tabBarShown, showScrollToEnd = false, st
           const distanceFromBottom = nativeEvent.contentSize.height - nativeEvent.layoutMeasurement.height - nativeEvent.contentOffset.y;
           if (distanceFromBottom < LOAD_MORE_DISTANCE) loadMoreRef.current?.();
           updateScrollToEnd();
+          notifyTourLayout();
         }}
         onScrollBeginDrag={onScrollBeginDrag}
-        onContentSizeChange={(_width, height) => { contentHeight.current = height; updateScrollToEnd(); }}
+        onContentSizeChange={(_width, height) => { contentHeight.current = height; updateScrollToEnd(); notifyTourLayout(); }}
         onLayout={({ nativeEvent }) => { viewportHeight.current = nativeEvent.layout.height; updateScrollToEnd(); }}
         scrollEventThrottle={16}
         ref={scrollRef}

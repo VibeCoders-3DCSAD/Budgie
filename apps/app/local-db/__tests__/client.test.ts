@@ -3,7 +3,7 @@ jest.mock("expo-sqlite", () => ({
 }));
 
 import * as SQLite from "expo-sqlite";
-import { closeDatabase, getDatabase, openMigratedDatabase, type Migration } from "../client";
+import { closeDatabase, getDatabase, type Migration } from "../client";
 import { startPracticeMode, stopPracticeMode } from "../../services/practiceMode";
 
 const openDatabaseAsync = SQLite.openDatabaseAsync as jest.Mock;
@@ -71,17 +71,5 @@ describe("local database initialization", () => {
     } finally {
       stopPracticeMode();
     }
-  });
-
-  it("opens a separate migrated database without replacing the user's handle", async () => {
-    const separate = createDatabase();
-    openDatabaseAsync.mockResolvedValueOnce(separate);
-    const migration: Migration = { version: 1, up: jest.fn().mockResolvedValue(undefined) };
-    await expect(openMigratedDatabase(":memory:", [migration])).resolves.toBe(separate);
-    expect(migration.up).toHaveBeenCalledWith(separate);
-    expect(openDatabaseAsync).toHaveBeenCalledWith(":memory:");
-    const user = createDatabase();
-    openDatabaseAsync.mockResolvedValueOnce(user);
-    await expect(getDatabase([])).resolves.toBe(user);
   });
 });

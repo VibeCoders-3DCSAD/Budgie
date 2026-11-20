@@ -86,3 +86,47 @@ it("is the same data every time for the same day", () => {
 it("names the missing subcategory instead of writing a broken reference", () => {
   expect(() => subcategoryLookup({ categories: [], subcategories: [] })("food_groceries")).toThrow('Practice data needs the "food_groceries" subcategory.');
 });
+
+describe("batched seeding", () => {
+  // The per-row pull path the seeder used before: a lookup and an insert for every row.
+  async function seedRowByRow(db: never, tax: ReturnType<typeof taxonomy>, seed: ReturnType<typeof buildPracticeSeed>) {
+    const { applyPullRow, normalizePullRow } = await import("../../../../local-db/sync/pullConvergence");
+    const tables: [string, Record<string, unknown>[]][] = [["categories", tax.categories], ["subcategories", tax.subcategories], ...PRACTICE_TABLE_ORDER.map((table) => [table, seed[table]] as [string, Record<string, unknown>[]])];
+    for (const [table, rows] of tables) {
+      for (const row of rows) {
+        const normalized = Object.fromEntries(Object.entries(normalizePullRow(table, row, USER)).filter(([, value]) => value !== undefined));
+        await applyPullRow(db, table, normalized);
+      }
+    }
+  }
+
+  function counted(harness: ReturnType<typeof createSqliteHarness>) {
+    const calls = { count: 0 };
+    const wrap = <T extends (...args: never[]) => unknown>(fn: T) => ((...args: never[]) => { calls.count += 1; return fn(...args); }) as T;
+    return { calls, db: { ...harness.db, runAsync: wrap(harness.db.runAsync), getFirstAsync: wrap(harness.db.getFirstAsync), getAllAsync: wrap(harness.db.getAllAsync) } };
+  }
+
+  it("writes exactly the rows the per-row pull path wrote, in a small fraction of the statements", async () => {
+    const today = "2026-11-20";
+    const tax = taxonomy();
+    const seed = buildPracticeSeed({ userId: USER, today, subcategoryId: subcategoryLookup(tax) });
+    const batched = createSqliteHarness();
+    const rowByRow = createSqliteHarness();
+    await batched.migrateAll();
+    await rowByRow.migrateAll();
+    const fast = counted(batched);
+    const slow = counted(rowByRow);
+    await applyPracticeSeed(fast.db as never, USER, tax, seed);
+    await seedRowByRow(slow.db as never, tax, seed);
+    const tables = batched.sqlite.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name <> '_migrations'").all() as { name: string }[];
+    for (const { name } of tables) {
+      // last_synced_at is stamped with the clock as each row is written, so it is the one column left out.
+      const dump = (harness: typeof batched) => (harness.sqlite.prepare(`SELECT * FROM "${name}" ORDER BY rowid`).all() as Record<string, unknown>[])
+        .map(({ last_synced_at: _stamp, ...row }) => row);
+      expect({ name, rows: dump(batched) }).toEqual({ name, rows: dump(rowByRow) });
+    }
+    expect(fast.calls.count * 10).toBeLessThan(slow.calls.count);
+    batched.sqlite.close();
+    rowByRow.sqlite.close();
+  });
+});

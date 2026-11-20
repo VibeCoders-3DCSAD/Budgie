@@ -1,7 +1,9 @@
+import { useEffect } from "react";
 import { Modal, Text, View } from "react-native";
 import { useToast } from "../../../components/Toast";
 import { shellPalette } from "../../shell/theme";
 import { TOUR_MESSAGES } from "../messages";
+import { preparePracticeMode } from "../services/practiceSession";
 import { skipTour, startTour } from "../services/tourRunner";
 import { useTourStore } from "../stores/useTourStore";
 import { TourButton } from "./TourButton";
@@ -10,6 +12,8 @@ import { TourButton } from "./TourButton";
 export function TourOffer({ userId }: { userId: string }) {
   const visible = useTourStore((state) => state.progress?.status === "not_started" && state.phase === "idle");
   const { showToast } = useToast();
+  // Builds the practice data while the offer is read, so Start only has to switch to it.
+  useEffect(() => { if (visible) preparePracticeMode(userId); }, [visible, userId]);
   const start = () => { void startTour(userId, "start").then((result) => { if (result === "failed") showToast(TOUR_MESSAGES.error, "danger"); }); };
   const skip = () => { void skipTour(userId).then(() => showToast(TOUR_MESSAGES.skipped)); };
   return (

@@ -18,6 +18,8 @@ export const useTourTargets = create<TourTargetsState>(() => ({ mounted: {} }));
 
 export function registerTarget(id: string, handle: TargetHandle = { measure: async () => null, page: null }): () => void {
   useTourTargets.setState((state) => ({ mounted: { ...state.mounted, [id]: [...(state.mounted[id] ?? []), handle] } }));
+  // A screen coming to the front brings its own copy of a target, so a step showing it measures again.
+  notifyTourLayout();
   return () => useTourTargets.setState((state) => ({ mounted: { ...state.mounted, [id]: (state.mounted[id] ?? []).filter((item) => item !== handle) } }));
 }
 
@@ -65,4 +67,18 @@ export function waitForTarget(id: string, timeoutMs: number): Promise<boolean> {
 export function sameRect(a: TargetRect | null, b: TargetRect | null): boolean {
   if (!a || !b) return a === b;
   return a.x === b.x && a.y === b.y && a.width === b.width && a.height === b.height;
+}
+
+// Something that can move a highlighted control has happened: a page scrolled or changed size, or a target
+// mounted.
+// The spotlight and tap hint re-measure on it instead of polling on a timer. Nothing listens unless a step is up.
+const layoutListeners = new Set<() => void>();
+
+export function onTourLayout(listener: () => void): () => void {
+  layoutListeners.add(listener);
+  return () => { layoutListeners.delete(listener); };
+}
+
+export function notifyTourLayout(): void {
+  for (const listener of layoutListeners) listener();
 }

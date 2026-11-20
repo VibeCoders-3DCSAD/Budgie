@@ -1,11 +1,12 @@
 import { type ReactNode, useContext, useEffect, useMemo, useRef } from "react";
-import { View } from "react-native";
+import { AppState, View } from "react-native";
 import { SpotlightTourContext, SpotlightTourProvider, type SpotlightTour, type TourStep } from "react-native-spotlight-tour";
-import { attachTourHandle, notifyTargetPress, notifyTourEvent, prepareStep } from "../services/tourRunner";
+import { followTarget } from "../services/targetFollower";
+import { attachTourHandle, notifyTargetPress, notifyTourEvent, prepareStep, saveCurrentStep } from "../services/tourRunner";
 import { readTourProgress } from "../services/tourProgress";
 import { TOUR_STEPS } from "../steps";
 import { resetTourStore, useTourStore } from "../stores/useTourStore";
-import { sameRect, setTargetPressListener, setTourEventListener, targetHandle, type TargetRect } from "../stores/useTourTargets";
+import { setTargetPressListener, setTourEventListener } from "../stores/useTourTargets";
 import { CENTER_TARGET, SPOT_OFFSET_Y, spotTarget, TourTarget } from "./TourTarget";
 import { TapHint } from "./TapHint";
 import { TourOffer } from "./TourOffer";
@@ -27,8 +28,14 @@ export function TourHost({ userId, children }: { userId: string; children: React
     readTourProgress(userId)
       .then((progress) => { if (active) useTourStore.setState({ progress }); })
       .catch(() => { if (active) useTourStore.setState({ loadFailed: true }); });
-    return () => { active = false; resetTourStore(); };
+    // A tour torn down mid-run (a lock or logout) keeps its place.
+    return () => { active = false; void saveCurrentStep(); resetTourStore(); };
   }, [userId]);
+  // Progress is not saved on every step, so save it whenever the app leaves the foreground.
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => { if (state !== "active") void saveCurrentStep(); });
+    return () => subscription.remove();
+  }, []);
 
   const steps = useMemo((): TourStep[] => TOUR_STEPS.map((step, index) => ({
     before: () => prepareStep(step, index),
@@ -61,27 +68,14 @@ function CenterAnchor() {
   );
 }
 
-const REMEASURE_MS = 250;
-
 // Keeps the spotlight on the current step's target. It measures the target on the screen in front (a hidden
-// screen underneath can carry the same target), and keeps measuring while the step is up, since the screen
-// may still be sliding in, scrolling, or loading when the step starts.
+// screen underneath can carry the same target), following it while the screen slides in, scrolls, or loads.
 function SpotFollower() {
   const { current, changeSpot } = useContext(SpotlightTourContext);
   const unavailable = useTourStore((state) => state.unavailableIndex);
   useEffect(() => {
     if (current === undefined) return;
-    const target = spotTarget(current, unavailable);
-    let shown: TargetRect | null = null;
-    let active = true;
-    const measure = () => void targetHandle(target)?.measure().then((rect) => {
-      if (!active || !rect || sameRect(shown, rect)) return;
-      shown = rect;
-      changeSpot(rect);
-    });
-    measure();
-    const timer = setInterval(measure, REMEASURE_MS);
-    return () => { active = false; clearInterval(timer); };
+    return followTarget(spotTarget(current, unavailable), (rect) => { if (rect) changeSpot(rect); });
   }, [current, unavailable, changeSpot]);
   return null;
 }
