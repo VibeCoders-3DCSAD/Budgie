@@ -5,7 +5,7 @@
   "scripts": {
     "start": "NODE_OPTIONS=--max-old-space-size=3072 expo start",
     "start:staging": "sh -c \"set -a && . ./.env.staging && set +a && exec pnpm start --clear\"",
-    "start:main": "sh -c \"set -a && . ./.env.main && set +a && exec pnpm start --clear\"",
+    "start:production": "sh -c \"set -a && . ./.env.production && set +a && exec pnpm start --clear\"",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --config jest.config.cjs"
