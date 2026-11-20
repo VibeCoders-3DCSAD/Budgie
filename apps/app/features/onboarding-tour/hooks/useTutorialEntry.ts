@@ -4,8 +4,8 @@ import { startTour } from "../services/tourRunner";
 import { useTourStore } from "../stores/useTourStore";
 import type { TourStage } from "../types";
 
-// Settings → Help and About: Resume tutorial (only with unfinished progress) and Replay tutorial; dev builds
-// can also replay from any stage.
+// Settings → Help and About: Resume tutorial (only with unfinished progress) and Replay tutorial;
+// Replay from a stage starts it at any one stage.
 export function useTutorialEntry(userId: string) {
   const canResume = useTourStore((state) => state.progress?.status === "paused" && state.progress.stepId !== null);
   const busy = useTourStore((state) => state.phase !== "idle");
