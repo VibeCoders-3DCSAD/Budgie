@@ -5,7 +5,7 @@ import { targetHandle, type TargetRect } from "../stores/useTourTargets";
 const TOP_CLEARANCE = 96;
 const BOTTOM_CLEARANCE = 150;
 
-function nextFrame(): Promise<void> {
+export function nextFrame(): Promise<void> {
   return new Promise((resolve) => requestAnimationFrame(() => resolve()));
 }
 

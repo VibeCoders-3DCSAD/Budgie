@@ -13,7 +13,8 @@ import * as runner from "../services/tourRunner";
 
 const mockEnter = jest.fn(async (_userId: string) => {});
 const mockExit = jest.fn(async () => {});
-jest.mock("../services/practiceSession", () => ({ enterPracticeMode: (userId: string) => mockEnter(userId), exitPracticeMode: () => mockExit() }));
+const mockDiscard = jest.fn(async () => {});
+jest.mock("../services/practiceSession", () => ({ enterPracticeMode: (userId: string) => mockEnter(userId), exitPracticeMode: () => mockExit(), discardPreparedPractice: () => mockDiscard() }));
 
 const user = "11111111-2222-4333-8444-555555555555";
 const handle = { goTo: jest.fn(), stop: jest.fn() };
@@ -73,13 +74,37 @@ it("pauses at the current step and returns to the user's data", async () => {
   expect(useTourStore.getState()).toMatchObject({ phase: "idle", userId: null, stepIndex: null });
 });
 
-it("finishes, skips, and records each step it shows", async () => {
-  await runner.recordStep(user, "welcome");
-  expect(await readTourProgress(user)).toMatchObject({ status: "paused", stepId: "welcome" });
+it("finishes and skips, dropping practice data built ahead for a skipped tour", async () => {
   await runner.finishTour(user);
   expect(await readTourProgress(user)).toMatchObject({ status: "completed" });
   await runner.skipTour(user);
   expect(useTourStore.getState().progress).toMatchObject({ status: "skipped" });
+  expect(mockDiscard).toHaveBeenCalled();
+});
+
+it("saves progress when a stage is finished, not on every step", async () => {
+  const secureStore = jest.requireMock<{ setItemAsync: jest.Mock }>("expo-secure-store");
+  const startsStage = (index: number) => index === 0 || TOUR_STEPS[index - 1]!.stage !== TOUR_STEPS[index]!.stage;
+  const midStage = TOUR_STEPS.findIndex((step, index) => !startsStage(index) && !step.action);
+  const nextStage = TOUR_STEPS.findIndex((step, index) => index > midStage && startsStage(index) && !step.action);
+  await runner.startTour(user, "start");
+  await new Promise((resolve) => setImmediate(resolve));
+  secureStore.setItemAsync.mockClear();
+  await runner.showStep(midStage);
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(secureStore.setItemAsync).not.toHaveBeenCalled();
+  await runner.showStep(nextStage);
+  await new Promise((resolve) => setImmediate(resolve));
+  expect(await readTourProgress(user)).toMatchObject({ status: "paused", stepId: TOUR_STEPS[nextStage]!.id });
+});
+
+it("saves the step on screen on demand (the app going to the background) only while a tour runs", async () => {
+  await runner.saveCurrentStep();
+  expect(useTourStore.getState().progress).toMatchObject({ status: "not_started" });
+  await runner.startTour(user, "start");
+  await runner.showStep(1);
+  await runner.saveCurrentStep();
+  expect(await readTourProgress(user)).toMatchObject({ status: "paused", stepId: TOUR_STEPS[1]!.id });
 });
 
 it("moves forward and back, and finishes after the last step", async () => {

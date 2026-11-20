@@ -3,16 +3,16 @@ import { Dimensions, Text, View } from "react-native";
 import { useToast } from "../../../components/Toast";
 import { shellPalette } from "../../shell/theme";
 import { TOUR_MESSAGES } from "../messages";
-import { continueLater, nextStep, previousStep, recordStep, skipStep } from "../services/tourRunner";
+import { followTarget } from "../services/targetFollower";
+import { continueLater, nextStep, previousStep, skipStep } from "../services/tourRunner";
 import { stageNumber, TOUR_STEPS } from "../steps";
 import { useTourStore } from "../stores/useTourStore";
-import { sameRect, targetHandle, type TargetRect } from "../stores/useTourTargets";
+import type { TargetRect } from "../stores/useTourTargets";
 import { TOUR_STAGES, type TourStepDef } from "../types";
 import { TourButton } from "./TourButton";
 
 const PADDING = 13;
 const DIM = "rgba(11, 31, 22, 0.6)";
-const REMEASURE_MS = 250;
 
 // A tap or fill step: the screen is dimmed except for a hole over the control, which stays live, so the user's
 // own tap or typing does the real thing. The spotlight cannot do this: its overlay is a modal that swallows
@@ -29,23 +29,11 @@ export function TapHint() {
   useEffect(() => {
     setRect(null);
     if (!step?.target) return;
-    const target = step.target;
-    let active = true;
-    // Keeps measuring while the hint is up: the step often starts mid screen transition, so the first
+    // Follows the target while the hint is up: the step often starts mid screen transition, so the first
     // position can be stale. A target that leaves the screen (a picker covering the form) hides the hint
     // until it comes back.
-    const measure = () => {
-      const handle = targetHandle(target);
-      if (!handle) return setRect(null);
-      void handle.measure().then((measured) => {
-        if (active) setRect((current) => (sameRect(current, measured) ? current : measured));
-      });
-    };
-    measure();
-    const timer = setInterval(measure, REMEASURE_MS);
-    if (userId) void recordStep(userId, step.id);
-    return () => { active = false; clearInterval(timer); };
-  }, [step, userId]);
+    return followTarget(step.target, setRect);
+  }, [step]);
 
   if (!step || !rect || !userId) return null;
   const { width, height } = layer;

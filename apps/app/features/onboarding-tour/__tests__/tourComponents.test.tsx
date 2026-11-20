@@ -1,7 +1,9 @@
 jest.mock("@expo/vector-icons", () => ({ MaterialCommunityIcons: () => null }));
 const mockShowToast = jest.fn();
 jest.mock("../../../components/Toast", () => ({ useToast: () => ({ showToast: mockShowToast }) }));
-jest.mock("../services/tourRunner", () => ({ startTour: jest.fn(async () => "started"), cancelStart: jest.fn(async () => {}), skipTour: jest.fn(async () => {}), continueLater: jest.fn(async () => {}), finishTour: jest.fn(async () => {}), recordStep: jest.fn(async () => {}), retryStep: jest.fn(), skipStep: jest.fn(async () => {}), nextStep: jest.fn(async () => {}), previousStep: jest.fn(async () => {}) }));
+const mockPrepare = jest.fn();
+jest.mock("../services/practiceSession", () => ({ preparePracticeMode: (userId: string) => mockPrepare(userId) }));
+jest.mock("../services/tourRunner", () => ({ startTour: jest.fn(async () => "started"), cancelStart: jest.fn(async () => {}), skipTour: jest.fn(async () => {}), continueLater: jest.fn(async () => {}), finishTour: jest.fn(async () => {}), retryStep: jest.fn(), skipStep: jest.fn(async () => {}), nextStep: jest.fn(async () => {}), previousStep: jest.fn(async () => {}) }));
 
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import { TourOffer } from "../components/TourOffer";
@@ -23,7 +25,6 @@ it("shows where the user is and moves on, back, or later", async () => {
   render(<TourTooltip {...renderProps} step={step} userId={user} />);
   expect(screen.getByText("Stage 2 of 9 · Money")).toBeTruthy();
   expect(screen.getByText("Your accounts")).toBeTruthy();
-  expect(mockRunner.recordStep).toHaveBeenCalledWith(user, "accounts");
   fireEvent.press(screen.getByLabelText("Next"));
   fireEvent.press(screen.getByLabelText("Back"));
   expect(mockRunner.nextStep).toHaveBeenCalledWith(user);
@@ -42,7 +43,6 @@ it("offers retry, skip, or continue later when the highlighted control cannot be
   fireEvent.press(screen.getByLabelText("Skip step"));
   expect(mockRunner.retryStep).toHaveBeenCalled();
   expect(mockRunner.skipStep).toHaveBeenCalledWith(user);
-  expect(mockRunner.recordStep).not.toHaveBeenCalled();
 });
 
 it("finishes on the last step", async () => {

@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef } from "react";
 import { type NativeScrollEvent, type NativeSyntheticEvent, ScrollView, type ScrollViewProps } from "react-native";
+import { notifyTourLayout } from "../stores/useTourTargets";
 
 type Scroller = { getScrollY: () => number; scrollTo: (y: number) => void };
 
@@ -19,6 +20,7 @@ export function TourScrollArea({ onScroll, scrollEventThrottle, children, ...pro
   const value = useMemo(() => ({ getScrollY, scrollTo }), [getScrollY, scrollTo]);
   const track = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     y.current = event.nativeEvent.contentOffset.y;
+    notifyTourLayout();
     onScroll?.(event);
   };
   return (
