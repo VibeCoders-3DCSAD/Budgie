@@ -194,19 +194,6 @@ export async function initDatabase(): Promise<SQLite.SQLiteDatabase> {
   return getDatabase(await tracePinStep("database.load-migrations", loadMigrations));
 }
 
-// A separate database with the full schema, e.g. the tour's in-memory practice data. Never the user's handle.
-export async function openMigratedDatabase(name: string, migrations: Migration[]): Promise<SQLite.SQLiteDatabase> {
-  const opened = await SQLite.openDatabaseAsync(name);
-  try {
-    await opened.execAsync(MIGRATIONS_TABLE);
-    await runMigrations(opened, migrations);
-    return opened;
-  } catch (error) {
-    await opened.closeAsync();
-    throw error;
-  }
-}
-
 type SchemaSource = Pick<SQLite.SQLiteDatabase, "getAllAsync">;
 type SchemaTarget = Pick<SQLite.SQLiteDatabase, "execAsync">;
 
